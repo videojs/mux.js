@@ -1,0 +1,24 @@
+{
+  "name": "mux.js",
+  "version": "1.0.0",
+  "description": "A collection of lightweight utilities for inspecting and manipulating video container formats.",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "video",
+    "container",
+    "transmux",
+    "mux",
+    "player",
+    "hls",
+    "mp4",
+    "aac",
+    "h264"
+  ],
+  "author": "Brightcove",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "qunitjs": "^1.18.0"
+  }
+}
