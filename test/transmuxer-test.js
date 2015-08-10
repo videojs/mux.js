@@ -1,25 +1,6 @@
 (function(window, muxjs) {
 'use strict';
-/*
-  ======== A Handy Little QUnit Reference ========
-  http://api.qunitjs.com/
 
-  Test methods:
-  module(name, {[setup][ ,teardown]})
-  test(name, callback)
-  expect(numberOfAssertions)
-  stop(increment)
-  start(decrement)
-  Test assertions:
-  ok(value, [message])
-  equal(actual, expected, [message])
-  notEqual(actual, expected, [message])
-  deepEqual(actual, expected, [message])
-  notDeepEqual(actual, expected, [message])
-  strictEqual(actual, expected, [message])
-  notStrictEqual(actual, expected, [message])
-  throws(block, [expected], [message])
-*/
 var
   TransportPacketStream = muxjs.mp2t.TransportPacketStream,
   transportPacketStream,
@@ -941,6 +922,31 @@ test('strips byte stream framing during parsing', function() {
   ]), new Uint8Array(data[1].data), 'parsed the second NAL unit');
 });
 
+test('can be reset', function() {
+  var input = {
+    type: 'video',
+    data: new Uint8Array([
+      0x00, 0x00, 0x00, 0x01,
+      0x09, 0x07,
+      0x00, 0x00, 0x01
+    ])
+  }, data = [];
+  // only the latest event is relevant for this test
+  h264Stream.on('data', function(event) {
+    data.push(event);
+  });
+
+  h264Stream.push(input);
+  h264Stream.end();
+  h264Stream.push(input);
+  h264Stream.end();
+
+  equal(data.length, 2, 'generated two data events');
+  equal(data[1].nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
+  equal(data[1].data.length, 2, 'calculated nal unit length');
+  equal(data[1].data[1], 7, 'read a payload byte');
+});
+
 module('VideoSegmentStream', {
   setup: function() {
     videoSegmentStream = new VideoSegmentStream({});
@@ -1090,7 +1096,7 @@ module('Transmuxer', {
 });
 
 test('generates a video init segment', function() {
-  var segments = [];
+  var segments = [], boxes;
   transmuxer.on('data', function(segment) {
     segments.push(segment);
   });
@@ -1109,30 +1115,38 @@ test('generates a video init segment', function() {
   ], false)));
   transmuxer.end();
 
-  equal(segments.length, 2, 'generated init and media segments');
+  equal(segments.length, 1, 'generated a segment');
   ok(segments[0].data, 'wrote data in the init segment');
   equal(segments[0].type, 'video', 'video is the segment type');
+
+  boxes = muxjs.inspectMp4(segments[0].data);
+  equal('ftyp', boxes[0].type, 'generated an ftyp box');
+  equal('moov', boxes[1].type, 'generated a moov box');
 });
 
 test('generates an audio init segment', function() {
-  var segments = [];
+  var segments = [], boxes;
   transmuxer.on('data', function(segment) {
     segments.push(segment);
   });
   transmuxer.push(packetize(PAT));
   transmuxer.push(packetize(PMT));
   transmuxer.push(packetize(audioPes([
-    0x00, 0x01
+    0x19, 0x47
   ], true)));
   transmuxer.end();
 
-  equal(segments.length, 2, 'generated init and media segments');
+  equal(segments.length, 1, 'generated a segment');
   ok(segments[0].data, 'wrote data in the init segment');
   equal(segments[0].type, 'audio', 'audio is the segment type');
+
+  boxes = muxjs.inspectMp4(segments[0].data);
+  equal('ftyp', boxes[0].type, 'generated an ftyp box');
+  equal('moov', boxes[1].type, 'generated a moov box');
 });
 
 test('buffers video samples until ended', function() {
-  var samples = [], boxes;
+  var samples = [], offset, boxes;
   transmuxer.on('data', function(data) {
     samples.push(data);
   });
@@ -1152,10 +1166,12 @@ test('buffers video samples until ended', function() {
   transmuxer.end();
   equal(samples.length, 1, 'emitted one event');
   boxes = muxjs.inspectMp4(samples[0].data);
-  equal(boxes.length, 2, 'generated two boxes');
-  equal(boxes[0].type, 'moof', 'the first box is a moof');
-  equal(boxes[1].type, 'mdat', 'the second box is a mdat');
-  deepEqual(new Uint8Array(samples[0].data.subarray(boxes[0].size + 8)),
+  equal(boxes.length, 4, 'generated four boxes');
+  equal(boxes[2].type, 'moof', 'the third box is a moof');
+  equal(boxes[3].type, 'mdat', 'the fourth box is a mdat');
+
+  offset = boxes[0].size + boxes[1].size + boxes[2].size + 8;
+  deepEqual(new Uint8Array(samples[0].data.subarray(offset)),
             new Uint8Array([
               0, 0, 0, 2,
               0x09, 0x01,
@@ -1220,7 +1236,9 @@ validateTrackFragment = function(track, segment, metadata) {
         metadata.mdatOffset + 8,
         'trun data offset is the size of the moof');
   ok(trun.samples.length > 0, 'generated media samples');
-  for (i = 0, j = trun.dataOffset; i < trun.samples.length; i++) {
+  for (i = 0, j = metadata.baseOffset + trun.dataOffset;
+       i < trun.samples.length;
+       i++) {
     sample = trun.samples[i];
     ok(sample.duration > 0, 'wrote a positive duration for sample ' + i);
     ok(sample.size > 0, 'wrote a positive size for sample ' + i);
@@ -1277,11 +1295,11 @@ test('parses an example mp2t file and generates media segments', function() {
   transmuxer.push(window.testSegment);
   transmuxer.end();
 
-  equal(videoSegments.length, 2, 'generated two video segments');
-  equal(audioSegments.length, 2, 'generated two audio segments');
+  equal(videoSegments.length, 1, 'generated one video segments');
+  equal(audioSegments.length, 1, 'generated one audio segments');
 
   boxes = muxjs.inspectMp4(videoSegments[0].data);
-  equal(boxes.length, 2, 'video init segments are composed of two boxes');
+  equal(boxes.length, 4, 'video segments are composed of four boxes');
   equal(boxes[0].type, 'ftyp', 'the first box is an ftyp');
   equal(boxes[1].type, 'moov', 'the second box is a moov');
   equal(boxes[1].boxes[0].type, 'mvhd', 'generated an mvhd');
@@ -1295,10 +1313,7 @@ test('parses an example mp2t file and generates media segments', function() {
   // });
   // equal(boxes[1].boxes[3].type, 'mvex', 'generated an mvex');
 
-  boxes = muxjs.inspectMp4(videoSegments[1].data);
-  ok(boxes.length > 0, 'video media segments are not empty');
-  ok(boxes.length % 2 === 0, 'video media segments are composed of pairs of boxes');
-  for (i = 0; i < boxes.length; i += 2) {
+  for (i = 2; i < boxes.length; i += 2) {
     equal(boxes[i].type, 'moof', 'first box is a moof');
     equal(boxes[i].boxes.length, 2, 'the moof has two children');
 
@@ -1308,13 +1323,74 @@ test('parses an example mp2t file and generates media segments', function() {
     sequenceNumber = mfhd.sequenceNumber;
 
     equal(boxes[i + 1].type, 'mdat', 'second box is an mdat');
-    validateTrackFragment(boxes[i].boxes[1], videoSegments[1].data, {
+    validateTrackFragment(boxes[i].boxes[1], videoSegments[0].data, {
       trackId: 256,
       width: 388,
       height: 300,
-      mdatOffset: boxes[0].size
+      baseOffset: boxes[0].size + boxes[1].size,
+      mdatOffset: boxes[2].size
     });
   }
+});
+
+test('can be reused for multiple TS segments', function() {
+  var
+    videoSegments = [],
+    audioSegments = [],
+    sequenceNumber = window.Infinity,
+    i, boxes, mfhd;
+
+  transmuxer.on('data', function(segment) {
+    if (segment.type === 'video') {
+      videoSegments.push(muxjs.inspectMp4(segment.data));
+    } else if (segment.type === 'audio') {
+      audioSegments.push(muxjs.inspectMp4(segment.data));
+    }
+  });
+  transmuxer.push(window.testSegment);
+  transmuxer.end();
+  transmuxer.push(window.testSegment);
+  transmuxer.end();
+
+  equal(videoSegments.length, 2, 'generated two video segments');
+  equal(audioSegments.length, 2, 'generated two audio segments');
+  deepEqual(videoSegments[0][0],
+            videoSegments[1][0],
+            'generated identical video ftyps');
+  deepEqual(videoSegments[0][1],
+            videoSegments[1][1],
+            'generated identical video moovs');
+  deepEqual(videoSegments[0][2].boxes[1],
+            videoSegments[1][2].boxes[1],
+            'generated identical video trafs');
+  equal(videoSegments[0][2].boxes[0].sequenceNumber,
+        0,
+        'set the correct video sequence number');
+  equal(videoSegments[1][2].boxes[0].sequenceNumber,
+        1,
+        'set the correct video sequence number');
+  deepEqual(videoSegments[0][3],
+            videoSegments[1][3],
+            'generated identical video mdats');
+
+  deepEqual(audioSegments[0][0],
+            audioSegments[1][0],
+            'generated identical audio ftyps');
+  deepEqual(audioSegments[0][1],
+            audioSegments[1][1],
+            'generated identical audio moovs');
+  deepEqual(audioSegments[0][2].boxes[1],
+            audioSegments[1][2].boxes[1],
+            'generated identical audio trafs');
+  equal(audioSegments[0][2].boxes[0].sequenceNumber,
+        0,
+        'set the correct audio sequence number');
+  equal(audioSegments[1][2].boxes[0].sequenceNumber,
+        1,
+        'set the correct audio sequence number');
+  deepEqual(audioSegments[0][3],
+            audioSegments[1][3],
+            'generated identical audio mdats');
 });
 
 })(window, window.muxjs);
