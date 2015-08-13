@@ -622,7 +622,10 @@ test('can parse an audio stsd', function() {
                          // DecoderSpecificInfo
                          0x05, // tag, DecoderSpecificInfoTag
                          0x02, // length
-                         0x11, 0x90, 0x06, 0x01, 0x02))); // decoder specific info
+                         // audioObjectType, samplingFrequencyIndex, channelConfiguration
+                         0x11, 0x90,
+                         // GASpecificConfig
+                         0x06, 0x01, 0x02)));
 
   deepEqual(muxjs.inspectMp4(new Uint8Array(data)), [{
     version: 0,
@@ -648,7 +651,14 @@ test('can parse an audio stsd', function() {
           streamType: 0x05,
           bufferSize: 0xff,
           maxBitrate: 0xff,
-          avgBitrate: 0xaa
+          avgBitrate: 0xaa,
+          decoderConfigDescriptor: {
+            tag: 5,
+            length: 2,
+            audioObjectType: 2,
+            samplingFrequencyIndex: 3,
+            channelConfiguration: 2
+          }
         }
       }
     }]

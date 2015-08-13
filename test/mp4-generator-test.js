@@ -249,7 +249,14 @@ validateAudioSample = function(sample) {
         maxBitrate: 56000,
         bufferSize: 1536,
         objectProfileIndication: 64,
-        streamType: 5
+        streamType: 5,
+        decoderConfigDescriptor: {
+          audioObjectType: 2,
+          channelConfiguration: 2,
+          length: 2,
+          samplingFrequencyIndex: 3,
+          tag: 5
+        },
       }
     }
   }, 'generated an audio sample');
@@ -318,8 +325,10 @@ test('generates an audio moov', function() {
     data = mp4.moov([{
       id: 7,
       type: 'audio',
+      audioobjecttype: 2,
       channelcount: 2,
       samplerate: 48000,
+      samplingfrequencyindex: 3,
       samplesize: 16
     }]),
     boxes;
