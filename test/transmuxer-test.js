@@ -689,6 +689,26 @@ module('H264 Stream', {
   }
 });
 
+test('properly parses seq_parameter_set_rbsp nal units', function() {
+  var data;
+  h264Stream.on('data', function(event) {
+    data = event;
+  });
+
+  // test SPS:
+  h264Stream.push({
+    type: 'video',
+    data: window.testSPS
+  });
+
+  ok(data, 'generated a data event');
+  equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified an sequence parameter set');
+  deepEqual(data.escapedRBSP, window.testRBSP, 'properly removed Emulation Prevention Bytes from the RBSP');
+
+  equal(data.config.width, 720, 'parsed the width');
+  equal(data.config.height, 404, 'parsed the height');
+});
+
 test('unpacks nal units from simple byte stream framing', function() {
   var data;
   h264Stream.on('data', function(event) {

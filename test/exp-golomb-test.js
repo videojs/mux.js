@@ -73,6 +73,15 @@ test('drops working data when skipping leading zeros', function() {
   equal(0x5a, expGolomb.readBits(8), 'the next bits are read');
 });
 
+test('skipBits correctly across word-boundaries', function() {
+  var expGolomb = new ExpGolomb(new Uint8Array([0x15, 0x00, 0x00, 0x28, 0x00, 0x0a, 0x00, 0x00]));
+  equal(expGolomb.readUnsignedExpGolomb(), 9, 'the first number is read');
+  expGolomb.skipBits(17);
+  equal(expGolomb.readUnsignedExpGolomb(), 4, 'the second number is read');
+  expGolomb.skipBits(13); // Crosses word boundary
+  equal(expGolomb.readUnsignedExpGolomb(), 4, 'the third number is read');
+});
+
 test('parses a sequence parameter set', function() {
   var
     sps = new Uint8Array([
