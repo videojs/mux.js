@@ -1030,12 +1030,44 @@ test('scales DTS values from milliseconds to 90kHz', function() {
 
   boxes = muxjs.inspectMp4(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
-  equal(samples.length, 3, 'generated two samples');
+  equal(samples.length, 3, 'generated three samples');
   equal(samples[0].duration, 1 * 90, 'multiplied DTS duration by 90');
   equal(samples[1].duration, 2 * 90, 'multiplied DTS duration by 90');
   equal(samples[2].duration, 2 * 90, 'inferred the final sample duration');
 });
 
+test('scales compositionTimeOffset values from milliseconds to 90kHz', function() {
+  var segment, boxes, samples;
+  videoSegmentStream.on('data', function(data) {
+    segment = data;
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 1,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 1,
+    pts: 2
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 1,
+    pts: 4
+  });
+  videoSegmentStream.end();
+
+  boxes = muxjs.inspectMp4(segment);
+  samples = boxes[0].boxes[1].boxes[2].samples;
+  equal(samples.length, 3, 'generated three samples');
+  equal(samples[0].compositionTimeOffset, 0 * 90, 'multiplied compositionTimeOffset duration by 90');
+  equal(samples[1].compositionTimeOffset, 1 * 90, 'multiplied compositionTimeOffset duration by 90');
+  equal(samples[2].compositionTimeOffset, 3 * 90, 'multiplied compositionTimeOffset duration by 90');
+});
 module('AAC Stream', {
   setup: function() {
     aacStream = new AacStream();
