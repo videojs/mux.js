@@ -690,7 +690,24 @@ module('H264 Stream', {
 });
 
 test('properly parses seq_parameter_set_rbsp nal units', function() {
-  var data;
+  var
+    data,
+    expectedRBSP = new Uint8Array([
+      0x42, 0xc0, 0x1e, 0xd9,
+      0x00, 0xb4, 0x35, 0xf9,
+      0xe1, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00,
+      0x3c, 0x0f, 0x16, 0x2e,
+      0x48
+    ]),
+    expectedConfig = {
+      profileIdc: 66,
+      levelIdc: 30,
+      profileCompatibility: 192,
+      width: 720,
+      height: 404
+    };
+
   h264Stream.on('data', function(event) {
     data = event;
   });
@@ -698,15 +715,23 @@ test('properly parses seq_parameter_set_rbsp nal units', function() {
   // test SPS:
   h264Stream.push({
     type: 'video',
-    data: window.testSPS
+    data: new Uint8Array([
+      0x00, 0x00, 0x00, 0x01,
+      0x67, 0x42, 0xc0, 0x1e,
+      0xd9, 0x00, 0xb4, 0x35,
+      0xf9, 0xe1, 0x00, 0x00,
+      0x03, 0x00, 0x01, 0x00,
+      0x00, 0x03, 0x00, 0x3c,
+      0x0f, 0x16, 0x2e, 0x48,
+      0x00, 0x00, 0x01
+    ])
   });
 
   ok(data, 'generated a data event');
   equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified an sequence parameter set');
-  deepEqual(data.escapedRBSP, window.testRBSP, 'properly removed Emulation Prevention Bytes from the RBSP');
+  deepEqual(data.escapedRBSP, expectedRBSP, 'properly removed Emulation Prevention Bytes from the RBSP');
 
-  equal(data.config.width, 720, 'parsed the width');
-  equal(data.config.height, 404, 'parsed the height');
+  deepEqual(data.config, expectedConfig, 'parsed the sps');
 });
 
 test('unpacks nal units from simple byte stream framing', function() {
