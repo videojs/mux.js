@@ -376,8 +376,8 @@ test('parses an elementary stream packet with a pts and dts', function() {
   equal(0x1b, packet.streamType, 'tracked the stream_type');
   equal(1, packet.data.byteLength, 'parsed a single data byte');
   equal(0x11, packet.data[0], 'parsed the data');
-  equal(4 / 90, packet.pts, 'parsed the pts');
-  equal(2 / 90, packet.dts, 'parsed the dts');
+  equal(4, packet.pts, 'parsed the pts');
+  equal(2, packet.dts, 'parsed the dts');
 });
 
 /**
@@ -550,7 +550,7 @@ test('parses standalone program stream packets', function() {
     dts: 8,
     data: new Uint8Array(19)
   });
-  elementaryStream.end();
+  elementaryStream.flush();
 
   equal(1, packets.length, 'built one packet');
   equal('audio', packets[0].type, 'identified audio data');
@@ -578,7 +578,7 @@ test('aggregates program stream packets from the transport stream', function() {
     streamType: H264_STREAM_TYPE,
     data: new Uint8Array(13)
   });
-  elementaryStream.end();
+  elementaryStream.flush();
   equal(1, events.length, 'built one packet');
   equal('video', events[0].type, 'identified video data');
   equal(events[0].pts, 7, 'passed along the pts');
@@ -616,7 +616,7 @@ test('buffers audio and video program streams individually', function() {
     streamType: ADTS_STREAM_TYPE,
     data: new Uint8Array(1)
   });
-  elementaryStream.end();
+  elementaryStream.flush();
   equal(2, events.length, 'parsed a complete packet');
   equal('video', events[0].type, 'identified video data');
   equal('audio', events[1].type, 'identified audio data');
@@ -656,7 +656,7 @@ test('flushes the buffered packets when a new one of that type is started', func
   equal('video', packets[0].type, 'identified video data');
   equal(2, packets[0].data.byteLength, 'concatenated packets');
 
-  elementaryStream.end();
+  elementaryStream.flush();
   equal(3, packets.length, 'built tow more packets');
   equal('video', packets[1].type, 'identified video data');
   equal(1, packets[1].data.byteLength, 'parsed the video payload');
@@ -862,7 +862,7 @@ test('parses nal unit types', function() {
       0x09
     ])
   });
-  h264Stream.end();
+  h264Stream.flush();
 
   ok(data, 'generated a data event');
   equal(data.nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
@@ -880,7 +880,7 @@ test('parses nal unit types', function() {
       0xef, 0x7c, 0x04
     ])
   });
-  h264Stream.end();
+  h264Stream.flush();
   ok(data, 'generated a data event');
   equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified a sequence parameter set');
 
@@ -892,7 +892,7 @@ test('parses nal unit types', function() {
       0x08, 0x01
     ])
   });
-  h264Stream.end();
+  h264Stream.flush();
   ok(data, 'generated a data event');
   equal(data.nalUnitType, 'pic_parameter_set_rbsp', 'identified a picture parameter set');
 
@@ -904,7 +904,7 @@ test('parses nal unit types', function() {
       0x05, 0x01
     ])
   });
-  h264Stream.end();
+  h264Stream.flush();
   ok(data, 'generated a data event');
   equal(data.nalUnitType, 'slice_layer_without_partitioning_rbsp_idr', 'identified a key frame');
 });
@@ -952,7 +952,7 @@ test('strips byte stream framing during parsing', function() {
       0x02, 0x01, 0x00
     ])
   });
-  h264Stream.end();
+  h264Stream.flush();
 
   equal(data.length, 2, 'parsed two NAL units');
   deepEqual(new Uint8Array([
@@ -982,9 +982,9 @@ test('can be reset', function() {
   });
 
   h264Stream.push(input);
-  h264Stream.end();
+  h264Stream.flush();
   h264Stream.push(input);
-  h264Stream.end();
+  h264Stream.flush();
 
   equal(data.length, 2, 'generated two data events');
   equal(data[1].nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
@@ -1016,7 +1016,7 @@ test('concatenates NAL units into AVC elementary streams', function() {
       0x04, 0x03, 0x02, 0x01, 0x00
     ])
   });
-  videoSegmentStream.end();
+  videoSegmentStream.flush();
 
   ok(segment, 'generated a data event');
   boxes = muxjs.inspectMp4(segment);
@@ -1031,7 +1031,7 @@ test('concatenates NAL units into AVC elementary streams', function() {
   ]), 'wrote an AVC stream into the mdat');
 });
 
-test('scales DTS values from milliseconds to 90kHz', function() {
+test('infers sample durations from DTS values', function() {
   var segment, boxes, samples;
   videoSegmentStream.on('data', function(data) {
     segment = data;
@@ -1051,17 +1051,17 @@ test('scales DTS values from milliseconds to 90kHz', function() {
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 4
   });
-  videoSegmentStream.end();
+  videoSegmentStream.flush();
 
   boxes = muxjs.inspectMp4(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
   equal(samples.length, 3, 'generated three samples');
-  equal(samples[0].duration, 1 * 90, 'multiplied DTS duration by 90');
-  equal(samples[1].duration, 2 * 90, 'multiplied DTS duration by 90');
-  equal(samples[2].duration, 2 * 90, 'inferred the final sample duration');
+  equal(samples[0].duration, 1, 'set the first sample duration');
+  equal(samples[1].duration, 2, 'set the second sample duration');
+  equal(samples[2].duration, 2, 'inferred the final sample duration');
 });
 
-test('scales compositionTimeOffset values from milliseconds to 90kHz', function() {
+test('calculates compositionTimeOffset values from the PTS and DTS', function() {
   var segment, boxes, samples;
   videoSegmentStream.on('data', function(data) {
     segment = data;
@@ -1084,14 +1084,14 @@ test('scales compositionTimeOffset values from milliseconds to 90kHz', function(
     dts: 1,
     pts: 4
   });
-  videoSegmentStream.end();
+  videoSegmentStream.flush();
 
   boxes = muxjs.inspectMp4(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
   equal(samples.length, 3, 'generated three samples');
-  equal(samples[0].compositionTimeOffset, 0 * 90, 'multiplied compositionTimeOffset duration by 90');
-  equal(samples[1].compositionTimeOffset, 1 * 90, 'multiplied compositionTimeOffset duration by 90');
-  equal(samples[2].compositionTimeOffset, 3 * 90, 'multiplied compositionTimeOffset duration by 90');
+  equal(samples[0].compositionTimeOffset, 0, 'calculated compositionTimeOffset');
+  equal(samples[1].compositionTimeOffset, 1, 'calculated compositionTimeOffset');
+  equal(samples[2].compositionTimeOffset, 3, 'calculated compositionTimeOffset');
 });
 module('AAC Stream', {
   setup: function() {
@@ -1190,7 +1190,7 @@ test('generates a video init segment', function() {
     0x06, 0xb6, 0xc2, 0xb5,
     0xef, 0x7c, 0x04
   ], false)));
-  transmuxer.end();
+  transmuxer.flush();
 
   equal(segments.length, 1, 'generated a segment');
   ok(segments[0].data, 'wrote data in the init segment');
@@ -1211,7 +1211,7 @@ test('generates an audio init segment', function() {
   transmuxer.push(packetize(audioPes([
     0x19, 0x47
   ], true)));
-  transmuxer.end();
+  transmuxer.flush();
 
   equal(segments.length, 1, 'generated a segment');
   ok(segments[0].data, 'wrote data in the init segment');
@@ -1240,7 +1240,7 @@ test('buffers video samples until ended', function() {
   transmuxer.push(packetize(videoPes([0x00, 0x05])));
 
   // flush everything
-  transmuxer.end();
+  transmuxer.flush();
   equal(samples.length, 1, 'emitted one event');
   boxes = muxjs.inspectMp4(samples[0].data);
   equal(boxes.length, 4, 'generated four boxes');
@@ -1370,7 +1370,7 @@ test('parses an example mp2t file and generates media segments', function() {
     }
   });
   transmuxer.push(window.testSegment);
-  transmuxer.end();
+  transmuxer.flush();
 
   equal(videoSegments.length, 1, 'generated one video segments');
   equal(audioSegments.length, 1, 'generated one audio segments');
@@ -1425,9 +1425,9 @@ test('can be reused for multiple TS segments', function() {
     }
   });
   transmuxer.push(window.testSegment);
-  transmuxer.end();
+  transmuxer.flush();
   transmuxer.push(window.testSegment);
-  transmuxer.end();
+  transmuxer.flush();
 
   equal(videoSegments.length, 2, 'generated two video segments');
   equal(audioSegments.length, 2, 'generated two audio segments');
