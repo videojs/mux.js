@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A collection of lightweight utilities for inspecting and manipulating video container formats.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./node_modules/.bin/karma start test/karma.conf.js --single-run"
   },
   "keywords": [
     "video",
@@ -19,6 +19,9 @@
   "author": "Brightcove",
   "license": "Apache-2.0",
   "devDependencies": {
+    "karma": "^0.13.9",
+    "karma-chrome-launcher": "^0.2.0",
+    "karma-qunit": "^0.1.5",
     "qunitjs": "^1.18.0"
   }
 }
