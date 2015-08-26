@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A collection of lightweight utilities for inspecting and manipulating video container formats.",
   "scripts": {
-    "test": "./node_modules/.bin/karma start test/karma.conf.js --single-run"
+    "test": "karma start test/karma.conf.js --single-run"
   },
   "keywords": [
     "video",
