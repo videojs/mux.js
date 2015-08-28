@@ -23,6 +23,11 @@
 
   var metadataStream, stringToInts, stringToCString, id3Tag, id3Frame;
 
+  stringToInts = muxjs.id3.stringToInts;
+  stringToCString = muxjs.id3.stringToCString;
+  id3Tag = muxjs.id3.id3Tag;
+  id3Frame = muxjs.id3.id3Frame;
+
   module('MetadataStream', {
     setup: function() {
       metadataStream = new muxjs.mp2t.MetadataStream();
@@ -33,63 +38,6 @@
     ok(metadataStream, 'does not return null');
   });
 
-  stringToInts = function(string) {
-    var result = [], i;
-    for (i = 0; i < string.length; i++) {
-      result[i] = string.charCodeAt(i);
-    }
-    return result;
-  };
-
-  stringToCString = function(string) {
-    return stringToInts(string).concat([0x00]);
-  };
-
-  id3Tag = function() {
-    var
-      frames = Array.prototype.concat.apply([], Array.prototype.slice.call(arguments)),
-      result = stringToInts('ID3').concat([
-        0x03, 0x00,            // version 3.0 of ID3v2 (aka ID3v.2.3.0)
-        0x40,                  // flags. include an extended header
-        0x00, 0x00, 0x00, 0x00, // size. set later
-
-        // extended header
-        0x00, 0x00, 0x00, 0x06, // extended header size. no CRC
-        0x00, 0x00,             // extended flags
-        0x00, 0x00, 0x00, 0x02  // size of padding
-      ], frames),
-      size;
-
-    // size is stored as a sequence of four 7-bit integers with the
-    // high bit of each byte set to zero
-    size = result.length - 10;
-    result[6] = (size >>> 21) & 0x7f;
-    result[7] = (size >>> 14) & 0x7f;
-    result[8] = (size >>>  7) & 0x7f;
-    result[9] = (size)        & 0x7f;
-
-    return result;
-  };
-
-  id3Frame = function(type) {
-    var result = stringToInts(type).concat([
-      0x00, 0x00, 0x00, 0x00, // size
-      0xe0, 0x00 // flags. tag/file alter preservation, read-only
-    ]),
-        size = result.length - 10;
-
-    // append the fields of the ID3 frame
-    result = result.concat.apply(result, Array.prototype.slice.call(arguments, 1));
-
-    // set the size
-    size = result.length - 10;
-    result[4] = (size >>> 24);
-    result[5] = (size >>> 16) & 0xff;
-    result[6] = (size >>>  8) & 0xff;
-    result[7] = (size)        & 0xff;
-
-    return result;
-  };
 
   test('parses simple ID3 metadata out of PES packets', function() {
     var
@@ -136,6 +84,7 @@
     id3Bytes[9] = (size)        & 0x7f;
 
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1000,
       dts: 1000,
@@ -165,6 +114,7 @@
     });
 
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1000,
       dts: 1000,
@@ -193,6 +143,7 @@
     });
 
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1000,
       dts: 900,
@@ -219,6 +170,7 @@
     });
 
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1000,
       dts: 900,
@@ -245,6 +197,7 @@
     });
 
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1000,
       dts: 900,
@@ -273,6 +226,7 @@
     });
 
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1000,
       dts: 900,
@@ -311,6 +265,7 @@
     });
 
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1000,
       dts: 900,
@@ -320,6 +275,7 @@
     equal(events.length, 0, 'parsed zero tags');
 
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1000,
       dts: 900,
@@ -338,12 +294,14 @@
     front = tag.subarray(0, 188);
     back = tag.subarray(188);
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 2000,
       dts: 2000,
       data: front
     });
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 2000,
       dts: 2000,
@@ -368,12 +326,14 @@
     });
 
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1000,
       dts: 900,
       data: front
     });
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1000,
       dts: 900,
@@ -383,6 +343,7 @@
     equal(events.length, 0, 'parsed zero tags');
 
     metadataStream.push({
+      type: 'timed-metadata',
       trackId: 7,
       pts: 1500,
       dts: 1500,
