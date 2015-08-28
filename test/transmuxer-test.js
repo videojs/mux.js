@@ -20,6 +20,7 @@ var
   MP2T_PACKET_LENGTH = muxjs.mp2t.MP2T_PACKET_LENGTH,
   H264_STREAM_TYPE = muxjs.mp2t.H264_STREAM_TYPE,
   ADTS_STREAM_TYPE = muxjs.mp2t.ADTS_STREAM_TYPE,
+  METADATA_STREAM_TYPE = muxjs.mp2t.METADATA_STREAM_TYPE,
   packetize,
 
   PAT,
@@ -30,7 +31,8 @@ var
 
   transportPacket,
   videoPes,
-  audioPes;
+  audioPes,
+  timedMetadataPes;
 
 module('MP2T Packet Stream', {
   setup: function() {
@@ -254,8 +256,8 @@ PMT = [
   0x40, 0x10,
   // tsc:01 afc:01 cc:0000 pointer_field:0000 0000
   0x50, 0x00,
-  // tid:0000 0010 ssi:0 0:0 r:00 sl:0000 0001 0111
-  0x02, 0x00, 0x17,
+  // tid:0000 0010 ssi:0 0:0 r:00 sl:0000 0001 1100
+  0x02, 0x00, 0x1c,
   // pn:0000 0000 0000 0001
   0x00, 0x01,
   // r:00 vn:00 000 cni:1 sn:0000 0000 lsn:0000 0000
@@ -274,6 +276,13 @@ PMT = [
   0x0f, 0x00, 0x12,
   // r:0000 esil:0000 0000 0000
   0x00, 0x00,
+
+  // timed metadata
+  // st:0001 0111 r:000 epid:0 0000 0001 0011
+  0x15, 0x00, 0x13,
+  // r:0000 esil:0000 0000 0000
+  0x00, 0x00,
+
   // crc
   0x00, 0x00, 0x00, 0x00
 ];
@@ -461,6 +470,11 @@ audioPes = function(data, first) {
     ((frameLength & 0x07) << 5) + 7,       // frame length in bytes
     0x00                                   // one AAC per ADTS frame
   ].concat(data), first);
+};
+
+timedMetadataPes = function(data) {
+  var id3 = muxjs.id3;
+  return transportPacket(0x13, id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01)));
 };
 
 test('parses an elementary stream packet without a pts or dts', function() {
@@ -657,11 +671,46 @@ test('flushes the buffered packets when a new one of that type is started', func
   equal(2, packets[0].data.byteLength, 'concatenated packets');
 
   elementaryStream.flush();
-  equal(3, packets.length, 'built tow more packets');
+  equal(3, packets.length, 'built two more packets');
   equal('video', packets[1].type, 'identified video data');
   equal(1, packets[1].data.byteLength, 'parsed the video payload');
   equal('audio', packets[2].type, 'identified audio data');
   equal(7, packets[2].data.byteLength, 'parsed the audio payload');
+});
+
+test('buffers and emits timed-metadata', function() {
+  var packets = [];
+  elementaryStream.on('data', function(packet) {
+    packets.push(packet);
+  });
+
+  elementaryStream.push({
+    type: 'pes',
+    payloadUnitStartIndicator: true,
+    streamType: METADATA_STREAM_TYPE,
+    data: new Uint8Array([0, 1])
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: METADATA_STREAM_TYPE,
+    data: new Uint8Array([2, 3])
+  });
+  equal(packets.length, 0, 'buffers metadata until the next start indicator');
+
+  elementaryStream.push({
+    type: 'pes',
+    payloadUnitStartIndicator: true,
+    streamType: METADATA_STREAM_TYPE,
+    data: new Uint8Array([4, 5])
+  });
+  equal(packets.length, 1, 'built a packet');
+  equal(packets[0].type, 'timed-metadata', 'identified timed-metadata');
+  deepEqual(packets[0].data, new Uint8Array([0, 1, 2, 3]), 'concatenated the data');
+
+  elementaryStream.flush();
+  equal(packets.length, 2, 'flushed a packet');
+  equal(packets[1].type, 'timed-metadata', 'identified timed-metadata');
+  deepEqual(packets[1].data, new Uint8Array([4, 5]), 'included the data');
 });
 
 test('drops packets with unknown stream types', function() {
@@ -1262,6 +1311,24 @@ test('buffers video samples until ended', function() {
               0x00, 0x05]),
             'concatenated NALs into an mdat');
 });
+
+test('creates a metadata stream', function() {
+  ok(transmuxer.metadataStream, 'created a metadata stream');
+});
+
+test('pipes timed metadata to the metadata stream', function() {
+  var metadatas = [];
+  transmuxer.metadataStream.on('data', function(data) {
+    metadatas.push(data);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(PMT));
+  transmuxer.push(packetize(timedMetadataPes([0x03])));
+
+  transmuxer.flush();
+  equal(metadatas.length, 1, 'emitted timed metadata');
+});
+
 
 validateTrack = function(track, metadata) {
   var mdia, handlerType;

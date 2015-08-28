@@ -23,6 +23,7 @@ module.exports = function(config) {
       '../lib/metadata-stream.js',
 
       'test-segment.js',
+      'id3-generator.js',
 
       'exp-golomb-test.js',
       'mp4-generator-test.js',
