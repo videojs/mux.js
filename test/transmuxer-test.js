@@ -1051,7 +1051,7 @@ module('VideoSegmentStream', {
 test('concatenates NAL units into AVC elementary streams', function() {
   var segment, boxes;
   videoSegmentStream.on('data', function(data) {
-    segment = data;
+    segment = data.boxes;
   });
   videoSegmentStream.push({
     data: new Uint8Array([
@@ -1083,7 +1083,7 @@ test('concatenates NAL units into AVC elementary streams', function() {
 test('infers sample durations from DTS values', function() {
   var segment, boxes, samples;
   videoSegmentStream.on('data', function(data) {
-    segment = data;
+    segment = data.boxes;
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
@@ -1113,7 +1113,7 @@ test('infers sample durations from DTS values', function() {
 test('calculates compositionTimeOffset values from the PTS and DTS', function() {
   var segment, boxes, samples;
   videoSegmentStream.on('data', function(data) {
-    segment = data;
+    segment = data.boxes;
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
