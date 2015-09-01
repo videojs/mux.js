@@ -1043,7 +1043,9 @@ test('can be reset', function() {
 
 module('VideoSegmentStream', {
   setup: function() {
-    videoSegmentStream = new VideoSegmentStream({});
+    var track = {};
+    videoSegmentStream = new VideoSegmentStream(track);
+    videoSegmentStream.track = track;
   }
 });
 
@@ -1051,7 +1053,7 @@ module('VideoSegmentStream', {
 test('concatenates NAL units into AVC elementary streams', function() {
   var segment, boxes;
   videoSegmentStream.on('data', function(data) {
-    segment = data;
+    segment = data.boxes;
   });
   videoSegmentStream.push({
     data: new Uint8Array([
@@ -1083,7 +1085,7 @@ test('concatenates NAL units into AVC elementary streams', function() {
 test('infers sample durations from DTS values', function() {
   var segment, boxes, samples;
   videoSegmentStream.on('data', function(data) {
-    segment = data;
+    segment = data.boxes;
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
@@ -1113,7 +1115,7 @@ test('infers sample durations from DTS values', function() {
 test('calculates compositionTimeOffset values from the PTS and DTS', function() {
   var segment, boxes, samples;
   videoSegmentStream.on('data', function(data) {
-    segment = data;
+    segment = data.boxes;
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
@@ -1142,6 +1144,40 @@ test('calculates compositionTimeOffset values from the PTS and DTS', function() 
   equal(samples[1].compositionTimeOffset, 1, 'calculated compositionTimeOffset');
   equal(samples[2].compositionTimeOffset, 3, 'calculated compositionTimeOffset');
 });
+
+test('calculates baseMediaDecodeTime values from the first DTS ever seen and subsequent segments\' lowest DTS', function() {
+  var segment, boxes, tfdt;
+  videoSegmentStream.on('data', function(data) {
+    segment = data.boxes;
+  });
+
+  videoSegmentStream.track.earliestDTS = 10;
+
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 100,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 200,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 300,
+    pts: 1
+  });
+  videoSegmentStream.flush();
+
+  boxes = muxjs.inspectMp4(segment);
+  tfdt = boxes[0].boxes[1].boxes[1];
+  equal(tfdt.baseMediaDecodeTime, 90, 'calculated baseMediaDecodeTime');
+});
+
 module('AAC Stream', {
   setup: function() {
     aacStream = new AacStream();
