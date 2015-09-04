@@ -1009,6 +1009,18 @@ test('parses nal unit types', function() {
   h264Stream.flush();
   ok(data, 'generated a data event');
   equal(data.nalUnitType, 'slice_layer_without_partitioning_rbsp_idr', 'identified a key frame');
+
+  data = null;
+  h264Stream.push({
+    type: 'video',
+    data: new Uint8Array([
+      0x00, 0x00, 0x00, 0x01,
+      0x06, 0x01
+    ])
+  });
+  h264Stream.flush();
+  ok(data, 'generated a data event');
+  equal(data.nalUnitType, 'sei_rbsp', 'identified a supplemental enhancement information unit');
 });
 
 // MP4 expects H264 (aka AVC) data to be in storage format. Storage
