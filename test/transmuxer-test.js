@@ -24,6 +24,7 @@ var
   packetize,
 
   PAT,
+  generatePMT,
   PMT,
   standalonePes,
   validateTrack,
@@ -249,6 +250,58 @@ test('parses the program map table pid from the program association table (PAT)'
   ok(packet, 'parsed a packet');
   strictEqual(0x0010, transportParseStream.pmtPid, 'parsed PMT pid');
 });
+
+generatePMT = function(options) {
+  var PMT = [
+    0x47, // sync byte
+    // tei:0 pusi:1 tp:0 pid:0 0000 0010 0000
+    0x40, 0x10,
+    // tsc:01 afc:01 cc:0000 pointer_field:0000 0000
+    0x50, 0x00,
+    // tid:0000 0010 ssi:0 0:0 r:00 sl:0000 0001 1100
+    0x02, 0x00, 0x1c,
+    // pn:0000 0000 0000 0001
+    0x00, 0x01,
+    // r:00 vn:00 000 cni:1 sn:0000 0000 lsn:0000 0000
+    0x01, 0x00, 0x00,
+    // r:000 ppid:0 0011 1111 1111
+    0x03, 0xff,
+    // r:0000 pil:0000 0000 0000
+    0x00, 0x00];
+
+    if (options.hasVideo) {
+      // h264
+      PMT = PMT.concat([
+        // st:0001 1010 r:000 epid:0 0000 0001 0001
+        0x1b, 0x00, 0x11,
+        // r:0000 esil:0000 0000 0000
+        0x00, 0x00
+      ]);
+    }
+
+    if (options.hasAudio) {
+      // adts
+      PMT = PMT.concat([
+        // st:0000 1111 r:000 epid:0 0000 0001 0010
+        0x0f, 0x00, 0x12,
+        // r:0000 esil:0000 0000 0000
+        0x00, 0x00
+      ]);
+    }
+
+    if (options.hasMetadata) {
+      // timed metadata
+      PMT = PMT.concat([
+        // st:0001 0111 r:000 epid:0 0000 0001 0011
+        0x15, 0x00, 0x13,
+        // r:0000 esil:0000 0000 0000
+        0x00, 0x00,
+      ]);
+    }
+
+    // crc
+    return PMT.concat([0x00, 0x00, 0x00, 0x00]);
+};
 
 PMT = [
   0x47, // sync byte
@@ -1151,7 +1204,7 @@ test('calculates baseMediaDecodeTime values from the first DTS ever seen and sub
     segment = data.boxes;
   });
 
-  videoSegmentStream.track.earliestDTS = 10;
+  videoSegmentStream.track.timelineStartDTS = 10;
 
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
@@ -1263,7 +1316,10 @@ test('generates a video init segment', function() {
     segments.push(segment);
   });
   transmuxer.push(packetize(PAT));
-  transmuxer.push(packetize(PMT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true
+  })));
+
   transmuxer.push(packetize(videoPes([
       0x08, 0x01 // pic_parameter_set_rbsp
   ], true)));
@@ -1292,7 +1348,9 @@ test('generates an audio init segment', function() {
     segments.push(segment);
   });
   transmuxer.push(packetize(PAT));
-  transmuxer.push(packetize(PMT));
+  transmuxer.push(packetize(generatePMT({
+    hasAudio: true
+  })));
   transmuxer.push(packetize(audioPes([
     0x19, 0x47
   ], true)));
@@ -1313,7 +1371,9 @@ test('buffers video samples until ended', function() {
     samples.push(data);
   });
   transmuxer.push(packetize(PAT));
-  transmuxer.push(packetize(PMT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true
+  })));
 
   // buffer a NAL
   transmuxer.push(packetize(videoPes([0x09, 0x01], true)));
@@ -1458,28 +1518,23 @@ validateTrackFragment = function(track, segment, metadata) {
   }
 };
 
-test('parses an example mp2t file and generates media segments', function() {
+test('parses an example mp2t file and generates combined media segments', function() {
   var
-    videoSegments = [],
-    audioSegments = [],
-    sequenceNumber = window.Infinity,
+    segments = [],
     i, boxes, mfhd;
 
   transmuxer.on('data', function(segment) {
-    if (segment.type === 'video') {
-      videoSegments.push(segment);
-    } else if (segment.type === 'audio') {
-      audioSegments.push(segment);
+    if (segment.type === 'combined') {
+      segments.push(segment);
     }
   });
   transmuxer.push(window.testSegment);
   transmuxer.flush();
 
-  equal(videoSegments.length, 1, 'generated one video segments');
-  equal(audioSegments.length, 1, 'generated one audio segments');
+  equal(segments.length, 1, 'generated one combined segment');
 
-  boxes = muxjs.inspectMp4(videoSegments[0].data);
-  equal(boxes.length, 4, 'video segments are composed of four boxes');
+  boxes = muxjs.inspectMp4(segments[0].data);
+  equal(boxes.length, 6, 'combined segments are composed of six boxes');
   equal(boxes[0].type, 'ftyp', 'the first box is an ftyp');
   equal(boxes[1].type, 'moov', 'the second box is a moov');
   equal(boxes[1].boxes[0].type, 'mvhd', 'generated an mvhd');
@@ -1499,32 +1554,29 @@ test('parses an example mp2t file and generates media segments', function() {
 
     mfhd = boxes[i].boxes[0];
     equal(mfhd.type, 'mfhd', 'mfhd is a child of the moof');
-    ok(mfhd.sequenceNumber < sequenceNumber, 'sequence numbers are increasing');
-    sequenceNumber = mfhd.sequenceNumber;
 
     equal(boxes[i + 1].type, 'mdat', 'second box is an mdat');
-    validateTrackFragment(boxes[i].boxes[1], videoSegments[0].data, {
-      trackId: 256,
-      width: 388,
-      height: 300,
-      baseOffset: boxes[0].size + boxes[1].size,
-      mdatOffset: boxes[2].size
-    });
+    if (i === 2) {
+      validateTrackFragment(boxes[i].boxes[1], segments[0].data, {
+        trackId: 256,
+        width: 388,
+        height: 300,
+        baseOffset: boxes[0].size + boxes[1].size,
+        mdatOffset: boxes[2].size
+      });
+    }
   }
 });
 
 test('can be reused for multiple TS segments', function() {
   var
-    videoSegments = [],
-    audioSegments = [],
+    segments = [],
     sequenceNumber = window.Infinity,
     i, boxes, mfhd;
 
   transmuxer.on('data', function(segment) {
-    if (segment.type === 'video') {
-      videoSegments.push(muxjs.inspectMp4(segment.data));
-    } else if (segment.type === 'audio') {
-      audioSegments.push(muxjs.inspectMp4(segment.data));
+    if (segment.type === 'combined') {
+      segments.push(muxjs.inspectMp4(segment.data));
     }
   });
   transmuxer.push(window.testSegment);
@@ -1532,44 +1584,37 @@ test('can be reused for multiple TS segments', function() {
   transmuxer.push(window.testSegment);
   transmuxer.flush();
 
-  equal(videoSegments.length, 2, 'generated two video segments');
-  equal(audioSegments.length, 2, 'generated two audio segments');
-  deepEqual(videoSegments[0][0],
-            videoSegments[1][0],
-            'generated identical video ftyps');
-  deepEqual(videoSegments[0][1],
-            videoSegments[1][1],
-            'generated identical video moovs');
-  deepEqual(videoSegments[0][2].boxes[1],
-            videoSegments[1][2].boxes[1],
+  equal(segments.length, 2, 'generated two combined segments');
+  deepEqual(segments[0][0],
+            segments[1][0],
+            'generated identical ftyps');
+  deepEqual(segments[0][1],
+            segments[1][1],
+            'generated identical moovs');
+  deepEqual(segments[0][2].boxes[1],
+            segments[1][2].boxes[1],
             'generated identical video trafs');
-  equal(videoSegments[0][2].boxes[0].sequenceNumber,
+  equal(segments[0][2].boxes[0].sequenceNumber,
         0,
         'set the correct video sequence number');
-  equal(videoSegments[1][2].boxes[0].sequenceNumber,
+  equal(segments[1][2].boxes[0].sequenceNumber,
         1,
         'set the correct video sequence number');
-  deepEqual(videoSegments[0][3],
-            videoSegments[1][3],
+  deepEqual(segments[0][3],
+            segments[1][3],
             'generated identical video mdats');
 
-  deepEqual(audioSegments[0][0],
-            audioSegments[1][0],
-            'generated identical audio ftyps');
-  deepEqual(audioSegments[0][1],
-            audioSegments[1][1],
-            'generated identical audio moovs');
-  deepEqual(audioSegments[0][2].boxes[1],
-            audioSegments[1][2].boxes[1],
+  deepEqual(segments[0][4].boxes[3],
+            segments[1][4].boxes[3],
             'generated identical audio trafs');
-  equal(audioSegments[0][2].boxes[0].sequenceNumber,
+  equal(segments[0][4].boxes[0].sequenceNumber,
         0,
-        'set the correct audio sequence number');
-  equal(audioSegments[1][2].boxes[0].sequenceNumber,
+        'set the correct video sequence number');
+  equal(segments[1][4].boxes[0].sequenceNumber,
         1,
-        'set the correct audio sequence number');
-  deepEqual(audioSegments[0][3],
-            audioSegments[1][3],
+        'set the correct video sequence number');
+  deepEqual(segments[0][5],
+            segments[1][5],
             'generated identical audio mdats');
 });
 
