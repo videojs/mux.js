@@ -21,7 +21,9 @@ module.exports = function(config) {
       '../lib/mp4-inspector.js',
       '../lib/transmuxer.js',
       '../lib/metadata-stream.js',
+      '../lib/caption-stream.js',
 
+      'sintel-captions.js',
       'test-segment.js',
       'id3-generator.js',
 
@@ -29,7 +31,8 @@ module.exports = function(config) {
       'mp4-generator-test.js',
       'mp4-inspector-test.js',
       'transmuxer-test.js',
-      'metadata-stream-test.js'
+      'metadata-stream-test.js',
+      'caption-stream-test.js'
     ],
 
 

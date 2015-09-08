@@ -3,7 +3,7 @@
     FlvTag = muxjs.FlvTag,
     H264Stream = muxjs.H264Stream,
     AacStream = muxjs.AacStream,
-    MetadataStream = muxjs.mp2t.MetadataStream,
+    MetadataStream = muxjs.MetadataStream,
     MP2T_PACKET_LENGTH,
     STREAM_TYPES;
 
@@ -489,6 +489,7 @@
   };
 
   // forward compatibility
+  muxjs.mp2t = muxjs.mp2t || {};
   muxjs.mp2t.H264_STREAM_TYPE = STREAM_TYPES.h264;
   muxjs.mp2t.ADTS_STREAM_TYPE = STREAM_TYPES.adts;
   muxjs.mp2t.METADATA_STREAM_TYPE = STREAM_TYPES.metadata;
