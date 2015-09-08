@@ -132,16 +132,16 @@
           'translated non-standard characters');
   });
 
-  test('pop-on display mode', function() {
+  test('pop-on mode', function() {
     var packets, captions;
     packets = [
        // RCL, resume caption loading
       { ccData: 0x1420 },
       // 'hi'
       { ccData: ('h'.charCodeAt(0) << 8) | 'i'.charCodeAt(0) },
-      // EOC, End of Caption
+      // EOC, End of Caption. Finished transmitting, begin display
       { pts: 1000, ccData: 0x142f },
-      // EOC, End of Caption, clear the display
+      // EOC, End of Caption. End display
       { pts: 10 * 1000, ccData: 0x142f }
     ];
     captions = [];
@@ -162,6 +162,86 @@
       text: 'hi'
     }, 'parsed the caption');
   });
+
+  test('recognizes the Erase Displayed Memory command', function() {
+    var packets, captions;
+    packets = [
+       // RCL, resume caption loading
+      { ccData: 0x1420 },
+      // '01'
+      { ccData: ('0'.charCodeAt(0) << 8) | '1'.charCodeAt(0) },
+      // EOC, End of Caption. Finished transmitting, display '01'
+      { pts: 1 * 1000, ccData: 0x142f },
+      // EDM, Erase Displayed Memory
+      { pts: 1.5 * 1000, ccData: 0x142c },
+      // '23'
+      { ccData: ('2'.charCodeAt(0) << 8) | '3'.charCodeAt(0) },
+      // EOC, End of Caption. Display '23'
+      { pts: 2 * 1000, ccData: 0x142f },
+      // '34'
+      { ccData: ('3'.charCodeAt(0) << 8) | '4'.charCodeAt(0) },
+      // EOC, End of Caption. Display '34'
+      { pts: 3 * 1000, ccData: 0x142f },
+      // EOC, End of Caption
+      { pts: 4 * 1000, ccData: 0x142f }
+    ];
+    captions = [];
+
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    packets.forEach(function(packet) {
+      cea608Stream.push(packet);
+    });
+    equal(captions.length, 3, 'detected three captions');
+    deepEqual(captions[0], {
+      startPts: 1 * 1000,
+      endPts: 1.5 * 1000,
+      text: '01'
+    }, 'parsed the first caption');
+    deepEqual(captions[1], {
+      startPts: 2 * 1000,
+      endPts: 3 * 1000,
+      text: '23'
+    }, 'parsed the second caption');
+    deepEqual(captions[2], {
+      startPts: 3 * 1000,
+      endPts: 4 * 1000,
+      text: '34'
+    }, 'parsed the third caption');
+  });
+
+  test('recognizes the Erase Non-Displayed Memory command', function() {
+    var packets, captions;
+    packets = [
+       // RCL, resume caption loading
+      { ccData: 0x1420 },
+      // '01'
+      { ccData: ('0'.charCodeAt(0) << 8) | '1'.charCodeAt(0) },
+      // ENM, Erase Non-Displayed Memory
+      { ccData: 0x142e },
+      { ccData: ('2'.charCodeAt(0) << 8) | '3'.charCodeAt(0) },
+      // EOC, End of Caption. Finished transmitting, display '23'
+      { pts: 1 * 1000, ccData: 0x142f },
+      // EOC, End of Caption
+      { pts: 2 * 1000, ccData: 0x142f }
+    ];
+    captions = [];
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    packets.forEach(function(packet) {
+      cea608Stream.push(packet);
+    });
+    equal(captions.length, 1, 'detected one caption');
+    deepEqual(captions[0], {
+      startPts: 1 * 1000,
+      endPts: 2 * 1000,
+      text: '23'
+    }, 'cleared the non-displayed memory');
+  })
 
   QUnit.skip('applies preamble address codes', function() {
     ok(false, 'not implemented')
