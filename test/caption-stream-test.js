@@ -241,7 +241,32 @@
       endPts: 2 * 1000,
       text: '23'
     }, 'cleared the non-displayed memory');
-  })
+  });
+
+  test('ignores unrecognized commands', function() {
+    var packets, captions;
+    packets = [
+       // RCL, resume caption loading
+      { ccData: 0x1420 },
+      // a row-9 indent 28 underline, which is not supported
+      { ccData: 0x1f7f },
+      // '01'
+      { ccData: ('0'.charCodeAt(0) << 8) | '1'.charCodeAt(0) },
+      // EOC, End of Caption
+      { pts: 1 * 1000, ccData: 0x142f },
+      // EOC, End of Caption
+      { pts: 2 * 1000, ccData: 0x142f }
+    ];
+    captions = [];
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    packets.forEach(function(packet) {
+      cea608Stream.push(packet);
+    });
+    equal(captions[0].text, '01', 'skipped the unrecognized commands');
+  });
 
   QUnit.skip('applies preamble address codes', function() {
     ok(false, 'not implemented')
