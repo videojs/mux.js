@@ -125,11 +125,14 @@ test('parses generic packet properties', function() {
     packet = data;
   });
 
+  transportParseStream.push(packetize(PAT));
+  transportParseStream.push(packetize(generatePMT({})));
   transportParseStream.push(new Uint8Array([
     0x47, // sync byte
     // tei:0 pusi:1 tp:0 pid:0 0000 0000 0001 tsc:01 afc:10 cc:11 padding: 00
     0x40, 0x01, 0x6c
   ]));
+
   ok(packet.payloadUnitStartIndicator, 'parsed payload_unit_start_indicator');
   ok(packet.pid, 'parsed PID');
 });
@@ -140,6 +143,8 @@ test('parses piped data events', function() {
     packet = data;
   });
 
+  transportParseStream.push(packetize(PAT));
+  transportParseStream.push(packetize(generatePMT({})));
   transportParseStream.push(new Uint8Array([
     0x47, // sync byte
     // tei:0 pusi:1 tp:0 pid:0 0000 0000 0001 tsc:01 afc:10 cc:11 padding: 00
@@ -1175,6 +1180,96 @@ test('infers sample durations from DTS values', function() {
   equal(samples[0].duration, 1, 'set the first sample duration');
   equal(samples[1].duration, 2, 'set the second sample duration');
   equal(samples[2].duration, 2, 'inferred the final sample duration');
+});
+
+test('track values from seq_parameter_set_rbsp should be cleared by a flush', function() {
+  var track;
+  videoSegmentStream.on('data', function(data) {
+    track = data.track;
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0xFF]),
+    nalUnitType: 'seq_parameter_set_rbsp',
+    config: {
+      width: 123,
+      height: 321,
+      profileIdc: 1,
+      levelIdc: 2,
+      profileCompatibility: 3
+    },
+    dts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x88]),
+    nalUnitType: 'seq_parameter_set_rbsp',
+    config: {
+      width: 1234,
+      height: 4321,
+      profileIdc: 4,
+      levelIdc: 5,
+      profileCompatibility: 6
+    },
+    dts: 1
+  });
+  videoSegmentStream.flush();
+
+  equal(track.width, 123, 'width is set by first SPS');
+  equal(track.height, 321, 'height is set by first SPS');
+  equal(track.sps[0][0], 0xFF, 'first sps is 0xFF');
+  equal(track.profileIdc, 1, 'profileIdc is set by first SPS');
+  equal(track.levelIdc, 2, 'levelIdc is set by first SPS');
+  equal(track.profileCompatibility, 3, 'profileCompatibility is set by first SPS');
+
+  videoSegmentStream.push({
+    data: new Uint8Array([0x99]),
+    nalUnitType: 'seq_parameter_set_rbsp',
+    config: {
+      width: 300,
+      height: 200,
+      profileIdc: 11,
+      levelIdc: 12,
+      profileCompatibility: 13
+    },
+    dts: 1
+  });
+  videoSegmentStream.flush();
+
+  equal(track.width, 300, 'width is set by first SPS after flush');
+  equal(track.height, 200, 'height is set by first SPS after flush');
+  equal(track.sps.length, 1, 'there is one sps');
+  equal(track.sps[0][0], 0x99, 'first sps is 0x99');
+  equal(track.profileIdc, 11, 'profileIdc is set by first SPS after flush');
+  equal(track.levelIdc, 12, 'levelIdc is set by first SPS after flush');
+  equal(track.profileCompatibility, 13, 'profileCompatibility is set by first SPS after flush');
+});
+
+test('track pps from pic_parameter_set_rbsp should be cleared by a flush', function() {
+  var track;
+  videoSegmentStream.on('data', function(data) {
+    track = data.track;
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x01]),
+    nalUnitType: 'pic_parameter_set_rbsp',
+    dts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x02]),
+    nalUnitType: 'pic_parameter_set_rbsp',
+    dts: 1
+  });
+  videoSegmentStream.flush();
+
+  equal(track.pps[0][0], 0x01, 'first pps is 0x01');
+
+  videoSegmentStream.push({
+    data: new Uint8Array([0x03]),
+    nalUnitType: 'pic_parameter_set_rbsp',
+    dts: 1
+  });
+  videoSegmentStream.flush();
+
+  equal(track.pps[0][0], 0x03, 'first pps is 0x03 after a flush');
 });
 
 test('calculates compositionTimeOffset values from the PTS and DTS', function() {
