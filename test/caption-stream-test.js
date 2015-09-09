@@ -75,8 +75,10 @@
     var transmuxer = new muxjs.mp2t.Transmuxer(),
         captions = [];
 
-    transmuxer.captionStream.on('data', function(caption) {
-      captions.push(caption);
+    transmuxer.on('data', function(data) {
+      if (data.captions) {
+        captions = captions.concat(data.captions);
+      }
     });
 
     transmuxer.push(window.sintelCaptions);
@@ -85,6 +87,8 @@
     equal(captions.length, 2, 'parsed two captions');
     equal(captions[0].text.indexOf('ASUKA'), 0, 'parsed the start of the first caption');
     ok(captions[0].text.indexOf('Japanese') > 0, 'parsed the end of the first caption');
+    equal(captions[0].startTime, 1, 'parsed the start time');
+    equal(captions[0].endTime, 4, 'parsed the end time');
   });
 
   var cea608Stream;
