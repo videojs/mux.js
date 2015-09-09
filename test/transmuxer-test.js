@@ -125,11 +125,14 @@ test('parses generic packet properties', function() {
     packet = data;
   });
 
+  transportParseStream.push(packetize(PAT));
+  transportParseStream.push(packetize(generatePMT({})));
   transportParseStream.push(new Uint8Array([
     0x47, // sync byte
     // tei:0 pusi:1 tp:0 pid:0 0000 0000 0001 tsc:01 afc:10 cc:11 padding: 00
     0x40, 0x01, 0x6c
   ]));
+
   ok(packet.payloadUnitStartIndicator, 'parsed payload_unit_start_indicator');
   ok(packet.pid, 'parsed PID');
 });
@@ -140,6 +143,8 @@ test('parses piped data events', function() {
     packet = data;
   });
 
+  transportParseStream.push(packetize(PAT));
+  transportParseStream.push(packetize(generatePMT({})));
   transportParseStream.push(new Uint8Array([
     0x47, // sync byte
     // tei:0 pusi:1 tp:0 pid:0 0000 0000 0001 tsc:01 afc:10 cc:11 padding: 00
