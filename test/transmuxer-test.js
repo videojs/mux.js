@@ -1311,7 +1311,7 @@ test('calculates baseMediaDecodeTime values from the first DTS ever seen and sub
     segment = data.boxes;
   });
 
-  videoSegmentStream.track.timelineStartDTS = 10;
+  videoSegmentStream.track.timelineStartDts = 10;
 
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
