@@ -41,8 +41,7 @@
             you can create a working MP4 like this:
             <pre>
 ffmpeg -i movie.ts -vn -codec copy -absf aac_adtstoasc movie-audio.mp4
-mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.m4s
-            </pre>
+mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.m4s</pre>
           <small>Looking for the <a href="legacy.html">FLV tool</a>?</small>
         </header>
         <section>
@@ -180,6 +179,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
       window.vjsBuffer = buffer;
     };
 
+    video.controls = true;
     window.vjsVideo = video;
     window.vjsMediaSource = mediaSource;
 
