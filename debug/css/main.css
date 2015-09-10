@@ -160,6 +160,16 @@ nav a:hover {
 section {
   clear: both;
 }
+fieldset {
+  margin: 4px;
+}
+input[disabled] {
+  color: #666;
+  background-color: #ddd;
+}
+#codecs {
+  min-width: 300px;
+}
 
 #video-place {
   margin-top: 20px;

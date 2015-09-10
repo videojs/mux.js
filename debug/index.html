@@ -67,12 +67,16 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
                 <input type="file" id="working">
               </label>
             </fieldset>
+            <label>
+              Codecs:
+              <input id="codecs" type="text" value="avc1.64001f,mp4a.40.5">
+            </label>
           </form>
         </section>
         <section id="video-place">
         </section>
         <section>
-          <h2>Comparision</h2>
+          <h2>Comparison</h2>
           <div id="comparison">
             A diff of the structure of the two MP4s will appear here
             once you've specified an input TS file and a known working
@@ -129,7 +133,8 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
 
         video = document.createElement('video'),
         mediaSource = new MediaSource(),
-        logevent;
+        logevent,
+        prepareSourceBuffer;
 
         document.querySelector('#video-place').appendChild(video);
 
@@ -159,16 +164,25 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
       comparison.innerHTML = diff;
     };
 
-    mediaSource.addEventListener('sourceopen', function() {
-      var buffer = mediaSource.addSourceBuffer('video/mp4;codecs="avc1.4d401f,mp4a.40.2"');
+    prepareSourceBuffer = function() {
+      var buffer, codecs;
+      if (window.vjsBuffer) {
+        return;
+      }
 
+      codecs = document.querySelector('#codecs');
+      codecs.disabled = 'true'
+
+      buffer = mediaSource.addSourceBuffer('video/mp4;codecs="' + codecs.value + '"');
       buffer.addEventListener('updatestart', logevent);
       buffer.addEventListener('updateend', logevent);
       buffer.addEventListener('error', logevent);
-      window.vjsMediaSource = mediaSource;
       window.vjsBuffer = buffer;
-      window.vjsVideo = video;
-    });
+    };
+
+    window.vjsVideo = video;
+    window.vjsMediaSource = mediaSource;
+
     mediaSource.addEventListener('error', logevent);
     mediaSource.addEventListener('opened', logevent);
     mediaSource.addEventListener('closed', logevent);
@@ -196,6 +210,8 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
             bytes,
             i, j;
 
+        prepareSourceBuffer();
+
         // transmux the MPEG-TS data to BMFF segments
         transmuxer.on('data', function(segment) {
           remuxedSegments.push(segment);
@@ -218,12 +234,11 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
 
         if (document.querySelector('#original-active').checked) {
           window.vjsBuffer.appendBuffer(bytes);
+          video.play();
         }
 
         // clear old box info
         vjsBoxes.innerHTML = muxjs.textifyMp4(vjsParsed, null, ' ');
-
-        video.play();
       });
 
       reader.readAsArrayBuffer(this.files[0]);
@@ -234,6 +249,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
       reader.addEventListener('loadend', function() {
         var bytes = new Uint8Array(reader.result);
 
+        prepareSourceBuffer();
 
         workingBytes = bytes;
         workingParsed = muxjs.inspectMp4(bytes);
@@ -245,6 +261,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
 
         if (document.querySelector('#working-active').checked) {
           window.vjsBuffer.appendBuffer(bytes);
+          video.play();
         }
       });
       reader.readAsArrayBuffer(this.files[0]);
