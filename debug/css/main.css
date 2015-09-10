@@ -161,8 +161,19 @@ section {
   clear: both;
 }
 
-form label {
-  display: block;
+#video-place {
+  margin-top: 20px;
+}
+#video-place.error video {
+  background-color: #ddd;
+  box-shadow: red 0 0 10px 3px;
+}
+
+video {
+  background-color: #000;
+  width: 100%;
+  max-width: 800px;
+  max-height: 450px;
 }
 
 .result-wrapper {
