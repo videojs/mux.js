@@ -160,9 +160,30 @@ nav a:hover {
 section {
   clear: both;
 }
+fieldset {
+  margin: 4px;
+}
+input[disabled] {
+  color: #666;
+  background-color: #ddd;
+}
+#codecs {
+  min-width: 300px;
+}
 
-form label {
-  display: block;
+#video-place {
+  margin-top: 20px;
+}
+#video-place.error video {
+  background-color: #ddd;
+  box-shadow: red 0 0 10px 3px;
+}
+
+video {
+  background-color: #000;
+  width: 100%;
+  max-width: 800px;
+  max-height: 450px;
 }
 
 .result-wrapper {
