@@ -216,6 +216,48 @@
     }, 'parsed the third caption');
   });
 
+  test('backspaces are applied to non-displayed memory', function() {
+    var captions = [];
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    // RCL, resume caption loading
+    cea608Stream.push({ ccData: 0x1420 });
+    // '01'
+    cea608Stream.push({
+      ccData: ('0'.charCodeAt(0) << 8) | '1'.charCodeAt(0)
+    });
+    // backspace
+    cea608Stream.push({ ccData: 0x1421 });
+    cea608Stream.push({
+      ccData: ('2'.charCodeAt(0) << 8) | '3'.charCodeAt(0)
+    });
+    // EOC, End of Caption
+    cea608Stream.push({ pts: 1 * 1000, ccData: 0x142f });
+    // EOC, End of Caption
+    cea608Stream.push({ pts: 3 * 1000, ccData: 0x142f });
+
+    equal(captions.length, 1, 'detected a caption');
+    equal(captions[0].text, '023', 'applied the backspace');
+  });
+
+  test('backspaces on cleared memory are no-ops', function() {
+    var captions = [];
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    // RCL, resume caption loading
+    cea608Stream.push({ ccData: 0x1420 });
+    // backspace
+    cea608Stream.push({ ccData: 0x1421 });
+    // EOC, End of Caption. Finished transmitting, display '01'
+    cea608Stream.push({ pts: 1 * 1000, ccData: 0x142f });
+
+    equal(captions.length, 0, 'no captions detected');
+  });
+
   test('recognizes the Erase Non-Displayed Memory command', function() {
     var packets, captions;
     packets = [
@@ -434,6 +476,80 @@
     // RU3, roll-up captions 3 rows
     cea608Stream.push({ ccdata: 0x1426 });
     equal(captions.length, 0, 'cleared the caption');
+  });
+
+  test('backspaces are reflected in the generated captions', function() {
+    var captions = [];
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    // RU2, roll-up captions 2 rows
+    cea608Stream.push({ ccData: 0x1425 });
+    // '01'
+    cea608Stream.push({
+      pts: 0 * 1000,
+      ccData: ('0'.charCodeAt(0) << 8) | '1'.charCodeAt(0)
+    });
+    // backspace
+    cea608Stream.push({ ccData: 0x1421 });
+    cea608Stream.push({
+      pts: 1 * 1000,
+      ccData: ('2'.charCodeAt(0) << 8) | '3'.charCodeAt(0)
+    });
+    // CR, carriage return
+    cea608Stream.push({ pts: 1 * 1000, ccData: 0x142d });
+
+    equal(captions.length, 1, 'detected a caption');
+    equal(captions[0].text, '023', 'applied the backspace');
+  });
+
+  test('backspaces can remove a caption entirely', function() {
+    var captions = [];
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    // RU2, roll-up captions 2 rows
+    cea608Stream.push({ ccData: 0x1425 });
+    // '01'
+    cea608Stream.push({
+      pts: 0 * 1000,
+      ccData: ('0'.charCodeAt(0) << 8) | '1'.charCodeAt(0)
+    });
+    // backspace
+    cea608Stream.push({ ccData: 0x1421 });
+    // backspace
+    cea608Stream.push({ ccData: 0x1421 });
+    // CR, carriage return
+    cea608Stream.push({ pts: 1 * 1000, ccData: 0x142d });
+
+    equal(captions.length, 0, 'no caption emitted');
+  });
+
+  test('backspaces stop at the beginning of the line', function() {
+    var captions = [];
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    // RU2, roll-up captions 2 rows
+    cea608Stream.push({ ccData: 0x1425 });
+    // '01'
+    cea608Stream.push({
+      pts: 0 * 1000,
+      ccData: ('0'.charCodeAt(0) << 8) | '1'.charCodeAt(0)
+    });
+    // backspace
+    cea608Stream.push({ ccData: 0x1421 });
+    // backspace
+    cea608Stream.push({ ccData: 0x1421 });
+    // backspace
+    cea608Stream.push({ ccData: 0x1421 });
+    // CR, carriage return
+    cea608Stream.push({ pts: 1 * 1000, ccData: 0x142d });
+
+    equal(captions.length, 0, 'no caption emitted');
   });
 
   QUnit.skip('paint-on display mode', function() {
