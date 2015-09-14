@@ -1408,6 +1408,102 @@ test('parses across packets', function() {
             'extracted the second AAC frame');
 });
 
+module('Transmuxer - options');
+
+test('no options creates combined output', function() {
+  var
+    segments = [],
+    boxes,
+    transmuxer = new Transmuxer();
+
+  transmuxer.on('data', function(segment) {
+    segments.push(segment);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true,
+    hasAudio: true
+  })));
+
+  transmuxer.push(packetize(audioPes([
+    0x19, 0x47
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+    0x07, // seq_parameter_set_rbsp
+    0x27, 0x42, 0xe0, 0x0b,
+    0xa9, 0x18, 0x60, 0x9d,
+    0x80, 0x53, 0x06, 0x01,
+    0x06, 0xb6, 0xc2, 0xb5,
+    0xef, 0x7c, 0x04
+  ], false)));
+  transmuxer.flush();
+
+  equal(segments.length, 1, 'generated a combined video and audio segment');
+  equal(segments[0].type, 'combined', 'combined is the segment type');
+
+  boxes = muxjs.inspectMp4(segments[0].data);
+  equal(boxes.length, 6, 'generated 6 top-level boxes');
+  equal('ftyp', boxes[0].type, 'generated an ftyp box');
+  equal('moov', boxes[1].type, 'generated a single moov box');
+  equal('moof', boxes[2].type, 'generated a first moof box');
+  equal('mdat', boxes[3].type, 'generated a first mdat box');
+  equal('moof', boxes[4].type, 'generated a second moof box');
+  equal('mdat', boxes[5].type, 'generated a second mdat box');
+});
+
+test('can specify that we want to generate separate audio and video segments', function() {
+  var
+    segments = [],
+    boxes,
+    transmuxer = new Transmuxer({remux: false});
+
+  transmuxer.on('data', function(segment) {
+    segments.push(segment);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true,
+    hasAudio: true
+  })));
+
+  transmuxer.push(packetize(audioPes([
+    0x19, 0x47
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+    0x07, // seq_parameter_set_rbsp
+    0x27, 0x42, 0xe0, 0x0b,
+    0xa9, 0x18, 0x60, 0x9d,
+    0x80, 0x53, 0x06, 0x01,
+    0x06, 0xb6, 0xc2, 0xb5,
+    0xef, 0x7c, 0x04
+  ], false)));
+  transmuxer.flush();
+
+  equal(segments.length, 2, 'generated a video and an audio segment');
+  equal(segments[0].type, 'video', 'video is the first segment type');
+  equal(segments[1].type, 'audio', 'audio is the second segment type');
+
+  boxes = muxjs.inspectMp4(segments[0].data);
+  equal(boxes.length, 4, 'generated 4 top-level boxes');
+  equal('ftyp', boxes[0].type, 'generated an ftyp box');
+  equal('moov', boxes[1].type, 'generated a moov box');
+  equal('moof', boxes[2].type, 'generated a moof box');
+  equal('mdat', boxes[3].type, 'generated a mdat box');
+
+  boxes = muxjs.inspectMp4(segments[1].data);
+  equal(boxes.length, 4, 'generated 4 top-level boxes');
+  equal('ftyp', boxes[0].type, 'generated an ftyp box');
+  equal('moov', boxes[1].type, 'generated a moov box');
+  equal('moof', boxes[2].type, 'generated a moof box');
+  equal('mdat', boxes[3].type, 'generated a mdat box');
+});
+
 // not handled: ADTS with CRC
 // ADTS with payload broken across push events
 
