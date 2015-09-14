@@ -276,8 +276,164 @@
     ok(false, 'not implemented')
   });
 
-  QUnit.skip('roll-up display mode', function() {
-    ok(false, 'not implemented');
+  test('roll-up display mode', function() {
+    var captions = [];
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    // RU2, roll-up captions 2 rows
+    cea608Stream.push({ ccData: 0x1425 });
+    // '01'
+    cea608Stream.push({
+      pts: 1 * 1000,
+      ccData: ('0'.charCodeAt(0) << 8) | '1'.charCodeAt(0)
+    });
+    // CR, carriage return
+    cea608Stream.push({ pts: 3 * 1000, ccData: 0x142d });
+
+    equal(captions.length, 1, 'detected one caption');
+    deepEqual(captions[0], {
+      startPts: 1 * 1000,
+      endPts: 3 * 1000,
+      text: '01'
+    }, 'parsed the caption')
+    captions = [];
+
+    // RU4, roll-up captions 4 rows
+    cea608Stream.push({ ccdata: 0x1427 });
+    // '23'
+    cea608Stream.push({
+      pts: 4 * 1000,
+      ccData: ('2'.charCodeAt(0) << 8) | '3'.charCodeAt(0)
+    });
+    // CR
+    cea608Stream.push({ pts: 5 * 1000, ccData: 0x142d });
+    equal(captions.length, 3, 'detected another caption');
+    deepEqual(captions[0], {
+      startPts: 3 * 1000,
+      endPts: 4 * 1000,
+      text: '01'
+    }, 'displayed the caption after the carriage return');
+    deepEqual(captions[1], {
+      startPts: 4 * 1000,
+      endPts: 5 * 1000,
+      text: '01'
+    }, 'kept the caption up after the new caption');
+    deepEqual(captions[2], {
+      startPts: 4 * 1000,
+      endPts: 5 * 1000,
+      text: '23'
+    }, 'parsed the new caption');
+  });
+
+  test('roll-up displays multiple rows simultaneously', function() {
+    var captions = [];
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    // RU2, roll-up captions 2 rows
+    cea608Stream.push({ ccData: 0x1425 });
+    // '01'
+    cea608Stream.push({
+      pts: 0 * 1000,
+      ccData: ('0'.charCodeAt(0) << 8) | '1'.charCodeAt(0)
+    });
+    // CR, carriage return
+    cea608Stream.push({ pts: 1 * 1000, ccData: 0x142d });
+    equal(captions.length, 1, 'detected a caption');
+    deepEqual(captions[0], {
+      startPts: 0 * 1000,
+      endPts: 1 * 1000,
+      text: '01'
+    }, 'created a caption for the first period');
+    captions = [];
+
+    // '23'
+    cea608Stream.push({
+      pts: 2 * 1000,
+      ccData: ('2'.charCodeAt(0) << 8) | '3'.charCodeAt(0)
+    });
+    // CR, carriage return
+    cea608Stream.push({ pts: 3 * 1000, ccData: 0x142d });
+    equal(captions.length, 3, 'detected three captions');
+    deepEqual(captions[0], {
+      startPts: 1 * 1000,
+      endPts: 2 * 1000,
+      text: '01'
+    }, 'created the top row for the second period');
+    deepEqual(captions[1], {
+      startPts: 2 * 1000,
+      endPts: 3 * 1000,
+      text: '01'
+    }, 'created the top row after the shift up');
+    deepEqual(captions[2], {
+      startPts: 2 * 1000,
+      endPts: 3 * 1000,
+      text: '23'
+    }, 'created the bottom row for the second period');
+    captions = [];
+
+    // '45'
+    cea608Stream.push({
+      pts: 4 * 1000,
+      ccData: ('4'.charCodeAt(0) << 8) | '5'.charCodeAt(0)
+    });
+    // CR, carriage return
+    cea608Stream.push({ pts: 5 * 1000, ccData: 0x142d });
+    equal(captions.length, 3, 'detected three captions');
+    deepEqual(captions[0], {
+      startPts: 3 * 1000,
+      endPts: 4 * 1000,
+      text: '23'
+    }, 'created the top row for the third period');
+    deepEqual(captions[1], {
+      startPts: 4 * 1000,
+      endPts: 5 * 1000,
+      text: '23'
+    }, 'created the top row after the shift up');
+    deepEqual(captions[2], {
+      startPts: 4 * 1000,
+      endPts: 5 * 1000,
+      text: '45'
+    }, 'created the bottom row for the third period');
+  });
+
+  test('the roll-up count can be changed on-the-fly', function() {
+    var captions = [];
+    cea608Stream.on('data', function(caption) {
+      captions.push(caption);
+    });
+
+    // RU2, roll-up captions 2 rows
+    cea608Stream.push({ ccData: 0x1425 });
+    // '01'
+    cea608Stream.push({
+      pts: 0 * 1000,
+      ccData: ('0'.charCodeAt(0) << 8) | '1'.charCodeAt(0)
+    });
+    // CR, carriage return
+    cea608Stream.push({ pts: 1 * 1000, ccData: 0x142d });
+    captions = [];
+
+    // RU3, roll-up captions 3 rows
+    cea608Stream.push({ ccData: 0x1426 });
+    // CR, carriage return
+    cea608Stream.push({ pts: 2 * 1000, ccData: 0x142d });
+    equal(captions.length, 1, 'still displaying a caption');
+    captions = [];
+
+    // RU4, roll-up captions 4 rows
+    cea608Stream.push({ ccData: 0x1427 });
+    // CR, carriage return
+    cea608Stream.push({ pts: 3 * 1000, ccData: 0x142d });
+    equal(captions.length, 1, 'still displaying a caption');
+    captions = [];
+
+    // RU3, roll-up captions 3 rows
+    cea608Stream.push({ ccdata: 0x1426 });
+    equal(captions.length, 0, 'cleared the caption');
   });
 
   QUnit.skip('paint-on display mode', function() {
