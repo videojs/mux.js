@@ -46,38 +46,55 @@ test('empty input does not error', function() {
   ok(true, 'did not throw');
 });
 test('parses a generic packet', function() {
-  var datas = [];
+  var
+    datas = [],
+    packet = new Uint8Array(188);
+
+  packet[0] = 0x47; // Sync-byte
+
   transportPacketStream.on('data', function(event) {
     datas.push(event);
   });
-  transportPacketStream.push(new Uint8Array(188));
+  transportPacketStream.push(packet);
 
   equal(1, datas.length, 'fired one event');
   equal(datas[0].byteLength, 188, 'delivered the packet');
 });
 
 test('buffers partial packets', function() {
-  var datas = [];
+  var
+    datas = [],
+    partialPacket1 = new Uint8Array(187),
+    partialPacket2 =  new Uint8Array(189);
+
+  partialPacket1[0] = 0x47; // Sync-byte
+  partialPacket2[1] = 0x47; // Sync-byte
+
   transportPacketStream.on('data', function(event) {
     datas.push(event);
   });
-  transportPacketStream.push(new Uint8Array(187));
+  transportPacketStream.push(partialPacket1);
 
   equal(0, datas.length, 'did not fire an event');
 
-  transportPacketStream.push(new Uint8Array(189));
+  transportPacketStream.push(partialPacket2);
   equal(2, datas.length, 'fired events');
   equal(188, datas[0].byteLength, 'parsed the first packet');
   equal(188, datas[1].byteLength, 'parsed the second packet');
 });
 
 test('parses multiple packets delivered at once', function() {
-  var datas = [];
+  var datas = [], packetStream = new Uint8Array(188 * 3);
+
+  packetStream[0] = 0x47; // Sync-byte
+  packetStream[188] = 0x47; // Sync-byte
+  packetStream[376] = 0x47; // Sync-byte
+
   transportPacketStream.on('data', function(event) {
     datas.push(event);
   });
 
-  transportPacketStream.push(new Uint8Array(188 * 3));
+  transportPacketStream.push(packetStream);
   equal(3, datas.length, 'fired three events');
   equal(188, datas[0].byteLength, 'parsed the first packet');
   equal(188, datas[1].byteLength, 'parsed the second packet');
@@ -85,13 +102,18 @@ test('parses multiple packets delivered at once', function() {
 });
 
 test('buffers extra after multiple packets', function() {
-  var datas = [];
+  var datas = [], packetStream = new Uint8Array(188 * 2 + 10);
+
+  packetStream[0] = 0x47; // Sync-byte
+  packetStream[188] = 0x47; // Sync-byte
+  packetStream[376] = 0x47; // Sync-byte
+
   transportPacketStream.on('data', function(event) {
     datas.push(event);
   });
 
-  transportPacketStream.push(new Uint8Array(188 * 2 + 10));
-  equal(2, datas.length, 'fired two events');
+  transportPacketStream.push(packetStream);
+  equal(2, datas.length, 'fired three events');
   equal(188, datas[0].byteLength, 'parsed the first packet');
   equal(188, datas[1].byteLength, 'parsed the second packet');
 
@@ -107,16 +129,6 @@ module('MP2T TransportParseStream', {
 
     transportPacketStream.pipe(transportParseStream);
   }
-});
-
-test('emits an error on an invalid packet', function() {
-  var errors = [];
-  transportParseStream.on('error', function(error) {
-    errors.push(error);
-  });
-  transportParseStream.push(new Uint8Array(188));
-
-  equal(1, errors.length, 'emitted an error');
 });
 
 test('parses generic packet properties', function() {
@@ -1116,6 +1128,10 @@ module('VideoSegmentStream', {
     var track = {};
     videoSegmentStream = new VideoSegmentStream(track);
     videoSegmentStream.track = track;
+    videoSegmentStream.track.timelineStartInfo = {
+      dts: 10,
+      pts: 10
+    };
   }
 });
 
@@ -1310,8 +1326,6 @@ test('calculates baseMediaDecodeTime values from the first DTS ever seen and sub
   videoSegmentStream.on('data', function(data) {
     segment = data.boxes;
   });
-
-  videoSegmentStream.track.timelineStartDts = 10;
 
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
