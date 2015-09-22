@@ -56,6 +56,7 @@ test('parses a generic packet', function() {
     datas.push(event);
   });
   transportPacketStream.push(packet);
+  transportPacketStream.flush();
 
   equal(1, datas.length, 'fired one event');
   equal(datas[0].byteLength, 188, 'delivered the packet');
@@ -78,6 +79,8 @@ test('buffers partial packets', function() {
   equal(0, datas.length, 'did not fire an event');
 
   transportPacketStream.push(partialPacket2);
+  transportPacketStream.flush();
+
   equal(2, datas.length, 'fired events');
   equal(188, datas[0].byteLength, 'parsed the first packet');
   equal(188, datas[1].byteLength, 'parsed the second packet');
@@ -95,6 +98,8 @@ test('parses multiple packets delivered at once', function() {
   });
 
   transportPacketStream.push(packetStream);
+  transportPacketStream.flush();
+
   equal(3, datas.length, 'fired three events');
   equal(188, datas[0].byteLength, 'parsed the first packet');
   equal(188, datas[1].byteLength, 'parsed the second packet');
@@ -118,6 +123,8 @@ test('buffers extra after multiple packets', function() {
   equal(188, datas[1].byteLength, 'parsed the second packet');
 
   transportPacketStream.push(new Uint8Array(178));
+  transportPacketStream.flush();
+
   equal(3, datas.length, 'fired a final event');
   equal(188, datas[2].length, 'parsed the finel packet');
 });
