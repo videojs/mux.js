@@ -46,56 +46,104 @@ test('empty input does not error', function() {
   ok(true, 'did not throw');
 });
 test('parses a generic packet', function() {
-  var datas = [];
+  var
+    datas = [],
+    packet = new Uint8Array(188);
+
+  packet[0] = 0x47; // Sync-byte
+
   transportPacketStream.on('data', function(event) {
     datas.push(event);
   });
-  transportPacketStream.push(new Uint8Array(188));
+  transportPacketStream.push(packet);
+  transportPacketStream.flush();
 
   equal(1, datas.length, 'fired one event');
   equal(datas[0].byteLength, 188, 'delivered the packet');
 });
 
 test('buffers partial packets', function() {
-  var datas = [];
+  var
+    datas = [],
+    partialPacket1 = new Uint8Array(187),
+    partialPacket2 =  new Uint8Array(189);
+
+  partialPacket1[0] = 0x47; // Sync-byte
+  partialPacket2[1] = 0x47; // Sync-byte
+
   transportPacketStream.on('data', function(event) {
     datas.push(event);
   });
-  transportPacketStream.push(new Uint8Array(187));
+  transportPacketStream.push(partialPacket1);
 
   equal(0, datas.length, 'did not fire an event');
 
-  transportPacketStream.push(new Uint8Array(189));
+  transportPacketStream.push(partialPacket2);
+  transportPacketStream.flush();
+
   equal(2, datas.length, 'fired events');
   equal(188, datas[0].byteLength, 'parsed the first packet');
   equal(188, datas[1].byteLength, 'parsed the second packet');
 });
 
 test('parses multiple packets delivered at once', function() {
-  var datas = [];
+  var datas = [], packetStream = new Uint8Array(188 * 3);
+
+  packetStream[0] = 0x47; // Sync-byte
+  packetStream[188] = 0x47; // Sync-byte
+  packetStream[376] = 0x47; // Sync-byte
+
   transportPacketStream.on('data', function(event) {
     datas.push(event);
   });
 
-  transportPacketStream.push(new Uint8Array(188 * 3));
+  transportPacketStream.push(packetStream);
+  transportPacketStream.flush();
+
   equal(3, datas.length, 'fired three events');
   equal(188, datas[0].byteLength, 'parsed the first packet');
   equal(188, datas[1].byteLength, 'parsed the second packet');
   equal(188, datas[2].byteLength, 'parsed the third packet');
 });
 
-test('buffers extra after multiple packets', function() {
-  var datas = [];
+test('resyncs packets', function() {
+  var datas = [], packetStream = new Uint8Array(188 * 3 - 2);
+
+  packetStream[0] = 0x47; // Sync-byte
+  packetStream[186] = 0x47; // Sync-byte
+  packetStream[374] = 0x47; // Sync-byte
+
   transportPacketStream.on('data', function(event) {
     datas.push(event);
   });
 
-  transportPacketStream.push(new Uint8Array(188 * 2 + 10));
-  equal(2, datas.length, 'fired two events');
+  transportPacketStream.push(packetStream);
+  transportPacketStream.flush();
+
+  equal(datas.length, 2, 'fired three events');
+  equal(datas[0].byteLength, 188, 'parsed the first packet');
+  equal(datas[1].byteLength, 188, 'parsed the second packet');
+});
+
+test('buffers extra after multiple packets', function() {
+  var datas = [], packetStream = new Uint8Array(188 * 2 + 10);
+
+  packetStream[0] = 0x47; // Sync-byte
+  packetStream[188] = 0x47; // Sync-byte
+  packetStream[376] = 0x47; // Sync-byte
+
+  transportPacketStream.on('data', function(event) {
+    datas.push(event);
+  });
+
+  transportPacketStream.push(packetStream);
+  equal(2, datas.length, 'fired three events');
   equal(188, datas[0].byteLength, 'parsed the first packet');
   equal(188, datas[1].byteLength, 'parsed the second packet');
 
   transportPacketStream.push(new Uint8Array(178));
+  transportPacketStream.flush();
+
   equal(3, datas.length, 'fired a final event');
   equal(188, datas[2].length, 'parsed the finel packet');
 });
@@ -107,16 +155,6 @@ module('MP2T TransportParseStream', {
 
     transportPacketStream.pipe(transportParseStream);
   }
-});
-
-test('emits an error on an invalid packet', function() {
-  var errors = [];
-  transportParseStream.on('error', function(error) {
-    errors.push(error);
-  });
-  transportParseStream.push(new Uint8Array(188));
-
-  equal(1, errors.length, 'emitted an error');
 });
 
 test('parses generic packet properties', function() {
@@ -454,9 +492,9 @@ test('parses an elementary stream packet with a pts and dts', function() {
  * @payload first {boolean} - true if this PES should be a payload
  * unit start
  */
-transportPacket = function(pid, data, first) {
+transportPacket = function(pid, data, first, pts) {
   var
-    adaptationFieldLength = 188 - data.length - (first ? 15 : 14),
+    adaptationFieldLength = 188 - data.length - 14 - (first ? 1 : 0) - (pts ? 5 : 0),
     // transport_packet(), Rec. ITU-T H.222.0, Table 2-2
     result = [
       // sync byte
@@ -487,11 +525,19 @@ transportPacket = function(pid, data, first) {
     0x00, 0x00, 0x05,
     // 10 psc:00 pp:0 dai:1 c:0 ooc:0
     0x84,
-    // pdf:00 ef:1 erf:0 dtmf:0 acif:0 pcf:0 pef:0
-    0x20,
+    // pdf:?0 ef:1 erf:0 dtmf:0 acif:0 pcf:0 pef:0
+    0x20 | (pts ? 0x80 : 0x00),
     // phdl:0000 0000
     0x00
   ]);
+  // Only store 15 bits of the PTS for testing purposes
+  if (pts) {
+    result.push(0x21);
+    result.push(0x00);
+    result.push(0x01);
+    result.push((pts & 0x7F80) >>> 7);
+    result.push(((pts & 0x7F) << 1) + 1);
+  }
   if (first) {
     result.push(0x00);
   }
@@ -504,11 +550,11 @@ transportPacket = function(pid, data, first) {
  * @payload first {boolean} - true if this PES should be a payload
  * unit start
  */
-videoPes = function(data, first) {
+videoPes = function(data, first, pts) {
   return transportPacket(0x11, [
     // NAL unit start code
     0x00, 0x00, 0x01
-  ].concat(data), first);
+  ].concat(data), first, pts);
 };
 standalonePes = videoPes([0xaf, 0x01], true);
 
@@ -518,7 +564,7 @@ standalonePes = videoPes([0xaf, 0x01], true);
  * @payload first {boolean} - true if this PES should be a payload
  * unit start
  */
-audioPes = function(data, first) {
+audioPes = function(data, first, pts) {
   var frameLength = data.length + 7;
   return transportPacket(0x12, [
     0xff, 0xf1,                            // no CRC
@@ -527,7 +573,7 @@ audioPes = function(data, first) {
     (frameLength & 0x7f8) >> 3,
     ((frameLength & 0x07) << 5) + 7,       // frame length in bytes
     0x00                                   // one AAC per ADTS frame
-  ].concat(data), first);
+  ].concat(data), first, pts);
 };
 
 timedMetadataPes = function(data) {
@@ -601,11 +647,13 @@ test('parses metadata events from PSI packets', function() {
   deepEqual(metadatas[0].tracks, [{
     id: 1,
     codec: 'avc',
-    type: 'video'
+    type: 'video',
+    timelineStartInfo: {}
   }, {
     id: 2,
     codec: 'adts',
-    type: 'audio'
+    type: 'audio',
+    timelineStartInfo: {}
   }], 'identified two tracks');
 });
 
@@ -1116,6 +1164,10 @@ module('VideoSegmentStream', {
     var track = {};
     videoSegmentStream = new VideoSegmentStream(track);
     videoSegmentStream.track = track;
+    videoSegmentStream.track.timelineStartInfo = {
+      dts: 10,
+      pts: 10
+    };
   }
 });
 
@@ -1311,8 +1363,6 @@ test('calculates baseMediaDecodeTime values from the first DTS ever seen and sub
     segment = data.boxes;
   });
 
-  videoSegmentStream.track.timelineStartDts = 10;
-
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
@@ -1486,8 +1536,8 @@ test('can specify that we want to generate separate audio and video segments', f
   transmuxer.flush();
 
   equal(segments.length, 2, 'generated a video and an audio segment');
-  equal(segments[0].type, 'video', 'video is the first segment type');
-  equal(segments[1].type, 'audio', 'audio is the second segment type');
+  ok(segments[0].type === 'video' || segments[1].type === 'video', 'one segment is video');
+  ok(segments[0].type === 'audio' || segments[1].type === 'audio', 'one segment is audio');
 
   boxes = muxjs.inspectMp4(segments[0].data);
   equal(boxes.length, 4, 'generated 4 top-level boxes');
@@ -1742,14 +1792,8 @@ test('parses an example mp2t file and generates combined media segments', functi
   equal(boxes[1].type, 'moov', 'the second box is a moov');
   equal(boxes[1].boxes[0].type, 'mvhd', 'generated an mvhd');
   validateTrack(boxes[1].boxes[1], {
-    trackId: 256,
-    width: 388,
-    height: 300
+    trackId: 257
   });
-  // validateTrack(boxes[1].boxes[2], {
-  //   trackId: 257
-  // });
-  // equal(boxes[1].boxes[3].type, 'mvex', 'generated an mvex');
 
   for (i = 2; i < boxes.length; i += 2) {
     equal(boxes[i].type, 'moof', 'first box is a moof');
@@ -1759,7 +1803,7 @@ test('parses an example mp2t file and generates combined media segments', functi
     equal(mfhd.type, 'mfhd', 'mfhd is a child of the moof');
 
     equal(boxes[i + 1].type, 'mdat', 'second box is an mdat');
-    if (i === 2) {
+    if (i === 3) {
       validateTrackFragment(boxes[i].boxes[1], segments[0].data, {
         trackId: 256,
         width: 388,
