@@ -106,6 +106,25 @@ test('parses multiple packets delivered at once', function() {
   equal(188, datas[2].byteLength, 'parsed the third packet');
 });
 
+test('resyncs packets', function() {
+  var datas = [], packetStream = new Uint8Array(188 * 3 - 2);
+
+  packetStream[0] = 0x47; // Sync-byte
+  packetStream[186] = 0x47; // Sync-byte
+  packetStream[374] = 0x47; // Sync-byte
+
+  transportPacketStream.on('data', function(event) {
+    datas.push(event);
+  });
+
+  transportPacketStream.push(packetStream);
+  transportPacketStream.flush();
+
+  equal(datas.length, 2, 'fired three events');
+  equal(datas[0].byteLength, 188, 'parsed the first packet');
+  equal(datas[1].byteLength, 188, 'parsed the second packet');
+});
+
 test('buffers extra after multiple packets', function() {
   var datas = [], packetStream = new Uint8Array(188 * 2 + 10);
 
@@ -628,11 +647,13 @@ test('parses metadata events from PSI packets', function() {
   deepEqual(metadatas[0].tracks, [{
     id: 1,
     codec: 'avc',
-    type: 'video'
+    type: 'video',
+    timelineStartInfo: {}
   }, {
     id: 2,
     codec: 'adts',
-    type: 'audio'
+    type: 'audio',
+    timelineStartInfo: {}
   }], 'identified two tracks');
 });
 
