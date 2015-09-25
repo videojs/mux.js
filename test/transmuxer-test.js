@@ -1710,10 +1710,16 @@ validateTrack = function(track, metadata) {
   equal(mdia.boxes[2].type, 'minf', 'wrote the media info');
 };
 
-validateTrackFragment = function(track, segment, metadata) {
+validateTrackFragment = function(track, segment, metadata, type) {
   var tfhd, trun, sdtp, i, j, sample, nalUnitType;
   equal(track.type, 'traf', 'wrote a track fragment');
-  equal(track.boxes.length, 4, 'wrote four track fragment children');
+
+  if (type === 'video') {
+    equal(track.boxes.length, 4, 'wrote four track fragment children');
+  } else if (type === 'audio') {
+    equal(track.boxes.length, 3, 'wrote three track fragment children');
+  }
+
   tfhd = track.boxes[0];
   equal(tfhd.type, 'tfhd', 'wrote a track fragment header');
   equal(tfhd.trackId, metadata.trackId, 'wrote the track id');
@@ -1725,56 +1731,64 @@ validateTrackFragment = function(track, segment, metadata) {
 
   trun = track.boxes[2];
   ok(trun.dataOffset >= 0, 'set data offset');
+
   equal(trun.dataOffset,
         metadata.mdatOffset + 8,
         'trun data offset is the size of the moof');
+
   ok(trun.samples.length > 0, 'generated media samples');
   for (i = 0, j = metadata.baseOffset + trun.dataOffset;
        i < trun.samples.length;
        i++) {
     sample = trun.samples[i];
-    ok(sample.duration > 0, 'wrote a positive duration for sample ' + i);
     ok(sample.size > 0, 'wrote a positive size for sample ' + i);
-    ok(sample.compositionTimeOffset >= 0,
-       'wrote a positive composition time offset for sample ' + i);
-    ok(sample.flags, 'wrote sample flags');
-    equal(sample.flags.isLeading, 0, 'the leading nature is unknown');
+    if (type === 'video') {
+      ok(sample.duration > 0, 'wrote a positive duration for sample ' + i);
+      ok(sample.compositionTimeOffset >= 0,
+         'wrote a positive composition time offset for sample ' + i);
+      ok(sample.flags, 'wrote sample flags');
+      equal(sample.flags.isLeading, 0, 'the leading nature is unknown');
 
-    notEqual(sample.flags.dependsOn, 0, 'sample dependency is not unknown');
-    notEqual(sample.flags.dependsOn, 4, 'sample dependency is valid');
-    nalUnitType = segment[j + 4] & 0x1F;
-    equal(nalUnitType, 9, 'samples begin with an access_unit_delimiter_rbsp');
+      notEqual(sample.flags.dependsOn, 0, 'sample dependency is not unknown');
+      notEqual(sample.flags.dependsOn, 4, 'sample dependency is valid');
+      nalUnitType = segment[j + 4] & 0x1F;
+      equal(nalUnitType, 9, 'samples begin with an access_unit_delimiter_rbsp');
 
-    equal(sample.flags.isDependedOn, 0, 'dependency of other samples is unknown');
-    equal(sample.flags.hasRedundancy, 0, 'sample redundancy is unknown');
-    equal(sample.flags.degradationPriority, 0, 'sample degradation priority is zero');
-
+      equal(sample.flags.isDependedOn, 0, 'dependency of other samples is unknown');
+      equal(sample.flags.hasRedundancy, 0, 'sample redundancy is unknown');
+      equal(sample.flags.degradationPriority, 0, 'sample degradation priority is zero');
+    } else {
+      equal(sample.duration, 1024,
+            'aac sample duration is always 1024');
+    }
     j += sample.size; // advance to the next sample in the mdat
   }
 
-  sdtp = track.boxes[3];
-  equal(trun.samples.length,
-        sdtp.samples.length,
-        'wrote an equal number of trun and sdtp samples');
-  for (i = 0; i < sdtp.samples.length; i++) {
-    sample = sdtp.samples[i];
-    notEqual(sample.dependsOn, 0, 'sample dependency is not unknown');
-    equal(trun.samples[i].flags.dependsOn,
-          sample.dependsOn,
-          'wrote a consistent dependsOn');
-    equal(trun.samples[i].flags.isDependedOn,
-          sample.isDependedOn,
-          'wrote a consistent isDependedOn');
-    equal(trun.samples[i].flags.hasRedundancy,
-          sample.hasRedundancy,
-          'wrote a consistent hasRedundancy');
+  if (type === 'video') {
+    sdtp = track.boxes[3];
+    equal(trun.samples.length,
+          sdtp.samples.length,
+          'wrote an equal number of trun and sdtp samples');
+    for (i = 0; i < sdtp.samples.length; i++) {
+      sample = sdtp.samples[i];
+      notEqual(sample.dependsOn, 0, 'sample dependency is not unknown');
+      equal(trun.samples[i].flags.dependsOn,
+            sample.dependsOn,
+            'wrote a consistent dependsOn');
+      equal(trun.samples[i].flags.isDependedOn,
+            sample.isDependedOn,
+            'wrote a consistent isDependedOn');
+      equal(trun.samples[i].flags.hasRedundancy,
+            sample.hasRedundancy,
+            'wrote a consistent hasRedundancy');
+    }
   }
 };
 
 test('parses an example mp2t file and generates combined media segments', function() {
   var
     segments = [],
-    i, boxes, mfhd;
+    i, j, boxes, mfhd, trackType = 'video', trackId = 256, baseOffset = 0;
 
   transmuxer.on('data', function(segment) {
     if (segment.type === 'combined') {
@@ -1792,6 +1806,9 @@ test('parses an example mp2t file and generates combined media segments', functi
   equal(boxes[1].type, 'moov', 'the second box is a moov');
   equal(boxes[1].boxes[0].type, 'mvhd', 'generated an mvhd');
   validateTrack(boxes[1].boxes[1], {
+    trackId: 256
+  });
+  validateTrack(boxes[1].boxes[2], {
     trackId: 257
   });
 
@@ -1803,14 +1820,23 @@ test('parses an example mp2t file and generates combined media segments', functi
     equal(mfhd.type, 'mfhd', 'mfhd is a child of the moof');
 
     equal(boxes[i + 1].type, 'mdat', 'second box is an mdat');
-    if (i === 3) {
+
+    // Only do even numbered boxes because the odd-offsets will be mdat
+    if (i % 2 === 0) {
+      for (j = 0; j < i; j++) {
+        baseOffset += boxes[j].size;
+      }
+
       validateTrackFragment(boxes[i].boxes[1], segments[0].data, {
-        trackId: 256,
+        trackId: trackId++,
         width: 388,
         height: 300,
-        baseOffset: boxes[0].size + boxes[1].size,
-        mdatOffset: boxes[2].size
-      });
+        baseOffset: baseOffset,
+        mdatOffset: boxes[i].size
+      }, trackType);
+
+      baseOffset = 0;
+      trackType = 'audio';
     }
   }
 });
