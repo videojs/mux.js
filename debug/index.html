@@ -149,6 +149,8 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         diffParsed,
         vjsBytes,
         workingBytes,
+        saveConfig,
+        restoreConfig,
 
         vjsBoxes = document.querySelector('.vjs-boxes'),
         workingBoxes = document.querySelector('.working-boxes'),
@@ -161,6 +163,35 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         logevent = function(event) {
           console.log(event.type);
         };
+
+    saveConfig = function () {
+      var inputs = [].slice.call(document.querySelectorAll('input:not([type=file])'));
+
+      inputs.forEach(function (element) {
+        localStorage.setItem(element.id,
+          JSON.stringify({
+          value: element.value,
+          checked: element.checked,
+          disabled: element.disabled
+        }));
+      });
+    };
+
+    restoreConfig = function () {
+      var inputs = [].slice.call(document.querySelectorAll('input:not([type=file])'));
+
+      inputs.forEach(function (element) {
+        var state;
+
+        state = JSON.parse(localStorage.getItem(element.id));
+        if (state) {
+          element.checked = state.checked;
+          element.value = state.value;
+          element.disabled = state.disabled;
+        }
+      });
+    };
+    document.addEventListener('DOMContentLoaded', restoreConfig);
 
     // output a diff of the two parsed MP4s
     diffParsed = function() {
@@ -297,6 +328,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
 
     working.addEventListener('change', function() {
       var reader = new FileReader();
+
       reader.addEventListener('loadend', function() {
         var bytes = new Uint8Array(reader.result);
 
@@ -322,6 +354,10 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
           .forEach(function (el) {
             el.disabled = this.checked;
           }, this);
+    });
+
+    [].slice.call(document.querySelectorAll('input')).forEach(function(el){
+      el.addEventListener('change', saveConfig);
     });
   </script>
 </body>
