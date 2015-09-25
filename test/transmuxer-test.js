@@ -16,6 +16,8 @@ var
   aacStream,
   Transmuxer = muxjs.mp2t.Transmuxer,
   transmuxer,
+  NalByteStream = muxjs.mp2t.NalByteStream,
+  nalByteStream,
 
   MP2T_PACKET_LENGTH = muxjs.mp2t.MP2T_PACKET_LENGTH,
   H264_STREAM_TYPE = muxjs.mp2t.H264_STREAM_TYPE,
@@ -1425,7 +1427,6 @@ test('generates AAC frame events from ADTS bytes', function() {
 });
 
 test('parses across packets', function() {
-
   var frames = [];
   aacStream.on('data', function(frame) {
     frames.push(frame);
@@ -1455,6 +1456,82 @@ test('parses across packets', function() {
   equal(frames.length, 2, 'parsed two frames');
   deepEqual(new Uint8Array(frames[1].data),
             new Uint8Array([0x9a, 0xbc]),
+            'extracted the second AAC frame');
+});
+
+test('parses frames segmented across packet', function() {
+  var frames = [];
+  aacStream.on('data', function(frame) {
+    frames.push(frame);
+  });
+  aacStream.push({
+    type: 'audio',
+    data: new Uint8Array([
+      0xff, 0xf1,       // no CRC
+      0x10,             // AAC Main, 44.1KHz
+      0xbc, 0x01, 0x20, // 2 channels, frame length 9 bytes
+      0x00,             // one AAC per ADTS frame
+      0x12        // incomplete AAC payload 1
+    ])
+  });
+  aacStream.push({
+    type: 'audio',
+    data: new Uint8Array([
+      0x34,             // remainder of the previous frame's payload
+      0xff, 0xf1,       // no CRC
+      0x10,             // AAC Main, 44.1KHz
+      0xbc, 0x01, 0x20, // 2 channels, frame length 9 bytes
+      0x00,             // one AAC per ADTS frame
+      0x9a, 0xbc,       // AAC payload 2
+      0xde, 0xf0        // extra junk that should be ignored
+    ])
+  });
+
+  equal(frames.length, 2, 'parsed two frames');
+  deepEqual(new Uint8Array(frames[0].data),
+            new Uint8Array([0x12, 0x34]),
+            'extracted the first AAC frame');
+  deepEqual(new Uint8Array(frames[1].data),
+            new Uint8Array([0x9a, 0xbc]),
+            'extracted the second AAC frame');
+});
+
+test('resyncs data in aac frames that contain garbage', function() {
+  var frames = [];
+  aacStream.on('data', function(frame) {
+    frames.push(frame);
+  });
+
+  aacStream.push({
+    type: 'audio',
+    data: new Uint8Array([
+      0x67,             // garbage
+      0xff, 0xf1,       // no CRC
+      0x10,             // AAC Main, 44.1KHz
+      0xbc, 0x01, 0x20, // 2 channels, frame length 9 bytes
+      0x00,             // one AAC per ADTS frame
+      0x9a, 0xbc,       // AAC payload 1
+      0xde, 0xf0        // extra junk that should be ignored
+    ])
+  });
+  aacStream.push({
+    type: 'audio',
+    data: new Uint8Array([
+      0x67,             // garbage
+      0xff, 0xf1,       // no CRC
+      0x10,             // AAC Main, 44.1KHz
+      0xbc, 0x01, 0x20, // 2 channels, frame length 9 bytes
+      0x00,             // one AAC per ADTS frame
+      0x12, 0x34        // AAC payload 2
+    ])
+  });
+
+  equal(frames.length, 2, 'parsed two frames');
+  deepEqual(new Uint8Array(frames[0].data),
+            new Uint8Array([0x9a, 0xbc]),
+            'extracted the first AAC frame');
+  deepEqual(new Uint8Array(frames[1].data),
+            new Uint8Array([0x12, 0x34]),
             'extracted the second AAC frame');
 });
 
@@ -1553,9 +1630,6 @@ test('can specify that we want to generate separate audio and video segments', f
   equal('moof', boxes[2].type, 'generated a moof box');
   equal('mdat', boxes[3].type, 'generated a mdat box');
 });
-
-// not handled: ADTS with CRC
-// ADTS with payload broken across push events
 
 module('Transmuxer', {
   setup: function() {
@@ -1889,6 +1963,136 @@ test('can be reused for multiple TS segments', function() {
   deepEqual(segments[0][5],
             segments[1][5],
             'generated identical audio mdats');
+});
+
+module('NalByteStream', {
+  setup: function() {
+    nalByteStream = new NalByteStream();
+  }
+});
+
+test('parses nal units with 4-byte start code', function(){
+  var nalUnits = [];
+  nalByteStream.on('data', function (data) {
+    nalUnits.push(data);
+  });
+
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x00, 0x01, // start code
+      0x09, 0xFF, // Payload
+      0x00, 0x00, 0x00 // end code
+    ])
+  });
+
+  equal(nalUnits.length, 1, 'found one nal');
+  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+});
+
+test('parses nal units with 3-byte start code', function(){
+  var nalUnits = [];
+  nalByteStream.on('data', function (data) {
+    nalUnits.push(data);
+  });
+
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x01, // start code
+      0x09, 0xFF, // Payload
+      0x00, 0x00, 0x00 // end code
+    ])
+  });
+
+  equal(nalUnits.length, 1, 'found one nal');
+  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+});
+
+test('parses multiple nal units', function(){
+  var nalUnits = [];
+  nalByteStream.on('data', function (data) {
+    nalUnits.push(data);
+  });
+
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x01, // start code
+      0x09, 0xFF, // Payload
+      0x00, 0x00, 0x00, // end code
+      0x00, 0x00, 0x01, // start code
+      0x12, 0xDD, // Payload
+      0x00, 0x00, 0x00 // end code
+    ])
+  });
+
+  equal(nalUnits.length, 2, 'found two nals');
+  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+  deepEqual(nalUnits[1], new Uint8Array([0x12, 0xDD]), 'has the proper payload');
+});
+
+test('parses nal units surrounded by an unreasonable amount of zero-bytes', function(){
+  var nalUnits = [];
+  nalByteStream.on('data', function (data) {
+    nalUnits.push(data);
+  });
+
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, // start code
+      0x09, 0xFF, // Payload
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, // end code
+      0x00, 0x00, 0x01, // start code
+      0x12, 0xDD, // Payload
+      0x00, 0x00, 0x00, // end code
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00
+    ])
+  });
+
+  equal(nalUnits.length, 2, 'found two nals');
+  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+  deepEqual(nalUnits[1], new Uint8Array([0x12, 0xDD]), 'has the proper payload');
+});
+
+test('parses nal units split across multiple packets', function(){
+  var nalUnits = [];
+  nalByteStream.on('data', function (data) {
+    nalUnits.push(data);
+  });
+
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x01, // start code
+      0x09, 0xFF // Partial payload
+    ])
+  });
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x12, 0xDD, // Partial Payload
+      0x00, 0x00, 0x00 // end code
+    ])
+  });
+
+  equal(nalUnits.length, 1, 'found two nals');
+  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF, 0x12, 0xDD]), 'has the proper payload');
 });
 
 })(window, window.muxjs);
