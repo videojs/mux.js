@@ -16,6 +16,8 @@ var
   aacStream,
   Transmuxer = muxjs.mp2t.Transmuxer,
   transmuxer,
+  NalByteStream = muxjs.mp2t.NalByteStream,
+  nalByteStream,
 
   MP2T_PACKET_LENGTH = muxjs.mp2t.MP2T_PACKET_LENGTH,
   H264_STREAM_TYPE = muxjs.mp2t.H264_STREAM_TYPE,
@@ -1425,7 +1427,6 @@ test('generates AAC frame events from ADTS bytes', function() {
 });
 
 test('parses across packets', function() {
-
   var frames = [];
   aacStream.on('data', function(frame) {
     frames.push(frame);
@@ -1456,6 +1457,105 @@ test('parses across packets', function() {
   deepEqual(new Uint8Array(frames[1].data),
             new Uint8Array([0x9a, 0xbc]),
             'extracted the second AAC frame');
+});
+
+test('parses frames segmented across packet', function() {
+  var frames = [];
+  aacStream.on('data', function(frame) {
+    frames.push(frame);
+  });
+  aacStream.push({
+    type: 'audio',
+    data: new Uint8Array([
+      0xff, 0xf1,       // no CRC
+      0x10,             // AAC Main, 44.1KHz
+      0xbc, 0x01, 0x20, // 2 channels, frame length 9 bytes
+      0x00,             // one AAC per ADTS frame
+      0x12        // incomplete AAC payload 1
+    ])
+  });
+  aacStream.push({
+    type: 'audio',
+    data: new Uint8Array([
+      0x34,             // remainder of the previous frame's payload
+      0xff, 0xf1,       // no CRC
+      0x10,             // AAC Main, 44.1KHz
+      0xbc, 0x01, 0x20, // 2 channels, frame length 9 bytes
+      0x00,             // one AAC per ADTS frame
+      0x9a, 0xbc,       // AAC payload 2
+      0xde, 0xf0        // extra junk that should be ignored
+    ])
+  });
+
+  equal(frames.length, 2, 'parsed two frames');
+  deepEqual(new Uint8Array(frames[0].data),
+            new Uint8Array([0x12, 0x34]),
+            'extracted the first AAC frame');
+  deepEqual(new Uint8Array(frames[1].data),
+            new Uint8Array([0x9a, 0xbc]),
+            'extracted the second AAC frame');
+});
+
+test('resyncs data in aac frames that contain garbage', function() {
+  var frames = [];
+  aacStream.on('data', function(frame) {
+    frames.push(frame);
+  });
+
+  aacStream.push({
+    type: 'audio',
+    data: new Uint8Array([
+      0x67,             // garbage
+      0xff, 0xf1,       // no CRC
+      0x10,             // AAC Main, 44.1KHz
+      0xbc, 0x01, 0x20, // 2 channels, frame length 9 bytes
+      0x00,             // one AAC per ADTS frame
+      0x9a, 0xbc,       // AAC payload 1
+      0xde, 0xf0        // extra junk that should be ignored
+    ])
+  });
+  aacStream.push({
+    type: 'audio',
+    data: new Uint8Array([
+      0x67,             // garbage
+      0xff, 0xf1,       // no CRC
+      0x10,             // AAC Main, 44.1KHz
+      0xbc, 0x01, 0x20, // 2 channels, frame length 9 bytes
+      0x00,             // one AAC per ADTS frame
+      0x12, 0x34        // AAC payload 2
+    ])
+  });
+
+  equal(frames.length, 2, 'parsed two frames');
+  deepEqual(new Uint8Array(frames[0].data),
+            new Uint8Array([0x9a, 0xbc]),
+            'extracted the first AAC frame');
+  deepEqual(new Uint8Array(frames[1].data),
+            new Uint8Array([0x12, 0x34]),
+            'extracted the second AAC frame');
+});
+
+test('skips CRC bytes', function() {
+  var frames = [];
+  aacStream.on('data', function(frame) {
+    frames.push(frame);
+  });
+  aacStream.push({
+    type: 'audio',
+    data: new Uint8Array([
+      0xff, 0xf0,       // with CRC
+      0x10,             // AAC Main, 44.1KHz
+      0xbc, 0x01, 0x60, // 2 channels, frame length 11 bytes
+      0x00,             // one AAC per ADTS frame
+      0xfe, 0xdc,       // "CRC"
+      0x12, 0x34        // AAC payload 2
+    ])
+  });
+
+  equal(frames.length, 1, 'parsed a frame');
+  deepEqual(new Uint8Array(frames[0].data),
+            new Uint8Array([0x12, 0x34]),
+            'skipped the CRC');
 });
 
 module('Transmuxer - options');
@@ -1553,9 +1653,6 @@ test('can specify that we want to generate separate audio and video segments', f
   equal('moof', boxes[2].type, 'generated a moof box');
   equal('mdat', boxes[3].type, 'generated a mdat box');
 });
-
-// not handled: ADTS with CRC
-// ADTS with payload broken across push events
 
 module('Transmuxer', {
   setup: function() {
@@ -1710,10 +1807,16 @@ validateTrack = function(track, metadata) {
   equal(mdia.boxes[2].type, 'minf', 'wrote the media info');
 };
 
-validateTrackFragment = function(track, segment, metadata) {
+validateTrackFragment = function(track, segment, metadata, type) {
   var tfhd, trun, sdtp, i, j, sample, nalUnitType;
   equal(track.type, 'traf', 'wrote a track fragment');
-  equal(track.boxes.length, 4, 'wrote four track fragment children');
+
+  if (type === 'video') {
+    equal(track.boxes.length, 4, 'wrote four track fragment children');
+  } else if (type === 'audio') {
+    equal(track.boxes.length, 3, 'wrote three track fragment children');
+  }
+
   tfhd = track.boxes[0];
   equal(tfhd.type, 'tfhd', 'wrote a track fragment header');
   equal(tfhd.trackId, metadata.trackId, 'wrote the track id');
@@ -1725,56 +1828,64 @@ validateTrackFragment = function(track, segment, metadata) {
 
   trun = track.boxes[2];
   ok(trun.dataOffset >= 0, 'set data offset');
+
   equal(trun.dataOffset,
         metadata.mdatOffset + 8,
         'trun data offset is the size of the moof');
+
   ok(trun.samples.length > 0, 'generated media samples');
   for (i = 0, j = metadata.baseOffset + trun.dataOffset;
        i < trun.samples.length;
        i++) {
     sample = trun.samples[i];
-    ok(sample.duration > 0, 'wrote a positive duration for sample ' + i);
     ok(sample.size > 0, 'wrote a positive size for sample ' + i);
-    ok(sample.compositionTimeOffset >= 0,
-       'wrote a positive composition time offset for sample ' + i);
-    ok(sample.flags, 'wrote sample flags');
-    equal(sample.flags.isLeading, 0, 'the leading nature is unknown');
+    if (type === 'video') {
+      ok(sample.duration > 0, 'wrote a positive duration for sample ' + i);
+      ok(sample.compositionTimeOffset >= 0,
+         'wrote a positive composition time offset for sample ' + i);
+      ok(sample.flags, 'wrote sample flags');
+      equal(sample.flags.isLeading, 0, 'the leading nature is unknown');
 
-    notEqual(sample.flags.dependsOn, 0, 'sample dependency is not unknown');
-    notEqual(sample.flags.dependsOn, 4, 'sample dependency is valid');
-    nalUnitType = segment[j + 4] & 0x1F;
-    equal(nalUnitType, 9, 'samples begin with an access_unit_delimiter_rbsp');
+      notEqual(sample.flags.dependsOn, 0, 'sample dependency is not unknown');
+      notEqual(sample.flags.dependsOn, 4, 'sample dependency is valid');
+      nalUnitType = segment[j + 4] & 0x1F;
+      equal(nalUnitType, 9, 'samples begin with an access_unit_delimiter_rbsp');
 
-    equal(sample.flags.isDependedOn, 0, 'dependency of other samples is unknown');
-    equal(sample.flags.hasRedundancy, 0, 'sample redundancy is unknown');
-    equal(sample.flags.degradationPriority, 0, 'sample degradation priority is zero');
-
+      equal(sample.flags.isDependedOn, 0, 'dependency of other samples is unknown');
+      equal(sample.flags.hasRedundancy, 0, 'sample redundancy is unknown');
+      equal(sample.flags.degradationPriority, 0, 'sample degradation priority is zero');
+    } else {
+      equal(sample.duration, 1024,
+            'aac sample duration is always 1024');
+    }
     j += sample.size; // advance to the next sample in the mdat
   }
 
-  sdtp = track.boxes[3];
-  equal(trun.samples.length,
-        sdtp.samples.length,
-        'wrote an equal number of trun and sdtp samples');
-  for (i = 0; i < sdtp.samples.length; i++) {
-    sample = sdtp.samples[i];
-    notEqual(sample.dependsOn, 0, 'sample dependency is not unknown');
-    equal(trun.samples[i].flags.dependsOn,
-          sample.dependsOn,
-          'wrote a consistent dependsOn');
-    equal(trun.samples[i].flags.isDependedOn,
-          sample.isDependedOn,
-          'wrote a consistent isDependedOn');
-    equal(trun.samples[i].flags.hasRedundancy,
-          sample.hasRedundancy,
-          'wrote a consistent hasRedundancy');
+  if (type === 'video') {
+    sdtp = track.boxes[3];
+    equal(trun.samples.length,
+          sdtp.samples.length,
+          'wrote an equal number of trun and sdtp samples');
+    for (i = 0; i < sdtp.samples.length; i++) {
+      sample = sdtp.samples[i];
+      notEqual(sample.dependsOn, 0, 'sample dependency is not unknown');
+      equal(trun.samples[i].flags.dependsOn,
+            sample.dependsOn,
+            'wrote a consistent dependsOn');
+      equal(trun.samples[i].flags.isDependedOn,
+            sample.isDependedOn,
+            'wrote a consistent isDependedOn');
+      equal(trun.samples[i].flags.hasRedundancy,
+            sample.hasRedundancy,
+            'wrote a consistent hasRedundancy');
+    }
   }
 };
 
 test('parses an example mp2t file and generates combined media segments', function() {
   var
     segments = [],
-    i, boxes, mfhd;
+    i, j, boxes, mfhd, trackType = 'video', trackId = 256, baseOffset = 0;
 
   transmuxer.on('data', function(segment) {
     if (segment.type === 'combined') {
@@ -1792,6 +1903,9 @@ test('parses an example mp2t file and generates combined media segments', functi
   equal(boxes[1].type, 'moov', 'the second box is a moov');
   equal(boxes[1].boxes[0].type, 'mvhd', 'generated an mvhd');
   validateTrack(boxes[1].boxes[1], {
+    trackId: 256
+  });
+  validateTrack(boxes[1].boxes[2], {
     trackId: 257
   });
 
@@ -1803,14 +1917,23 @@ test('parses an example mp2t file and generates combined media segments', functi
     equal(mfhd.type, 'mfhd', 'mfhd is a child of the moof');
 
     equal(boxes[i + 1].type, 'mdat', 'second box is an mdat');
-    if (i === 3) {
+
+    // Only do even numbered boxes because the odd-offsets will be mdat
+    if (i % 2 === 0) {
+      for (j = 0; j < i; j++) {
+        baseOffset += boxes[j].size;
+      }
+
       validateTrackFragment(boxes[i].boxes[1], segments[0].data, {
-        trackId: 256,
+        trackId: trackId++,
         width: 388,
         height: 300,
-        baseOffset: boxes[0].size + boxes[1].size,
-        mdatOffset: boxes[2].size
-      });
+        baseOffset: baseOffset,
+        mdatOffset: boxes[i].size
+      }, trackType);
+
+      baseOffset = 0;
+      trackType = 'audio';
     }
   }
 });
@@ -1863,6 +1986,136 @@ test('can be reused for multiple TS segments', function() {
   deepEqual(segments[0][5],
             segments[1][5],
             'generated identical audio mdats');
+});
+
+module('NalByteStream', {
+  setup: function() {
+    nalByteStream = new NalByteStream();
+  }
+});
+
+test('parses nal units with 4-byte start code', function(){
+  var nalUnits = [];
+  nalByteStream.on('data', function (data) {
+    nalUnits.push(data);
+  });
+
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x00, 0x01, // start code
+      0x09, 0xFF, // Payload
+      0x00, 0x00, 0x00 // end code
+    ])
+  });
+
+  equal(nalUnits.length, 1, 'found one nal');
+  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+});
+
+test('parses nal units with 3-byte start code', function(){
+  var nalUnits = [];
+  nalByteStream.on('data', function (data) {
+    nalUnits.push(data);
+  });
+
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x01, // start code
+      0x09, 0xFF, // Payload
+      0x00, 0x00, 0x00 // end code
+    ])
+  });
+
+  equal(nalUnits.length, 1, 'found one nal');
+  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+});
+
+test('parses multiple nal units', function(){
+  var nalUnits = [];
+  nalByteStream.on('data', function (data) {
+    nalUnits.push(data);
+  });
+
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x01, // start code
+      0x09, 0xFF, // Payload
+      0x00, 0x00, 0x00, // end code
+      0x00, 0x00, 0x01, // start code
+      0x12, 0xDD, // Payload
+      0x00, 0x00, 0x00 // end code
+    ])
+  });
+
+  equal(nalUnits.length, 2, 'found two nals');
+  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+  deepEqual(nalUnits[1], new Uint8Array([0x12, 0xDD]), 'has the proper payload');
+});
+
+test('parses nal units surrounded by an unreasonable amount of zero-bytes', function(){
+  var nalUnits = [];
+  nalByteStream.on('data', function (data) {
+    nalUnits.push(data);
+  });
+
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x01, // start code
+      0x09, 0xFF, // Payload
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, // end code
+      0x00, 0x00, 0x01, // start code
+      0x12, 0xDD, // Payload
+      0x00, 0x00, 0x00, // end code
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00
+    ])
+  });
+
+  equal(nalUnits.length, 2, 'found two nals');
+  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+  deepEqual(nalUnits[1], new Uint8Array([0x12, 0xDD]), 'has the proper payload');
+});
+
+test('parses nal units split across multiple packets', function(){
+  var nalUnits = [];
+  nalByteStream.on('data', function (data) {
+    nalUnits.push(data);
+  });
+
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x01, // start code
+      0x09, 0xFF // Partial payload
+    ])
+  });
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x12, 0xDD, // Partial Payload
+      0x00, 0x00, 0x00 // end code
+    ])
+  });
+
+  equal(nalUnits.length, 1, 'found two nals');
+  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF, 0x12, 0xDD]), 'has the proper payload');
 });
 
 })(window, window.muxjs);
