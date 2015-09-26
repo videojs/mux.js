@@ -12,7 +12,7 @@ for live events.
 In-band HLS captions follow the CEA-708 standard.
 
 # References
-- Rec. ITU-T H.264: H.264 video data specification. CEA-708 captions
+- [Rec. ITU-T H.264](https://www.itu.int/rec/T-REC-H.264): H.264 video data specification. CEA-708 captions
   are encapsulated in supplemental enhancement information (SEI)
   network abstraction layer (NAL) units within the video stream.
 - [ANSI/SCTE
