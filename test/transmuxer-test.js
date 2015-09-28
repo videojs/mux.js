@@ -1535,6 +1535,29 @@ test('resyncs data in aac frames that contain garbage', function() {
             'extracted the second AAC frame');
 });
 
+test('ignores audio "MPEG version" bit in adts header', function() {
+  var frames = [];
+  aacStream.on('data', function(frame) {
+    frames.push(frame);
+  });
+  aacStream.push({
+    type: 'audio',
+    data: new Uint8Array([
+      0xff, 0xf8,       // MPEG-2 audio, CRC
+      0x10,             // AAC Main, 44.1KHz
+      0xbc, 0x01, 0x60, // 2 channels, frame length 11 bytes
+      0x00,             // one AAC per ADTS frame
+      0xfe, 0xdc,       // "CRC"
+      0x12, 0x34        // AAC payload 2
+    ])
+  });
+
+  equal(frames.length, 1, 'parsed a frame');
+  deepEqual(new Uint8Array(frames[0].data),
+            new Uint8Array([0x12, 0x34]),
+            'skipped the CRC');
+});
+
 test('skips CRC bytes', function() {
   var frames = [];
   aacStream.on('data', function(frame) {
