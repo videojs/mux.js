@@ -33,3 +33,15 @@ transmuxer.on('data', function (segment) {
   });
 });
 ```
+
+## MP4 Inspector
+Parse MP4s into javascript objects or a text representation for display or debugging:
+```js
+// drop in a Uint8Array of an MP4:
+var parsed = muxjs.inspectMp4(bytes);
+// dig into the boxes:
+console.log('The major brand of the first box:', parsed[0].majorBrand);
+// print out the structure of the MP4:
+document.body.appendChild(document.createTextNode(muxjs.textifyMp4(parsed)));
+```
+The MP4 inspector is used extensively as a debugging tool for the transmuxer. You can see it in action by cloning the project and opening [the debug page](https://github.com/videojs/mux.js/blob/master/debug/index.html) in your browser.
