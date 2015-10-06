@@ -95,12 +95,16 @@
 
 
   <!-- transmuxing -->
-  <script src="../lib/stream.js"></script>
-  <script src="../legacy/flv-tag.js"></script>
-  <script src="../lib/exp-golomb.js"></script>
-  <script src="../lib/metadata-stream.js"></script>
-  <script src="../lib/transmuxer_common.js"></script>
-  <script src="../legacy/segment-parser.js"></script>
+  <script src="../lib/utils/stream.js"></script>
+  <script src="../lib/utils/exp-golomb.js"></script>
+  <script src="../lib/tools/mp4-inspector.js"></script>
+  <script src="../lib/codecs/aac.js"></script>
+  <script src="../lib/codecs/h264.js"></script>
+  <script src="../lib/m2ts/m2ts.js"></script>
+  <script src="../lib/m2ts/caption-stream.js"></script>
+  <script src="../lib/m2ts/metadata-stream.js"></script>
+  <script src="../lib/flv/flv-tag.js"></script>
+  <script src="../lib/flv/transmuxer.js"></script>
 
   <!-- Include QUnit for object diffs -->
   <script src="../node_modules/qunitjs/qunit/qunit.js"></script>
@@ -316,8 +320,6 @@
           return header;
         };
 
-    videojs.log = console.log.bind(console);
-
     // assemble the FLV tags in decoder order
     getOrderedTags = function(segmentData) {
       var
@@ -350,7 +352,7 @@
     original.addEventListener('change', function() {
       var reader = new FileReader();
       reader.addEventListener('loadend', function() {
-        var parser = new muxjs.SegmentParser(),
+        var parser = new muxjs.flv.Transmuxer(),
             tags = [parser.getFlvHeader()],
             tag,
             bytes,

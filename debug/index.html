@@ -129,12 +129,16 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
   </div>
 
 
-  <script src="../lib/stream.js"></script>
-  <script src="../lib/mp4-generator.js"></script>
-  <script src="../lib/metadata-stream.js"></script>
-  <script src="../lib/transmuxer.js"></script>
-  <script src="../lib/mp4-inspector.js"></script>
-  <script src="../lib/exp-golomb.js"></script>
+  <script src="../lib/utils/stream.js"></script>
+  <script src="../lib/utils/exp-golomb.js"></script>
+  <script src="../lib/mp4/mp4-generator.js"></script>
+  <script src="../lib/tools/mp4-inspector.js"></script>
+  <script src="../lib/codecs/aac.js"></script>
+  <script src="../lib/codecs/h264.js"></script>
+  <script src="../lib/m2ts/m2ts.js"></script>
+  <script src="../lib/m2ts/caption-stream.js"></script>
+  <script src="../lib/m2ts/metadata-stream.js"></script>
+  <script src="../lib/mp4/transmuxer.js"></script>
 
   <!-- Include QUnit for object diffs -->
   <script src="../node_modules/qunitjs/qunit/qunit.js"></script>
@@ -285,9 +289,9 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
             i, j;
 
         if (combined) {
-            transmuxer = new muxjs.mp2t.Transmuxer();
+            transmuxer = new muxjs.mp4.Transmuxer();
         } else {
-            transmuxer = new muxjs.mp2t.Transmuxer({remux: false});
+            transmuxer = new muxjs.mp4.Transmuxer({remux: false});
         }
 
         if (document.querySelector('#original-active').checked) {

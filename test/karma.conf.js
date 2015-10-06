@@ -15,14 +15,16 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      '../lib/stream.js',
-      '../lib/exp-golomb.js',
-      '../lib/mp4-generator.js',
-      '../lib/mp4-inspector.js',
-      '../lib/transmuxer_common.js',
-      '../lib/transmuxer.js',
-      '../lib/metadata-stream.js',
-      '../lib/caption-stream.js',
+      '../lib/utils/stream.js',
+      '../lib/utils/exp-golomb.js',
+      '../lib/mp4/mp4-generator.js',
+      '../lib/tools/mp4-inspector.js',
+      '../lib/codecs/aac.js',
+      '../lib/codecs/h264.js',
+      '../lib/m2ts/m2ts.js',
+      '../lib/m2ts/caption-stream.js',
+      '../lib/m2ts/metadata-stream.js',
+      '../lib/mp4/transmuxer.js',
 
       'sintel-captions.js',
       'test-segment.js',
