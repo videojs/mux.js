@@ -390,7 +390,7 @@ CoalesceStream.prototype.flush = function() {
  * An object that incrementally transmuxes MPEG2 Trasport Stream
  * chunks into an FLV.
  */
-SegmentParser = function() {
+SegmentParser = function(options) {
   var
     self = this,
     videoTrack,
