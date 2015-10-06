@@ -62,6 +62,14 @@
           </form>
         </section>
         <section>
+          <h2>Comparison</h2>
+          <div id="comparison">
+            A diff of the structure of the two FLVs will appear here
+            once you've specified an input TS file and a known working
+            FLV.
+          </div>
+        </section>
+        <section>
           <h2>Tag Comparison</h2>
           <div class="result-wrapper">
             <h3>mux.js</h3>
@@ -89,13 +97,13 @@
   <!-- transmuxing -->
   <script src="../lib/stream.js"></script>
   <script src="../legacy/flv-tag.js"></script>
-  <script src="../legacy/exp-golomb.js"></script>
-  <script src="../legacy/h264-extradata.js"></script>
-  <script src="../legacy/h264-stream.js"></script>
-  <script src="../legacy/aac-stream.js"></script>
+  <script src="../lib/exp-golomb.js"></script>
   <script src="../lib/metadata-stream.js"></script>
+  <script src="../lib/transmuxer_common.js"></script>
   <script src="../legacy/segment-parser.js"></script>
 
+  <!-- Include QUnit for object diffs -->
+  <script src="../node_modules/qunitjs/qunit/qunit.js"></script>
   <script>
     var inputs = document.getElementById('inputs'),
         original = document.getElementById('original'),
@@ -103,14 +111,241 @@
 
         vjsTags = document.querySelector('.vjs-tags'),
         workingTags = document.querySelector('.working-tags'),
-
+        getOrderedTags,
         tagTypes = {
           0x08: 'audio',
           0x09: 'video',
           0x12: 'metadata'
+        },
+        vjsParsed,
+        workingParsed,
+        // output a diff of the two parsed MP4s
+        diffParsed = function() {
+          var comparison, diff, transmuxed;
+          if (!vjsParsed || !workingParsed) {
+            // wait until both inputs have been provided
+            return;
+          }
+          comparison = document.querySelector('#comparison');
+          transmuxed = vjsParsed;
+          diff = '<p>A <del>red background</del> indicates ' +
+            'properties present in the transmuxed file but missing from the ' +
+            'working version. A <ins>green background</ins> indicates ' +
+            'properties present in the working version but missing in the ' +
+            'transmuxed output.</p>';
+          diff += '<pre class="flv-diff">' +
+            QUnit.diff(transmuxed, workingParsed) +
+            '</pre>';
+
+          comparison.innerHTML = diff;
+        },
+        hex = function (val) {
+          return '0x' + ('00' + val.toString(16)).slice(-2).toUpperCase();
+        },
+        hexStringList = function (data) {
+          var arr = [];
+
+          while(data.byteLength >0) {
+            i = 0;
+            switch(data.byteLength) {
+              default:
+                arr.push(hex(data[i++]));
+              case 7:
+                arr.push(hex(data[i++]));
+              case 6:
+                arr.push(hex(data[i++]));
+              case 5:
+                arr.push(hex(data[i++]));
+              case 4:
+                arr.push(hex(data[i++]));
+              case 3:
+                arr.push(hex(data[i++]));
+              case 2:
+                arr.push(hex(data[i++]));
+              case 1:
+                arr.push(hex(data[i++]));
+            }
+            data = data.subarray(i);
+          }
+          return arr.join(' ');
+        },
+        parseAVCTag = function (tag, obj) {
+          var
+            avcPacketTypes = [
+              'AVC Sequence Header',
+              'AVC NALU',
+              'AVC End-of-Sequence'
+            ],
+            nalUnitTypes = [
+              'unspecified',
+              'slice_layer_without_partitioning',
+              'slice_data_partition_a_layer',
+              'slice_data_partition_b_layer',
+              'slice_data_partition_c_layer',
+              'slice_layer_without_partitioning_idr',
+              'sei',
+              'seq_parameter_set',
+              'pic_parameter_set',
+              'access_unit_delimiter',
+              'end_of_seq',
+              'end_of_stream',
+              'filler',
+              'seq_parameter_set_ext',
+              'prefix_nal_unit',
+              'subset_seq_parameter_set',
+              'reserved',
+              'reserved',
+              'reserved'
+            ],
+            compositionTime = (tag[1] & parseInt('01111111', 2) << 16) | (tag[2] << 8) | tag[3];
+
+          obj = obj || {};
+
+          obj.avcPacketType = avcPacketTypes[tag[0]];
+          obj.CompositionTime = (tag[1] & parseInt('10000000', 2)) ? -compositionTime : compositionTime;
+
+          if (tag[0] === 1) {
+            obj.nalUnitTypeRaw = hexStringList(tag.subarray(4, 100));
+          } else {
+            obj.data = hexStringList(tag.subarray(4));
+          }
+
+          return obj;
+        },
+        parseVideoTag = function (tag, obj) {
+          var
+            frameTypes = [
+              'Unknown',
+              'Keyframe (for AVC, a seekable frame)',
+              'Inter frame (for AVC, a nonseekable frame)',
+              'Disposable inter frame (H.263 only)',
+              'Generated keyframe (reserved for server use only)',
+              'Video info/command frame'
+            ],
+            codecIDs = [
+              'JPEG (currently unused)',
+              'Sorenson H.263',
+              'Screen video',
+              'On2 VP6',
+              'On2 VP6 with alpha channel',
+              'Screen video version 2',
+              'AVC'
+            ],
+            codecID = tag[0] & parseInt('00001111', 2);
+
+          obj = obj || {};
+
+          obj.frameType = frameTypes[(tag[0] & parseInt('11110000', 2)) >>> 4];
+          obj.codecID = codecID;
+
+          if (codecID === 7) {
+            return parseAVCTag(tag.subarray(1), obj);
+          }
+          return obj;
+        },
+        parseAACTag = function (tag, obj) {
+          var packetTypes = [
+            'AAC Sequence Header',
+            'AAC Raw'
+          ];
+
+          obj = obj || {};
+
+          obj.aacPacketType = packetTypes[tag[0]];
+          obj.data = hexStringList(tag.subarray(1));
+
+          return obj;
+        },
+        parseAudioTag = function (tag, obj) {
+          var
+            formatTable = [
+              'Linear PCM, platform endian',
+              'ADPCM',
+              'MP3',
+              'Linear PCM, little endian',
+              'Nellymoser 16-kHz mono',
+              'Nellymoser 8-kHz mono',
+              'Nellymoser',
+              'G.711 A-law logarithmic PCM',
+              'G.711 mu-law logarithmic PCM',
+              'reserved',
+              'AAC',
+              'Speex',
+              'MP3 8-Khz',
+              'Device-specific sound'
+            ],
+            samplingRateTable = [
+              '5.5-kHz',
+              '11-kHz',
+              '22-kHz',
+              '44-kHz'
+            ],
+            soundFormat = (tag[0] & parseInt('11110000', 2)) >>> 4;
+
+          obj = obj || {};
+
+          obj.soundFormat = formatTable[soundFormat];
+          obj.soundRate = samplingRateTable[(tag[0] & parseInt('00001100', 2)) >>> 2];
+          obj.soundSize = ((tag[0] & parseInt('00000010', 2)) >>> 1) ? '16-bit' : '8-bit';
+          obj.soundType = (tag[0] & parseInt('00000001', 2)) ? 'Stereo' : 'Mono';
+
+          if (soundFormat === 10) {
+            return parseAACTag(tag.subarray(1), obj);
+          }
+          return obj;
+        },
+        parseGenericTag = function (tag) {
+          return {
+            tagType: tagTypes[tag[0]],
+            dataSize: (tag[1] << 16) | (tag[2] << 8) | tag[3],
+            timestamp: (tag[7] << 24) | (tag[4] << 16) | (tag[5] << 8) | tag[6],
+            streamID: (tag[8] << 16) | (tag[9] << 8) | tag[10]
+          };
+        },
+        parseTag = function (tag) {
+          var header = parseGenericTag(tag);
+          switch (tag[0]) {
+            case 0x08:
+              parseAudioTag(tag.subarray(11), header);
+              break;
+            case 0x09:
+              parseVideoTag(tag.subarray(11), header);
+              break;
+            case 0x12:
+          }
+          return header;
         };
 
     videojs.log = console.log.bind(console);
+
+    // assemble the FLV tags in decoder order
+    getOrderedTags = function(segmentData) {
+      var
+        videoTags = segmentData.tags.videoTags,
+        audioTags = segmentData.tags.audioTags,
+        tag,
+        tags = [];
+
+      while (videoTags.length || audioTags.length) {
+        if (!videoTags.length) {
+          // only audio tags remain
+          tag = audioTags.shift();
+        } else if (!audioTags.length) {
+          // only video tags remain
+          tag = videoTags.shift();
+        } else if (audioTags[0].dts < videoTags[0].dts) {
+          // audio should be decoded next
+          tag = audioTags.shift();
+        } else {
+          // video should be decoded next
+          tag = videoTags.shift();
+        }
+
+        tags.push(tag.finalize());
+      }
+
+      return tags;
+    };
 
     original.addEventListener('change', function() {
       var reader = new FileReader();
@@ -130,30 +365,40 @@
 
         bytes = new Uint8Array(reader.result);
 
-        parser.parseSegmentBinaryData(bytes);
+        parser.on('data', function(segmentData) {
+          var tags = getOrderedTags(segmentData), tag, parseResults = [];
 
-        // collect all the tags
-        while (parser.tagsAvailable()) {
-          tag = parser.getNextTag();
-          tags.push(tag.bytes);
-          li = document.createElement('li');
-          li.innerHTML = tagTypes[tag.bytes[0]] + ': ' + tag.bytes.byteLength + 'B';
-          vjsTags.appendChild(li);
-        }
-        // create a uint8array for the entire segment and copy everything over
-        i = tags.length;
-        while (i--) {
-          byteLength += tags[i].byteLength;
-        }
-        data = new Uint8Array(byteLength);
-        i = tags.length;
-        pos = byteLength;
-        while (i--) {
-          pos -= tags[i].byteLength;
-          data.set(tags[i], pos);
-        }
+          // collect all the tags
+          for (var i = 0; i < tags.length; i++) {
+            tag = tags[i];
+            parseResults.push(parseTag(tag.bytes.subarray(0, tag.bytes.byteLength - 4)));
+          }
 
+          pre = document.createElement('pre');
+          vjsParsed = JSON.stringify(parseResults, null, 2);
+          pre.innerHTML = vjsParsed;
+          vjsTags.appendChild(pre);
+
+          // create a uint8array for the entire segment and copy everything over
+          i = tags.length;
+          while (i--) {
+            byteLength += tags[i].bytes.byteLength;
+          }
+          data = new Uint8Array(byteLength);
+          i = tags.length;
+          pos = byteLength;
+          while (i--) {
+            pos -= tags[i].bytes.byteLength;
+            data.set(tags[i].bytes, pos);
+          }
+
+          diffParsed();
+        });
+
+        parser.push(bytes);
+        parser.flush();
       });
+
       reader.readAsArrayBuffer(this.files[0]);
     }, false);
 
@@ -163,7 +408,8 @@
         var bytes = new Uint8Array(reader.result),
             i = 9, // header
             dataSize,
-            li;
+            parseResults = [],
+            pre, tag;
 
         // clear old tag info
         workingTags.innerHTML = '';
@@ -176,40 +422,22 @@
           dataSize |= bytes[i + 3];
           dataSize += 11;
 
-          li = document.createElement('li');
-          li.innerHTML = tagTypes[bytes[i]] + ': ' + dataSize + 'B';
-          workingTags.appendChild(li);
+          tag = bytes.subarray(i, i + dataSize);
+
+          parseResults.push(parseTag(tag));
 
           i += dataSize; // tag size
           i += 4; // previous tag size
         }
+        pre = document.createElement('pre');
+        workingParsed = JSON.stringify(parseResults, null, 2)
+        pre.innerHTML = workingParsed;
+        workingTags.appendChild(pre);
+
+        diffParsed();
       });
       reader.readAsArrayBuffer(this.files[0]);
     }, false);
-  </script>
-  <script type="text/plain">
-    // map nal_unit_types to friendly names
-    console.log([
-      'unspecified',
-      'slice_layer_without_partitioning',
-      'slice_data_partition_a_layer',
-      'slice_data_partition_b_layer',
-      'slice_data_partition_c_layer',
-      'slice_layer_without_partitioning_idr',
-      'sei',
-      'seq_parameter_set',
-      'pic_parameter_set',
-      'access_unit_delimiter',
-      'end_of_seq',
-      'end_of_stream',
-      'filler',
-      'seq_parameter_set_ext',
-      'prefix_nal_unit',
-      'subset_seq_parameter_set',
-      'reserved',
-      'reserved',
-      'reserved'
-    ][nalUnitType]);
   </script>
 </body>
 </html>
