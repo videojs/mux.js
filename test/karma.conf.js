@@ -19,6 +19,7 @@ module.exports = function(config) {
       '../lib/exp-golomb.js',
       '../lib/mp4-generator.js',
       '../lib/mp4-inspector.js',
+      '../lib/transmuxer_common.js',
       '../lib/transmuxer.js',
       '../lib/metadata-stream.js',
       '../lib/caption-stream.js',
