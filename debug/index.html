@@ -212,8 +212,8 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         'properties present in the working version but missing in the ' +
         'transmuxed output.</p>';
       diff += '<pre class="mp4-diff">' +
-        QUnit.diff(muxjs.textifyMp4(transmuxed, null, ' '),
-                   muxjs.textifyMp4(workingParsed, null, ' ')) +
+        QUnit.diff(muxjs.tools.textifyMp4(transmuxed, null, ' '),
+                   muxjs.tools.textifyMp4(workingParsed, null, ' ')) +
         '</pre>';
 
       comparison.innerHTML = diff;
@@ -319,12 +319,12 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         }
 
         vjsBytes = bytes;
-        vjsParsed = muxjs.inspectMp4(bytes);
+        vjsParsed = muxjs.tools.inspectMp4(bytes);
         console.log('transmuxed', vjsParsed);
         diffParsed();
 
         // clear old box info
-        vjsBoxes.innerHTML = muxjs.textifyMp4(vjsParsed, null, ' ');
+        vjsBoxes.innerHTML = muxjs.tools.textifyMp4(vjsParsed, null, ' ');
       });
 
       reader.readAsArrayBuffer(this.files[0]);
@@ -344,12 +344,12 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         }
 
         workingBytes = bytes;
-        workingParsed = muxjs.inspectMp4(bytes);
+        workingParsed = muxjs.tools.inspectMp4(bytes);
         console.log('working', workingParsed);
         diffParsed();
 
         // clear old box info
-        workingBoxes.innerHTML = muxjs.textifyMp4(workingParsed, null, ' ');
+        workingBoxes.innerHTML = muxjs.tools.textifyMp4(workingParsed, null, ' ');
       });
       reader.readAsArrayBuffer(this.files[0]);
     }, false);
