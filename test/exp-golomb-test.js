@@ -21,7 +21,7 @@
   */
 var
   buffer,
-  ExpGolomb = window.muxjs.ExpGolomb,
+  ExpGolomb = window.muxjs.utils.ExpGolomb,
   expGolomb;
 
 module('Exponential Golomb coding');

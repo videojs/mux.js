@@ -62,6 +62,14 @@
           </form>
         </section>
         <section>
+          <h2>Comparison</h2>
+          <div id="comparison">
+            A diff of the structure of the two FLVs will appear here
+            once you've specified an input TS file and a known working
+            FLV.
+          </div>
+        </section>
+        <section>
           <h2>Tag Comparison</h2>
           <div class="result-wrapper">
             <h3>mux.js</h3>
@@ -87,15 +95,20 @@
 
 
   <!-- transmuxing -->
-  <script src="../lib/stream.js"></script>
-  <script src="../legacy/flv-tag.js"></script>
-  <script src="../legacy/exp-golomb.js"></script>
-  <script src="../legacy/h264-extradata.js"></script>
-  <script src="../legacy/h264-stream.js"></script>
-  <script src="../legacy/aac-stream.js"></script>
-  <script src="../lib/metadata-stream.js"></script>
-  <script src="../legacy/segment-parser.js"></script>
+  <script src="../lib/utils/stream.js"></script>
+  <script src="../lib/utils/exp-golomb.js"></script>
+  <script src="../lib/tools/mp4-inspector.js"></script>
+  <script src="../lib/codecs/aac.js"></script>
+  <script src="../lib/codecs/h264.js"></script>
+  <script src="../lib/m2ts/m2ts.js"></script>
+  <script src="../lib/m2ts/caption-stream.js"></script>
+  <script src="../lib/m2ts/metadata-stream.js"></script>
+  <script src="../lib/flv/flv-tag.js"></script>
+  <script src="../lib/flv/transmuxer.js"></script>
+  <script src="../lib/tools/flv-inspector.js"></script>
 
+  <!-- Include QUnit for object diffs -->
+  <script src="../node_modules/qunitjs/qunit/qunit.js"></script>
   <script>
     var inputs = document.getElementById('inputs'),
         original = document.getElementById('original'),
@@ -103,19 +116,69 @@
 
         vjsTags = document.querySelector('.vjs-tags'),
         workingTags = document.querySelector('.working-tags'),
-
+        getOrderedTags,
         tagTypes = {
           0x08: 'audio',
           0x09: 'video',
           0x12: 'metadata'
+        },
+        vjsParsed,
+        workingParsed,
+        // output a diff of the two parsed MP4s
+        diffParsed = function() {
+          var comparison, diff, transmuxed;
+          if (!vjsParsed || !workingParsed) {
+            // wait until both inputs have been provided
+            return;
+          }
+          comparison = document.querySelector('#comparison');
+          transmuxed = vjsParsed;
+          diff = '<p>A <del>red background</del> indicates ' +
+            'properties present in the transmuxed file but missing from the ' +
+            'working version. A <ins>green background</ins> indicates ' +
+            'properties present in the working version but missing in the ' +
+            'transmuxed output.</p>';
+          diff += '<pre class="flv-diff">' +
+            QUnit.diff(transmuxed, workingParsed) +
+            '</pre>';
+
+          comparison.innerHTML = diff;
         };
 
-    videojs.log = console.log.bind(console);
+
+    // assemble the FLV tags in decoder order
+    getOrderedTags = function(segmentData) {
+      var
+        videoTags = segmentData.tags.videoTags,
+        audioTags = segmentData.tags.audioTags,
+        tag,
+        tags = [];
+
+      while (videoTags.length || audioTags.length) {
+        if (!videoTags.length) {
+          // only audio tags remain
+          tag = audioTags.shift();
+        } else if (!audioTags.length) {
+          // only video tags remain
+          tag = videoTags.shift();
+        } else if (audioTags[0].dts < videoTags[0].dts) {
+          // audio should be decoded next
+          tag = audioTags.shift();
+        } else {
+          // video should be decoded next
+          tag = videoTags.shift();
+        }
+
+        tags.push(tag.finalize());
+      }
+
+      return tags;
+    };
 
     original.addEventListener('change', function() {
       var reader = new FileReader();
       reader.addEventListener('loadend', function() {
-        var parser = new muxjs.SegmentParser(),
+        var parser = new muxjs.flv.Transmuxer(),
             tags = [parser.getFlvHeader()],
             tag,
             bytes,
@@ -130,30 +193,40 @@
 
         bytes = new Uint8Array(reader.result);
 
-        parser.parseSegmentBinaryData(bytes);
+        parser.on('data', function(segmentData) {
+          var tags = getOrderedTags(segmentData), tag, parseResults = [];
 
-        // collect all the tags
-        while (parser.tagsAvailable()) {
-          tag = parser.getNextTag();
-          tags.push(tag.bytes);
-          li = document.createElement('li');
-          li.innerHTML = tagTypes[tag.bytes[0]] + ': ' + tag.bytes.byteLength + 'B';
-          vjsTags.appendChild(li);
-        }
-        // create a uint8array for the entire segment and copy everything over
-        i = tags.length;
-        while (i--) {
-          byteLength += tags[i].byteLength;
-        }
-        data = new Uint8Array(byteLength);
-        i = tags.length;
-        pos = byteLength;
-        while (i--) {
-          pos -= tags[i].byteLength;
-          data.set(tags[i], pos);
-        }
+          // collect all the tags
+          for (var i = 0; i < tags.length; i++) {
+            tag = tags[i];
+            parseResults.push(muxjs.tools.inspectFlvTag(tag.bytes.subarray(0, tag.bytes.byteLength - 4)));
+          }
 
+          pre = document.createElement('pre');
+          vjsParsed = muxjs.tools.textifyFlv(parseResults);
+          pre.innerHTML = vjsParsed;
+          vjsTags.appendChild(pre);
+
+          // create a uint8array for the entire segment and copy everything over
+/*          i = tags.length;
+          while (i--) {
+            byteLength += tags[i].bytes.byteLength;
+          }
+          data = new Uint8Array(byteLength);
+          i = tags.length;
+          pos = byteLength;
+          while (i--) {
+            pos -= tags[i].bytes.byteLength;
+            data.set(tags[i].bytes, pos);
+          }*/
+
+          diffParsed();
+        });
+
+        parser.push(bytes);
+        parser.flush();
       });
+
       reader.readAsArrayBuffer(this.files[0]);
     }, false);
 
@@ -163,53 +236,21 @@
         var bytes = new Uint8Array(reader.result),
             i = 9, // header
             dataSize,
-            li;
+            parseResults = [],
+            pre, tag;
 
         // clear old tag info
         workingTags.innerHTML = '';
+        parseResults = muxjs.tools.inspectFlv(bytes);
+        pre = document.createElement('pre');
+        workingParsed = muxjs.tools.textifyFlv(parseResults)
+        pre.innerHTML = workingParsed;
+        workingTags.appendChild(pre);
 
-        // traverse the tags
-        i += 4; // previous tag size
-        while (i < bytes.byteLength) {
-          dataSize = bytes[i + 1] << 16;
-          dataSize |= bytes[i + 2] << 8;
-          dataSize |= bytes[i + 3];
-          dataSize += 11;
-
-          li = document.createElement('li');
-          li.innerHTML = tagTypes[bytes[i]] + ': ' + dataSize + 'B';
-          workingTags.appendChild(li);
-
-          i += dataSize; // tag size
-          i += 4; // previous tag size
-        }
+        diffParsed();
       });
       reader.readAsArrayBuffer(this.files[0]);
     }, false);
-  </script>
-  <script type="text/plain">
-    // map nal_unit_types to friendly names
-    console.log([
-      'unspecified',
-      'slice_layer_without_partitioning',
-      'slice_data_partition_a_layer',
-      'slice_data_partition_b_layer',
-      'slice_data_partition_c_layer',
-      'slice_layer_without_partitioning_idr',
-      'sei',
-      'seq_parameter_set',
-      'pic_parameter_set',
-      'access_unit_delimiter',
-      'end_of_seq',
-      'end_of_stream',
-      'filler',
-      'seq_parameter_set_ext',
-      'prefix_nal_unit',
-      'subset_seq_parameter_set',
-      'reserved',
-      'reserved',
-      'reserved'
-    ][nalUnitType]);
   </script>
 </body>
 </html>

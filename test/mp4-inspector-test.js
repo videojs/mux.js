@@ -120,7 +120,7 @@ var
 module('MP4 Inspector');
 
 test('produces an empty array for empty input', function() {
-  strictEqual(muxjs.inspectMp4(new Uint8Array([])).length, 0, 'returned an empty array');
+  strictEqual(muxjs.tools.inspectMp4(new Uint8Array([])).length, 0, 'returned an empty array');
 });
 
 test('can parse a Box', function() {
@@ -128,7 +128,7 @@ test('can parse a Box', function() {
     0x00, 0x00, 0x00, 0x00, // size 0
     0x00, 0x00, 0x00, 0x00 // boxtype 0
   ]);
-  deepEqual(muxjs.inspectMp4(box), [{
+  deepEqual(muxjs.tools.inspectMp4(box), [{
     type: '\u0000\u0000\u0000\u0000',
     size: 0,
     data: box.subarray(box.byteLength)
@@ -136,7 +136,7 @@ test('can parse a Box', function() {
 });
 
 test('can parse an ftyp', function() {
-  deepEqual(muxjs.inspectMp4(new Uint8Array(box('ftyp',
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(box('ftyp',
     0x61, 0x76, 0x63, 0x31, // major brand
     0x00, 0x00, 0x00, 0x02, // minor version
     98, 111, 111, 112, // compatible brands
@@ -151,7 +151,7 @@ test('can parse an ftyp', function() {
 });
 
 test('can parse a pdin', function() {
-  deepEqual(muxjs.inspectMp4(new Uint8Array(box('pdin',
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(box('pdin',
     0x01, // version 1
     0x01, 0x02, 0x03, // flags
     0x00, 0x00, 0x04, 0x00, // 1024 = 0x400 bytes/second rate
@@ -171,7 +171,7 @@ test('can parse an mdat', function() {
       0, 0, 0, 4, // length
       0x01, 0x02, 0x03, 0x04 // data
     ));
-  deepEqual(muxjs.inspectMp4(mdat), [{
+  deepEqual(muxjs.tools.inspectMp4(mdat), [{
     size: 16,
     type: 'mdat',
     nals: [
@@ -188,12 +188,12 @@ test('can parse a free or skip', function() {
     skip = new Uint8Array(box('skip',
                               0x01, 0x02, 0x03, 0x04)); // data
 
-  deepEqual(muxjs.inspectMp4(free), [{
+  deepEqual(muxjs.tools.inspectMp4(free), [{
       size: 12,
       type: 'free',
       data: free.subarray(free.byteLength - 4)
     }], 'parsed a free');
-  deepEqual(muxjs.inspectMp4(skip), [{
+  deepEqual(muxjs.tools.inspectMp4(skip), [{
       size: 12,
       type: 'skip',
       data: skip.subarray(skip.byteLength - 4)
@@ -201,7 +201,7 @@ test('can parse a free or skip', function() {
 });
 
 test('can parse a version 0 mvhd', function() {
-  deepEqual(muxjs.inspectMp4(new Uint8Array(mvhd0)), [{
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(mvhd0)), [{
     type: 'mvhd',
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
@@ -218,7 +218,7 @@ test('can parse a version 0 mvhd', function() {
 });
 
 test('can parse a version 0 tkhd', function() {
-  deepEqual(muxjs.inspectMp4(new Uint8Array(tkhd0)), [{
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(tkhd0)), [{
     type: 'tkhd',
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
@@ -237,7 +237,7 @@ test('can parse a version 0 tkhd', function() {
 });
 
 test('can parse a version 0 mdhd', function() {
-  deepEqual(muxjs.inspectMp4(new Uint8Array(mdhd0)), [{
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(mdhd0)), [{
     type: 'mdhd',
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
@@ -353,7 +353,7 @@ test('can parse a moov', function() {
                             0x00, 0x00, 0x00, 0x01)))))); // chunk_offset
 
 
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)), [{
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)), [{
     type: 'moov',
     size: 469,
     boxes: [{
@@ -478,7 +478,7 @@ test('can parse an mvex', function() {
             0x00, 0x00, 0x00, 0x02, // default_sample_duration
             0x00, 0x00, 0x00, 0x03, // default_sample_size
             0x00, 0x61, 0x00, 0x01)); // default_sample_flags
-  deepEqual(muxjs.inspectMp4(new Uint8Array(mvex)), [{
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(mvex)), [{
     type: 'mvex',
     size: 40,
     boxes: [{
@@ -549,7 +549,7 @@ test('can parse a video stsd', function() {
                         0x00, 0x00, 0x00, 0x00, // bufferSizeDB
                         0x00, 0x00, 0x00, 0x01, // maxBitrate
                         0x00, 0x00, 0x00, 0x01))); // avgBitrate
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)), [{
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)), [{
     type: 'stsd',
     size: 147,
     version: 0,
@@ -627,7 +627,7 @@ test('can parse an audio stsd', function() {
                          // GASpecificConfig
                          0x06, 0x01, 0x02)));
 
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)), [{
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)), [{
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
     type: 'stsd',
@@ -666,7 +666,7 @@ test('can parse an audio stsd', function() {
 });
 
 test('can parse an styp', function() {
-  deepEqual(muxjs.inspectMp4(new Uint8Array(box('styp',
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(box('styp',
     0x61, 0x76, 0x63, 0x31, // major brand
     0x00, 0x00, 0x00, 0x02, // minor version
     98, 111, 111, 112 // compatible brands
@@ -688,7 +688,7 @@ test('can parse a vmhd', function() {
                  0x00, 0x00,
                  0x00, 0x00); // opcolor
 
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)),
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)),
             [{
               type: 'vmhd',
               size: 20,
@@ -708,7 +708,7 @@ test('can parse an stsz', function() {
                  0x00, 0x00, 0x00, 0x01, // entry_size
                  0x00, 0x00, 0x00, 0x02, // entry_size
                  0x00, 0x00, 0x00, 0x03); // entry_size
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)),
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)),
             [{
               type: 'stsz',
               size: 32,
@@ -736,7 +736,7 @@ test('can parse a moof', function() {
                         0x00, 0x00, 0x00, 0x03, // default_sample_duration,
                         0x00, 0x00, 0x00, 0x04, // default_sample_size
                         0x00, 0x00, 0x00, 0x05))); // default_sample_flags
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)),
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)),
             [{
               type: 'moof',
               size: 72,
@@ -784,7 +784,7 @@ test('can parse a trun', function() {
                  0x00, 0x00, 0x00, 0x08, // sample_duration
                  0x00, 0x00, 0x00, 0xfe, // sample_size
                  0x00, 0x00, 0x00, 0x00); // sample_composition_time_offset
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)),
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)),
             [{
               type: 'trun',
               version: 0,
@@ -825,7 +825,7 @@ test('can parse a trun with per-sample flags', function() {
                  // dp: 0001 0010 0011 0100
                  0x01, 0xc4, 0x12, 0x34,
                  0x00, 0x00, 0x00, 0x00); // sample_composition_time_offset
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)),
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)),
             [{
               type: 'trun',
               version: 0,
@@ -859,7 +859,7 @@ test('can parse an sdtp', function() {
                  // reserved + sample_depends_on +
                  // sample_is_dependend_on + sample_has_redundancy
                  0x27);
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)), [{
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)), [{
     type: 'sdtp',
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
@@ -895,7 +895,7 @@ test('can parse a sidx', function(){
                 0x00, 0x00, 0x00, 0x04, // subsegment_duration
                 0x10, 0x00, 0x00, 0x05 // starts_with_SAP(1) + SAP_type(3) + SAP_delta_time(28)
       );
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)),
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)),
             [{
               type: 'sidx',
               version: 0,
@@ -931,7 +931,7 @@ test('can parse an smhd', function() {
                  0x00, 0xff,       // balance, fixed-point 8.8
                  0x00, 0x00);      // reserved
 
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)),
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)),
             [{
               type: 'smhd',
               size: 16,
@@ -947,7 +947,7 @@ test('can parse a tfdt', function() {
                  0x00, // version
                  0x00, 0x00, 0x00, // flags
                  0x01, 0x02, 0x03, 0x04); // baseMediaDecodeTime
-  deepEqual(muxjs.inspectMp4(new Uint8Array(data)),
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(data)),
             [{
               type: 'tfdt',
               version: 0,
@@ -967,7 +967,7 @@ test('can parse a series of boxes', function() {
     98, 111, 111, 112, // compatible brands
   ]);
 
-  deepEqual(muxjs.inspectMp4(new Uint8Array(ftyp.concat(ftyp))),
+  deepEqual(muxjs.tools.inspectMp4(new Uint8Array(ftyp.concat(ftyp))),
             [{
               type: 'ftyp',
               size: 4 * 6,

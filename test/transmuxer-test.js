@@ -8,15 +8,15 @@ var
   transportParseStream,
   ElementaryStream = muxjs.mp2t.ElementaryStream,
   elementaryStream,
-  H264Stream = muxjs.mp2t.H264Stream,
+  H264Stream = muxjs.codecs.H264Stream,
   h264Stream,
-  VideoSegmentStream = muxjs.mp2t.VideoSegmentStream,
+  VideoSegmentStream = muxjs.mp4.VideoSegmentStream,
   videoSegmentStream,
-  AacStream = muxjs.mp2t.AacStream,
+  AacStream = muxjs.codecs.AacStream,
   aacStream,
-  Transmuxer = muxjs.mp2t.Transmuxer,
+  Transmuxer = muxjs.mp4.Transmuxer,
   transmuxer,
-  NalByteStream = muxjs.mp2t.NalByteStream,
+  NalByteStream = muxjs.codecs.NalByteStream,
   nalByteStream,
 
   MP2T_PACKET_LENGTH = muxjs.mp2t.MP2T_PACKET_LENGTH,
@@ -1194,7 +1194,7 @@ test('concatenates NAL units into AVC elementary streams', function() {
   videoSegmentStream.flush();
 
   ok(segment, 'generated a data event');
-  boxes = muxjs.inspectMp4(segment);
+  boxes = muxjs.tools.inspectMp4(segment);
   equal(boxes[1].byteLength,
         (4 + 4) + (4 + 6),
         'wrote the correct number of bytes');
@@ -1228,7 +1228,7 @@ test('infers sample durations from DTS values', function() {
   });
   videoSegmentStream.flush();
 
-  boxes = muxjs.inspectMp4(segment);
+  boxes = muxjs.tools.inspectMp4(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
   equal(samples.length, 3, 'generated three samples');
   equal(samples[0].duration, 1, 'set the first sample duration');
@@ -1351,7 +1351,7 @@ test('calculates compositionTimeOffset values from the PTS and DTS', function() 
   });
   videoSegmentStream.flush();
 
-  boxes = muxjs.inspectMp4(segment);
+  boxes = muxjs.tools.inspectMp4(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
   equal(samples.length, 3, 'generated three samples');
   equal(samples[0].compositionTimeOffset, 0, 'calculated compositionTimeOffset');
@@ -1385,7 +1385,7 @@ test('calculates baseMediaDecodeTime values from the first DTS ever seen and sub
   });
   videoSegmentStream.flush();
 
-  boxes = muxjs.inspectMp4(segment);
+  boxes = muxjs.tools.inspectMp4(segment);
   tfdt = boxes[0].boxes[1].boxes[1];
   equal(tfdt.baseMediaDecodeTime, 90, 'calculated baseMediaDecodeTime');
 });
@@ -1617,7 +1617,7 @@ test('no options creates combined output', function() {
   equal(segments.length, 1, 'generated a combined video and audio segment');
   equal(segments[0].type, 'combined', 'combined is the segment type');
 
-  boxes = muxjs.inspectMp4(segments[0].data);
+  boxes = muxjs.tools.inspectMp4(segments[0].data);
   equal(boxes.length, 6, 'generated 6 top-level boxes');
   equal('ftyp', boxes[0].type, 'generated an ftyp box');
   equal('moov', boxes[1].type, 'generated a single moov box');
@@ -1662,14 +1662,14 @@ test('can specify that we want to generate separate audio and video segments', f
   ok(segments[0].type === 'video' || segments[1].type === 'video', 'one segment is video');
   ok(segments[0].type === 'audio' || segments[1].type === 'audio', 'one segment is audio');
 
-  boxes = muxjs.inspectMp4(segments[0].data);
+  boxes = muxjs.tools.inspectMp4(segments[0].data);
   equal(boxes.length, 4, 'generated 4 top-level boxes');
   equal('ftyp', boxes[0].type, 'generated an ftyp box');
   equal('moov', boxes[1].type, 'generated a moov box');
   equal('moof', boxes[2].type, 'generated a moof box');
   equal('mdat', boxes[3].type, 'generated a mdat box');
 
-  boxes = muxjs.inspectMp4(segments[1].data);
+  boxes = muxjs.tools.inspectMp4(segments[1].data);
   equal(boxes.length, 4, 'generated 4 top-level boxes');
   equal('ftyp', boxes[0].type, 'generated an ftyp box');
   equal('moov', boxes[1].type, 'generated a moov box');
@@ -1710,7 +1710,7 @@ test('generates a video init segment', function() {
   ok(segments[0].data, 'wrote data in the init segment');
   equal(segments[0].type, 'video', 'video is the segment type');
 
-  boxes = muxjs.inspectMp4(segments[0].data);
+  boxes = muxjs.tools.inspectMp4(segments[0].data);
   equal('ftyp', boxes[0].type, 'generated an ftyp box');
   equal('moov', boxes[1].type, 'generated a moov box');
 });
@@ -1733,7 +1733,7 @@ test('generates an audio init segment', function() {
   ok(segments[0].data, 'wrote data in the init segment');
   equal(segments[0].type, 'audio', 'audio is the segment type');
 
-  boxes = muxjs.inspectMp4(segments[0].data);
+  boxes = muxjs.tools.inspectMp4(segments[0].data);
   equal('ftyp', boxes[0].type, 'generated an ftyp box');
   equal('moov', boxes[1].type, 'generated a moov box');
 });
@@ -1760,7 +1760,7 @@ test('buffers video samples until ended', function() {
   // flush everything
   transmuxer.flush();
   equal(samples.length, 1, 'emitted one event');
-  boxes = muxjs.inspectMp4(samples[0].data);
+  boxes = muxjs.tools.inspectMp4(samples[0].data);
   equal(boxes.length, 4, 'generated four boxes');
   equal(boxes[2].type, 'moof', 'the third box is a moof');
   equal(boxes[3].type, 'mdat', 'the fourth box is a mdat');
@@ -1920,7 +1920,7 @@ test('parses an example mp2t file and generates combined media segments', functi
 
   equal(segments.length, 1, 'generated one combined segment');
 
-  boxes = muxjs.inspectMp4(segments[0].data);
+  boxes = muxjs.tools.inspectMp4(segments[0].data);
   equal(boxes.length, 6, 'combined segments are composed of six boxes');
   equal(boxes[0].type, 'ftyp', 'the first box is an ftyp');
   equal(boxes[1].type, 'moov', 'the second box is a moov');
@@ -1969,7 +1969,7 @@ test('can be reused for multiple TS segments', function() {
 
   transmuxer.on('data', function(segment) {
     if (segment.type === 'combined') {
-      segments.push(muxjs.inspectMp4(segment.data));
+      segments.push(muxjs.tools.inspectMp4(segment.data));
     }
   });
   transmuxer.push(window.testSegment);

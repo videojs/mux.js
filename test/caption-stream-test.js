@@ -72,7 +72,7 @@
   });
 
   test('can be parsed from a segment', function() {
-    var transmuxer = new muxjs.mp2t.Transmuxer(),
+    var transmuxer = new muxjs.mp4.Transmuxer(),
         captions = [];
 
     transmuxer.on('data', function(data) {

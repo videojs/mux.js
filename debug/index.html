@@ -129,12 +129,16 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
   </div>
 
 
-  <script src="../lib/stream.js"></script>
-  <script src="../lib/mp4-generator.js"></script>
-  <script src="../lib/metadata-stream.js"></script>
-  <script src="../lib/transmuxer.js"></script>
-  <script src="../lib/mp4-inspector.js"></script>
-  <script src="../lib/exp-golomb.js"></script>
+  <script src="../lib/utils/stream.js"></script>
+  <script src="../lib/utils/exp-golomb.js"></script>
+  <script src="../lib/mp4/mp4-generator.js"></script>
+  <script src="../lib/tools/mp4-inspector.js"></script>
+  <script src="../lib/codecs/aac.js"></script>
+  <script src="../lib/codecs/h264.js"></script>
+  <script src="../lib/m2ts/m2ts.js"></script>
+  <script src="../lib/m2ts/caption-stream.js"></script>
+  <script src="../lib/m2ts/metadata-stream.js"></script>
+  <script src="../lib/mp4/transmuxer.js"></script>
 
   <!-- Include QUnit for object diffs -->
   <script src="../node_modules/qunitjs/qunit/qunit.js"></script>
@@ -208,8 +212,8 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         'properties present in the working version but missing in the ' +
         'transmuxed output.</p>';
       diff += '<pre class="mp4-diff">' +
-        QUnit.diff(muxjs.textifyMp4(transmuxed, null, ' '),
-                   muxjs.textifyMp4(workingParsed, null, ' ')) +
+        QUnit.diff(muxjs.tools.textifyMp4(transmuxed, null, ' '),
+                   muxjs.tools.textifyMp4(workingParsed, null, ' ')) +
         '</pre>';
 
       comparison.innerHTML = diff;
@@ -285,9 +289,9 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
             i, j;
 
         if (combined) {
-            transmuxer = new muxjs.mp2t.Transmuxer();
+            transmuxer = new muxjs.mp4.Transmuxer();
         } else {
-            transmuxer = new muxjs.mp2t.Transmuxer({remux: false});
+            transmuxer = new muxjs.mp4.Transmuxer({remux: false});
         }
 
         if (document.querySelector('#original-active').checked) {
@@ -315,12 +319,12 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         }
 
         vjsBytes = bytes;
-        vjsParsed = muxjs.inspectMp4(bytes);
+        vjsParsed = muxjs.tools.inspectMp4(bytes);
         console.log('transmuxed', vjsParsed);
         diffParsed();
 
         // clear old box info
-        vjsBoxes.innerHTML = muxjs.textifyMp4(vjsParsed, null, ' ');
+        vjsBoxes.innerHTML = muxjs.tools.textifyMp4(vjsParsed, null, ' ');
       });
 
       reader.readAsArrayBuffer(this.files[0]);
@@ -340,12 +344,12 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         }
 
         workingBytes = bytes;
-        workingParsed = muxjs.inspectMp4(bytes);
+        workingParsed = muxjs.tools.inspectMp4(bytes);
         console.log('working', workingParsed);
         diffParsed();
 
         // clear old box info
-        workingBoxes.innerHTML = muxjs.textifyMp4(workingParsed, null, ' ');
+        workingBoxes.innerHTML = muxjs.tools.textifyMp4(workingParsed, null, ' ');
       });
       reader.readAsArrayBuffer(this.files[0]);
     }, false);
