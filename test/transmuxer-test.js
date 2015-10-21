@@ -32,6 +32,7 @@ var
   validateTrack,
   validateTrackFragment,
 
+  pesHeader,
   transportPacket,
   videoPes,
   audioPes,
@@ -402,90 +403,36 @@ test('parse the elementary streams from a program map table', function() {
   deepEqual(transportParseStream.programMapTable, packet.programMapTable, 'recorded the PMT');
 });
 
-test('parses an elementary stream packet with just a pts', function() {
-  var packet;
-  transportParseStream.on('data', function(data) {
-    packet = data;
-  });
-
-  transportParseStream.programMapTable = {
-    0x11: 0x1b // pid 0x11 is h264 data
-  };
-
-  transportParseStream.push(new Uint8Array([
-    0x47, // sync byte
-    // tei:0 pusi:1 tp:0 pid:0 0000 0001 0001
-    0x40, 0x11,
-    // tsc:01 afc:01 cc:0000
-    0x50,
+pesHeader = function (first, pts) {
+  // PES_packet(), Rec. ITU-T H.222.0, Table 2-21
+  var result = [
     // pscp:0000 0000 0000 0000 0000 0001
     0x00, 0x00, 0x01,
-    // sid:0000 0000 ppl:0000 0000 0000 1001
-    0x00, 0x00, 0x09,
+    // sid:0000 0000 ppl:0000 0000 0000 0101
+    0x00, 0x00, 0x05,
     // 10 psc:00 pp:0 dai:1 c:0 ooc:0
     0x84,
-    // pdf:10 ef:1 erf:0 dtmf:0 acif:0 pcf:0 pef:0
-    0xc0,
-    // phdl:0000 0101 '0010' pts:000 mb:1 pts:0000 0000
-    0x05, 0x21, 0x00,
-    // pts:0000 000 mb:1 pts:0000 0000 pts:0000 000 mb:1
-    0x01, 0x00, 0x01,
-    // "data":0101
-    0x11
-  ]));
+    // pdf:?0 ef:1 erf:0 dtmf:0 acif:0 pcf:0 pef:0
+    0x20 | (pts ? 0x80 : 0x00),
+    // phdl:0000 0000
+    (first ? 0x01 : 0x00) + (pts ? 0x05 : 0x00)
+  ];
 
-  ok(packet, 'parsed a packet');
-  equal('pes', packet.type, 'recognized a PES packet');
-  equal(0x1b, packet.streamType, 'tracked the stream_type');
-  equal(1, packet.data.byteLength, 'parsed a single data byte');
-  equal(0x11, packet.data[0], 'parsed the data');
-  equal(0, packet.pts, 'parsed the pts');
-});
+  // Only store 15 bits of the PTS for testing purposes
+  if (pts) {
+    result.push(0x21);
+    result.push(0x00);
+    result.push(0x01);
+    result.push((pts & 0x7F80) >>> 7);
+    result.push(((pts & 0x7F) << 1) | 1);
+  }
 
-test('parses an elementary stream packet with a pts and dts', function() {
-  var packet;
-  transportParseStream.on('data', function(data) {
-    packet = data;
-  });
+  if (first) {
+    result.push(0x00);
+  }
 
-  transportParseStream.programMapTable = {
-    0x11: 0x1b // pid 0x11 is h264 data
-  };
-
-  transportParseStream.push(new Uint8Array([
-    0x47, // sync byte
-    // tei:0 pusi:1 tp:0 pid:0 0000 0001 0001
-    0x40, 0x11,
-    // tsc:01 afc:01 cc:0000
-    0x50,
-    // pscp:0000 0000 0000 0000 0000 0001
-    0x00, 0x00, 0x01,
-    // sid:0000 0000 ppl:0000 0000 0000 1110
-    0x00, 0x00, 0x0e,
-    // 10 psc:00 pp:0 dai:1 c:0 ooc:0
-    0x84,
-    // pdf:11 ef:1 erf:0 dtmf:0 acif:0 pcf:0 pef:0
-    0xe0,
-    // phdl:0000 1010 '0011' pts:000 mb:1 pts:0000 0000
-    0x0a, 0x21, 0x00,
-    // pts:0000 000 mb:1 pts:0000 0000 pts:0000 100 mb:1
-    0x01, 0x00, 0x09,
-    // '0001' dts:000 mb:1 dts:0000 0000 dts:0000 000 mb:1
-    0x11, 0x00, 0x01,
-    // dts:0000 0000 dts:0000 010 mb:1
-    0x00, 0x05,
-    // "data":0101
-    0x11
-  ]));
-
-  ok(packet, 'parsed a packet');
-  equal('pes', packet.type, 'recognized a PES packet');
-  equal(0x1b, packet.streamType, 'tracked the stream_type');
-  equal(1, packet.data.byteLength, 'parsed a single data byte');
-  equal(0x11, packet.data[0], 'parsed the data');
-  equal(4, packet.pts, 'parsed the pts');
-  equal(2, packet.dts, 'parsed the dts');
-});
+  return result;
+};
 
 /**
  * Helper function to create transport stream PES packets
@@ -520,29 +467,8 @@ transportPacket = function(pid, data, first, pts) {
   }
 
   // PES_packet(), Rec. ITU-T H.222.0, Table 2-21
-  result = result.concat([
-    // pscp:0000 0000 0000 0000 0000 0001
-    0x00, 0x00, 0x01,
-    // sid:0000 0000 ppl:0000 0000 0000 0101
-    0x00, 0x00, 0x05,
-    // 10 psc:00 pp:0 dai:1 c:0 ooc:0
-    0x84,
-    // pdf:?0 ef:1 erf:0 dtmf:0 acif:0 pcf:0 pef:0
-    0x20 | (pts ? 0x80 : 0x00),
-    // phdl:0000 0000
-    0x00
-  ]);
-  // Only store 15 bits of the PTS for testing purposes
-  if (pts) {
-    result.push(0x21);
-    result.push(0x00);
-    result.push(0x01);
-    result.push((pts & 0x7F80) >>> 7);
-    result.push(((pts & 0x7F) << 1) + 1);
-  }
-  if (first) {
-    result.push(0x00);
-  }
+  result = result.concat(pesHeader(first, pts));
+
   return result.concat(data);
 };
 
@@ -582,30 +508,6 @@ timedMetadataPes = function(data) {
   var id3 = muxjs.id3;
   return transportPacket(0x13, id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01)));
 };
-
-test('parses an elementary stream packet without a pts or dts', function() {
-
-  var packet;
-  transportParseStream.on('data', function(data) {
-    packet = data;
-  });
-
-  // pid 0x11 is h264 data
-  transportParseStream.programMapTable = {
-    0x11: H264_STREAM_TYPE
-  };
-
-  transportParseStream.push(new Uint8Array(standalonePes));
-
-  ok(packet, 'parsed a packet');
-  equal('pes', packet.type, 'recognized a PES packet');
-  equal(0x1b, packet.streamType, 'tracked the stream_type');
-  equal(2 + 4, packet.data.byteLength, 'parsed two data bytes');
-  equal(0xaf, packet.data[packet.data.length - 2], 'parsed the first data byte');
-  equal(0x01, packet.data[packet.data.length - 1], 'parsed the second data byte');
-  ok(!packet.pts, 'did not parse a pts');
-  ok(!packet.dts, 'did not parse a dts');
-});
 
 module('MP2T ElementaryStream', {
   setup: function() {
@@ -660,7 +562,11 @@ test('parses metadata events from PSI packets', function() {
 });
 
 test('parses standalone program stream packets', function() {
-  var packets = [];
+  var
+    packets = [],
+    packetData = [0x01, 0x02],
+    pesHead = pesHeader(false, 7);
+
   elementaryStream.on('data', function(packet) {
     packets.push(packet);
   });
@@ -668,19 +574,22 @@ test('parses standalone program stream packets', function() {
     type: 'pes',
     streamType: ADTS_STREAM_TYPE,
     payloadUnitStartIndicator: true,
-    pts: 7,
-    dts: 8,
-    data: new Uint8Array(19)
+    data: new Uint8Array(pesHead.concat(packetData))
   });
   elementaryStream.flush();
 
-  equal(1, packets.length, 'built one packet');
-  equal('audio', packets[0].type, 'identified audio data');
-  equal(19, packets[0].data.byteLength, 'parsed the correct payload size');
+  equal(packets.length, 1, 'built one packet');
+  equal(packets[0].type, 'audio', 'identified audio data');
+  equal(packets[0].data.byteLength, packetData.length, 'parsed the correct payload size');
+  equal(packets[0].pts, 7, 'correctly parsed the pts value');
 });
 
 test('aggregates program stream packets from the transport stream', function() {
-  var events = [];
+  var
+    events = [],
+    packetData = [0x01, 0x02],
+    pesHead = pesHeader(false, 7);
+
   elementaryStream.on('data', function(event) {
     events.push(event);
   });
@@ -689,23 +598,119 @@ test('aggregates program stream packets from the transport stream', function() {
     type: 'pes',
     streamType: H264_STREAM_TYPE,
     payloadUnitStartIndicator: true,
-    pts: 7,
-    dts: 8,
-    data: new Uint8Array(7)
+    data: new Uint8Array(pesHead.slice(0, 4)) // Spread PES Header across packets
   });
-  equal(0, events.length, 'buffers partial packets');
+
+  equal(events.length, 0, 'buffers partial packets');
 
   elementaryStream.push({
     type: 'pes',
     streamType: H264_STREAM_TYPE,
-    data: new Uint8Array(13)
+    data: new Uint8Array(pesHead.slice(4).concat(packetData))
   });
   elementaryStream.flush();
-  equal(1, events.length, 'built one packet');
-  equal('video', events[0].type, 'identified video data');
-  equal(events[0].pts, 7, 'passed along the pts');
-  equal(events[0].dts, 8, 'passed along the dts');
-  equal(20, events[0].data.byteLength, 'concatenated transport packets');
+
+  equal(events.length, 1, 'built one packet');
+  equal(events[0].type, 'video', 'identified video data');
+  equal(events[0].pts, 7, 'correctly parsed the pts');
+  equal(events[0].data.byteLength, packetData.length, 'concatenated transport packets');
+});
+
+test('parses an elementary stream packet with just a pts', function() {
+  var packet;
+  elementaryStream.on('data', function(data) {
+    packet = data;
+  });
+
+  elementaryStream.push({
+    type: 'pes',
+    streamType: H264_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array([
+      // pscp:0000 0000 0000 0000 0000 0001
+      0x00, 0x00, 0x01,
+      // sid:0000 0000 ppl:0000 0000 0000 1001
+      0x00, 0x00, 0x09,
+      // 10 psc:00 pp:0 dai:1 c:0 ooc:0
+      0x84,
+      // pdf:10 ef:1 erf:0 dtmf:0 acif:0 pcf:0 pef:0
+      0xc0,
+      // phdl:0000 0101 '0010' pts:000 mb:1 pts:0000 0000
+      0x05, 0x21, 0x00,
+      // pts:0000 000 mb:1 pts:0000 0000 pts:0000 001 mb:1
+      0x01, 0x00, 0x03,
+      // "data":0101
+      0x11
+    ])
+  });
+  elementaryStream.flush();
+
+  ok(packet, 'parsed a packet');
+  equal(packet.data.byteLength, 1, 'parsed a single data byte');
+  equal(packet.data[0], 0x11, 'parsed the data');
+  equal(packet.pts, 1, 'parsed the pts');
+});
+
+test('parses an elementary stream packet with a pts and dts', function() {
+  var packet;
+  elementaryStream.on('data', function(data) {
+    packet = data;
+  });
+
+  elementaryStream.push({
+    type: 'pes',
+    streamType: H264_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array([
+      // pscp:0000 0000 0000 0000 0000 0001
+      0x00, 0x00, 0x01,
+      // sid:0000 0000 ppl:0000 0000 0000 1110
+      0x00, 0x00, 0x0e,
+      // 10 psc:00 pp:0 dai:1 c:0 ooc:0
+      0x84,
+      // pdf:11 ef:1 erf:0 dtmf:0 acif:0 pcf:0 pef:0
+      0xe0,
+      // phdl:0000 1010 '0011' pts:000 mb:1 pts:0000 0000
+      0x0a, 0x21, 0x00,
+      // pts:0000 000 mb:1 pts:0000 0000 pts:0000 100 mb:1
+      0x01, 0x00, 0x09,
+      // '0001' dts:000 mb:1 dts:0000 0000 dts:0000 000 mb:1
+      0x11, 0x00, 0x01,
+      // dts:0000 0000 dts:0000 010 mb:1
+      0x00, 0x05,
+      // "data":0101
+      0x11
+    ])
+  });
+  elementaryStream.flush();
+
+  ok(packet, 'parsed a packet');
+  equal(packet.data.byteLength, 1, 'parsed a single data byte');
+  equal(packet.data[0], 0x11, 'parsed the data');
+  equal(packet.pts, 4, 'parsed the pts');
+  equal(packet.dts, 2, 'parsed the dts');
+});
+
+test('parses an elementary stream packet without a pts or dts', function() {
+  var packet;
+  elementaryStream.on('data', function(data) {
+    packet = data;
+  });
+
+  elementaryStream.push({
+    type: 'pes',
+    streamType: H264_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeader().concat([0xaf, 0x01]))
+  });
+  elementaryStream.flush();
+
+  ok(packet, 'parsed a packet');
+  equal(packet.data.byteLength, 2, 'parsed two data bytes');
+  equal(packet.data[0], 0xaf, 'parsed the first data byte');
+  equal(packet.data[1], 0x01, 'parsed the second data byte');
+  ok(!packet.pts, 'did not parse a pts');
+  ok(!packet.dts, 'did not parse a dts');
 });
 
 test('buffers audio and video program streams individually', function() {
