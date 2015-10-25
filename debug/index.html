@@ -49,7 +49,9 @@
             <pre>
 ffmpeg -i movie.ts -vn -codec copy -absf aac_adtstoasc movie-audio.mp4
 mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.m4s</pre>
-          <small>Looking for the <a href="legacy.html">FLV tool</a>?</small>
+            <small>
+              Looking for the <a href="legacy.html">FLV tool</a>? Want to see the behavior with <a href="mse-workbench.html">after multiple appends</a>?
+            </small>
         </header>
         <section>
           <h2>Inputs</h2>
@@ -164,7 +166,6 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         workingBoxes = document.querySelector('.working-boxes'),
 
         video,
-        mediaSource,
         logevent,
         prepareSourceBuffer;
 
@@ -227,42 +228,27 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
 
       video = document.createElement('video');
       video.controls = true;
-      mediaSource = new MediaSource();
-      video.src = URL.createObjectURL(mediaSource);
-      window.vjsVideo = video;
-      window.vjsMediaSource = mediaSource;
       document.querySelector('#video-place').innerHTML = '';
       document.querySelector('#video-place').appendChild(video);
-
-      mediaSource.addEventListener('error', logevent);
-      mediaSource.addEventListener('opened', logevent);
-      mediaSource.addEventListener('closed', logevent);
-      mediaSource.addEventListener('sourceended', logevent);
 
       codecs = document.querySelector('#codecs');
       codecsArray = codecs.value.split(',');
 
-      mediaSource.addEventListener('sourceopen', function () {
-        if (combined) {
-          buffer = mediaSource.addSourceBuffer('video/mp4;codecs="' + codecs.value + '"');
-        } else if (outputType === 'video') {
-          buffer = mediaSource.addSourceBuffer('video/mp4;codecs="' + codecsArray[0] + '"');
-        } else if (outputType === 'audio') {
-          buffer = mediaSource.addSourceBuffer('audio/mp4;codecs="' + (codecsArray[1] ||codecsArray[0]) + '"');
-        }
-
-        buffer.addEventListener('updatestart', logevent);
-        buffer.addEventListener('updateend', logevent);
-        buffer.addEventListener('error', logevent);
-        window.vjsBuffer = buffer;
-
-        video.addEventListener('error', logevent);
-        video.addEventListener('error', function() {
-          document.getElementById('video-place').classList.add('error');
+      if (combined) {
+        muxjs.debug.prepareVideo(video, {
+          codecs: codecs.value
+        }, function(mediaSource, sourceBuffer) {
+          window.vjsBuffer = sourceBuffer;
+          callback();
         });
-
-        return callback();
-      });
+      } else {
+        muxjs.debug.prepareVideo(video, {
+          codecs: outputType === 'video' ? codecsArray[0] : codecsArray[1]
+        }, function(mediaSource, sourceBuffer) {
+          window.vjsBuffer = sourceBuffer;
+          callback();
+        });
+      }
     };
 
     original.addEventListener('change', function() {

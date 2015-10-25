@@ -17,7 +17,49 @@
     });
   };
 
+  var logMediaSource = function(event) {
+    console.log('media source', event.type);
+  };
+  var logSourceBuffer = function(event) {
+    console.log('source buffer', event.type);
+  };
+
+  var prepareVideo = function(video, options, callback) {
+    var mediaSource  = new MediaSource();
+
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+
+    video.src = URL.createObjectURL(mediaSource);
+    mediaSource.addEventListener('error', logMediaSource);
+    mediaSource.addEventListener('opened', logMediaSource);
+    mediaSource.addEventListener('closed', logMediaSource);
+    mediaSource.addEventListener('sourceended', logMediaSource);
+
+    mediaSource.addEventListener('sourceopen', function () {
+      var sourceBuffer, codecs;
+
+      codecs = options.codecs || 'avc1.64001f,mp4a.40.2';
+
+      sourceBuffer = mediaSource.addSourceBuffer('video/mp4;codecs="' + codecs + '"');
+
+      sourceBuffer.addEventListener('updatestart', logSourceBuffer);
+      sourceBuffer.addEventListener('updateend', logSourceBuffer);
+      sourceBuffer.addEventListener('error', logSourceBuffer);
+
+      video.addEventListener('error', logSourceBuffer);
+      video.addEventListener('error', function() {
+        video.classList.add('error');
+      });
+
+      return callback(mediaSource, sourceBuffer);
+    });
+  }
+
   muxjs.debug = {
-    diffParsed: diffParsed
+    diffParsed: diffParsed,
+    prepareVideo: prepareVideo
   };
 })(window.muxjs);
