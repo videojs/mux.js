@@ -12,6 +12,7 @@
 
   <link rel="stylesheet" href="css/normalize.min.css">
   <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/diffview.css">
 
   <script src="js/vendor/modernizr-2.6.2.min.js"></script>
   <style>
@@ -99,11 +100,12 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         </section>
         <section>
           <h2>Comparison</h2>
-          <div id="comparison">
+          <p id="comparison-info">
             A diff of the structure of the two MP4s will appear here
             once you've specified an input TS file and a known working
             MP4.
-          </div>
+          </p>
+          <div id="comparison"></div>
         </section>
         <section>
           <h2>Structure</h2>
@@ -140,8 +142,10 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
   <script src="../lib/m2ts/metadata-stream.js"></script>
   <script src="../lib/mp4/transmuxer.js"></script>
 
-  <!-- Include QUnit for object diffs -->
-  <script src="../node_modules/qunitjs/qunit/qunit.js"></script>
+  <!-- Include jsdifflib for object diffs -->
+  <script src="js/difflib.js"></script>
+  <script src="js/diffview.js"></script>
+  <script src="js/main.js"></script>
   <script>
     'use strict';
     var inputs = document.getElementById('inputs'),
@@ -150,7 +154,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
 
         vjsParsed,
         workingParsed,
-        diffParsed,
+        updateDiff,
         vjsBytes,
         workingBytes,
         saveConfig,
@@ -198,25 +202,16 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
     document.addEventListener('DOMContentLoaded', restoreConfig);
 
     // output a diff of the two parsed MP4s
-    diffParsed = function() {
-      var comparison, diff, transmuxed;
+    updateDiff = function() {
+      var comparison;
       if (!vjsParsed || !workingParsed) {
         // wait until both inputs have been provided
         return;
       }
-      comparison = document.querySelector('#comparison');
-      transmuxed = vjsParsed;
-      diff = '<p>A <del>red background</del> indicates ' +
-        'properties present in the transmuxed file but missing from the ' +
-        'working version. A <ins>green background</ins> indicates ' +
-        'properties present in the working version but missing in the ' +
-        'transmuxed output.</p>';
-      diff += '<pre class="mp4-diff">' +
-        QUnit.diff(muxjs.tools.textifyMp4(transmuxed, null, ' '),
-                   muxjs.tools.textifyMp4(workingParsed, null, ' ')) +
-        '</pre>';
 
-      comparison.innerHTML = diff;
+      comparison = document.querySelector('#comparison');
+      comparison.innerHTML = '';
+      comparison.appendChild(muxjs.debug.diffParsed(workingParsed, vjsParsed));
     };
 
     prepareSourceBuffer = function(combined, outputType, callback) {
@@ -321,7 +316,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         vjsBytes = bytes;
         vjsParsed = muxjs.tools.inspectMp4(bytes);
         console.log('transmuxed', vjsParsed);
-        diffParsed();
+        updateDiff();
 
         // clear old box info
         vjsBoxes.innerHTML = muxjs.tools.textifyMp4(vjsParsed, null, ' ');
@@ -346,7 +341,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         workingBytes = bytes;
         workingParsed = muxjs.tools.inspectMp4(bytes);
         console.log('working', workingParsed);
-        diffParsed();
+        updateDiff();
 
         // clear old box info
         workingBoxes.innerHTML = muxjs.tools.textifyMp4(workingParsed, null, ' ');
