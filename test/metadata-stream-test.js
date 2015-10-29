@@ -269,7 +269,8 @@
       trackId: 7,
       pts: 1000,
       dts: 900,
-      data: front
+      data: front,
+      dataAlignmentIndicator: 0x01
     });
 
     equal(events.length, 0, 'parsed zero tags');
@@ -279,7 +280,8 @@
       trackId: 7,
       pts: 1000,
       dts: 900,
-      data: back
+      data: back,
+      dataAlignmentIndicator: 0x00
     });
 
     equal(events.length, 1, 'parsed a tag');
@@ -293,21 +295,29 @@
                                          owner, payload, payload)));
     front = tag.subarray(0, 188);
     back = tag.subarray(188);
+    events = [];
     metadataStream.push({
       type: 'timed-metadata',
       trackId: 7,
       pts: 2000,
       dts: 2000,
-      data: front
+      data: front,
+      dataAlignmentIndicator: 0x01
     });
     metadataStream.push({
       type: 'timed-metadata',
       trackId: 7,
       pts: 2000,
       dts: 2000,
-      data: back
+      data: back,
+      dataAlignmentIndicator: 0x00
     });
-    equal(events.length, 2, 'parsed a subseqent frame');
+
+    equal(events.length, 1, 'parsed a tag');
+    equal(events[0].frames.length, 1, 'parsed a frame');
+    equal(events[0].frames[0].data.byteLength,
+          2 * payload.length,
+          'collected data across pushes');
   });
 
   test('ignores tags when the header is fragmented', function() {
