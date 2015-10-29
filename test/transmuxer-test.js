@@ -1223,6 +1223,11 @@ test('infers sample durations from DTS values', function() {
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 2
   });
@@ -1239,6 +1244,45 @@ test('infers sample durations from DTS values', function() {
   equal(samples[0].duration, 1, 'set the first sample duration');
   equal(samples[1].duration, 2, 'set the second sample duration');
   equal(samples[2].duration, 2, 'inferred the final sample duration');
+});
+
+test('filters pre-IDR samples and caluculate duration correctly', function() {
+  var segment, boxes, samples;
+  videoSegmentStream.on('data', function(data) {
+    segment = data.boxes;
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp',
+    dts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 2
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 4
+  });
+  videoSegmentStream.flush();
+
+  boxes = muxjs.tools.inspectMp4(segment);
+  samples = boxes[0].boxes[1].boxes[2].samples;
+  equal(samples.length, 2, 'generated two samples, filters out pre-IDR');
+  equal(samples[0].duration, 3, 'set the first sample duration');
+  equal(samples[1].duration, 2, 'set the second sample duration');
 });
 
 test('track values from seq_parameter_set_rbsp should be cleared by a flush', function() {
@@ -1341,6 +1385,11 @@ test('calculates compositionTimeOffset values from the PTS and DTS', function() 
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 1,
     pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 1
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
