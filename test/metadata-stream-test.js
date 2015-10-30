@@ -269,7 +269,8 @@
       trackId: 7,
       pts: 1000,
       dts: 900,
-      data: front
+      data: front,
+      dataAlignmentIndicator: true
     });
 
     equal(events.length, 0, 'parsed zero tags');
@@ -279,7 +280,8 @@
       trackId: 7,
       pts: 1000,
       dts: 900,
-      data: back
+      data: back,
+      dataAlignmentIndicator: false
     });
 
     equal(events.length, 1, 'parsed a tag');
@@ -293,21 +295,110 @@
                                          owner, payload, payload)));
     front = tag.subarray(0, 188);
     back = tag.subarray(188);
+    events = [];
     metadataStream.push({
       type: 'timed-metadata',
       trackId: 7,
       pts: 2000,
       dts: 2000,
-      data: front
+      data: front,
+      dataAlignmentIndicator: true
     });
     metadataStream.push({
       type: 'timed-metadata',
       trackId: 7,
       pts: 2000,
       dts: 2000,
-      data: back
+      data: back,
+      dataAlignmentIndicator: false
     });
-    equal(events.length, 2, 'parsed a subseqent frame');
+
+    equal(events.length, 1, 'parsed a tag');
+    equal(events[0].frames.length, 1, 'parsed a frame');
+    equal(events[0].frames[0].data.byteLength,
+          2 * payload.length,
+          'collected data across pushes');
+  });
+
+  test('id3 frame is malformed first time but gets corrected in the next frame', function() {
+    var
+      events = [],
+      owner = stringToCString('owner@example.com'),
+      payload = stringToInts('A TS packet is 188 bytes in length so that it can' +
+                             ' be easily transmitted over ATM networks, an ' +
+                             'important medium at one time. We want to be sure' +
+                             ' that ID3 frames larger than a TS packet are ' +
+                             'properly re-assembled.'),
+      tag = new Uint8Array(id3Tag(id3Frame('PRIV', owner, payload))),
+      front = tag.subarray(0, 100);
+
+    metadataStream.on('data', function(event) {
+      events.push(event);
+    });
+
+    // receives incomplete id3
+    metadataStream.push({
+      type: 'timed-metadata',
+      trackId: 7,
+      pts: 1000,
+      dts: 900,
+      data: front,
+      dataAlignmentIndicator: true
+    });
+
+    equal(events.length, 0, 'parsed zero tags');
+
+    // receives complete id3
+    metadataStream.push({
+      type: 'timed-metadata',
+      trackId: 7,
+      pts: 1000,
+      dts: 900,
+      data: tag,
+      dataAlignmentIndicator: true
+    });
+
+    equal(events.length, 1, 'parsed a tag');
+    equal(events[0].frames.length, 1, 'parsed a frame');
+    equal(events[0].frames[0].data.byteLength,
+          payload.length,
+          'collected data across pushes');
+  });
+
+  test('id3 frame reports more data than its tagsize ', function() {
+    var
+      events = [],
+      owner = stringToCString('owner@example.com'),
+      payload = stringToInts('A TS packet is 188 bytes in length so that it can' +
+                             ' be easily transmitted over ATM networks, an ' +
+                             'important medium at one time. We want to be sure' +
+                             ' that ID3 frames larger than a TS packet are ' +
+                             'properly re-assembled.'),
+      tag = new Uint8Array(id3Tag(id3Frame('PRIV', owner, payload))),
+      d = new Uint8Array([0x04, 0x05, 0x06]),
+      data = new Uint8Array(tag.byteLength + d.byteLength);
+
+    data.set(tag);
+    data.set(d, tag.length);
+
+    metadataStream.on('data', function(event) {
+      events.push(event);
+    });
+
+    metadataStream.push({
+      type: 'timed-metadata',
+      trackId: 7,
+      pts: 1000,
+      dts: 900,
+      data: data,
+      dataAlignmentIndicator: true
+    });
+
+    equal(events.length, 1, 'parsed a tag');
+    equal(events[0].frames.length, 1, 'parsed a frame');
+    equal(events[0].frames[0].data.byteLength,
+          payload.length,
+          'collected data across pushes');
   });
 
   test('ignores tags when the header is fragmented', function() {
