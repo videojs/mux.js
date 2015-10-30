@@ -270,7 +270,7 @@
       pts: 1000,
       dts: 900,
       data: front,
-      dataAlignmentIndicator: 0x01
+      dataAlignmentIndicator: true
     });
 
     equal(events.length, 0, 'parsed zero tags');
@@ -281,7 +281,7 @@
       pts: 1000,
       dts: 900,
       data: back,
-      dataAlignmentIndicator: 0x00
+      dataAlignmentIndicator: false
     });
 
     equal(events.length, 1, 'parsed a tag');
@@ -302,7 +302,7 @@
       pts: 2000,
       dts: 2000,
       data: front,
-      dataAlignmentIndicator: 0x01
+      dataAlignmentIndicator: true
     });
     metadataStream.push({
       type: 'timed-metadata',
@@ -310,7 +310,7 @@
       pts: 2000,
       dts: 2000,
       data: back,
-      dataAlignmentIndicator: 0x00
+      dataAlignmentIndicator: false
     });
 
     equal(events.length, 1, 'parsed a tag');
@@ -343,7 +343,7 @@
       pts: 1000,
       dts: 900,
       data: front,
-      dataAlignmentIndicator: 0x01
+      dataAlignmentIndicator: true
     });
 
     equal(events.length, 0, 'parsed zero tags');
@@ -355,7 +355,7 @@
       pts: 1000,
       dts: 900,
       data: tag,
-      dataAlignmentIndicator: 0x01
+      dataAlignmentIndicator: true
     });
 
     equal(events.length, 1, 'parsed a tag');
@@ -391,7 +391,7 @@
       pts: 1000,
       dts: 900,
       data: data,
-      dataAlignmentIndicator: 0x01
+      dataAlignmentIndicator: true
     });
 
     equal(events.length, 1, 'parsed a tag');
