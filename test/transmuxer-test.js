@@ -15,6 +15,7 @@ var
   AacStream = muxjs.codecs.AacStream,
   aacStream,
   Transmuxer = muxjs.mp4.Transmuxer,
+  FlvTransmuxer = muxjs.flv.Transmuxer,
   transmuxer,
   NalByteStream = muxjs.codecs.NalByteStream,
   nalByteStream,
@@ -1731,7 +1732,7 @@ test('can specify that we want to generate separate audio and video segments', f
   equal('mdat', boxes[3].type, 'generated a mdat box');
 });
 
-module('Transmuxer', {
+module('MP4 - Transmuxer', {
   setup: function() {
     transmuxer = new Transmuxer();
   }
@@ -1792,7 +1793,7 @@ test('generates an audio init segment', function() {
   equal('moov', boxes[1].type, 'generated a moov box');
 });
 
-test('buffers video samples until ended', function() {
+test('buffers video samples until flushed', function() {
   var samples = [], offset, boxes;
   transmuxer.on('data', function(data) {
     samples.push(data);
@@ -2193,6 +2194,111 @@ test('parses nal units split across multiple packets', function(){
 
   equal(nalUnits.length, 1, 'found two nals');
   deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF, 0x12, 0xDD]), 'has the proper payload');
+});
+
+module('FLV - Transmuxer', {
+  setup: function() {
+    transmuxer = new FlvTransmuxer();
+  }
+});
+
+test('generates video tags', function() {
+  var segments = [], boxes;
+  transmuxer.on('data', function(segment) {
+    segments.push(segment);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true
+  })));
+
+  transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter
+  ], true)));
+
+  transmuxer.flush();
+
+  equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
+  equal(segments[0].tags.videoTags.length, 2, 'generated a two video tags');
+});
+
+test('drops nalUnits at the start of a segment not preceeded by an access_unit_delimiter_rbsp', function() {
+  var segments = [], boxes;
+  transmuxer.on('data', function(segment) {
+    segments.push(segment);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true
+  })));
+
+  transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+    0x07, // seq_parameter_set_rbsp
+    0x27, 0x42, 0xe0, 0x0b,
+    0xa9, 0x18, 0x60, 0x9d,
+    0x80, 0x53, 0x06, 0x01,
+    0x06, 0xb6, 0xc2, 0xb5,
+    0xef, 0x7c, 0x04
+  ], false)));
+  transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter
+  ], true)));
+
+  transmuxer.flush();
+
+  equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
+  equal(segments[0].tags.videoTags.length, 1, 'generated a single video tag');
+});
+
+test('generates an audio tags', function() {
+  var segments = [], boxes;
+  transmuxer.on('data', function(segment) {
+    segments.push(segment);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasAudio: true
+  })));
+  transmuxer.push(packetize(audioPes([
+    0x19, 0x47
+  ], true)));
+
+  transmuxer.flush();
+
+  equal(segments[0].tags.audioTags.length, 3, 'generated three audio tags');
+  equal(segments[0].tags.videoTags.length, 0, 'generated no video tags');
+});
+
+test('buffers video samples until flushed', function() {
+  var segments = [], offset, boxes;
+  transmuxer.on('data', function(data) {
+    segments.push(data);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true
+  })));
+
+  // buffer a NAL
+  transmuxer.push(packetize(videoPes([0x09, 0x01], true)));
+  transmuxer.push(packetize(videoPes([0x00, 0x02])));
+
+  // add an access_unit_delimiter_rbsp
+  transmuxer.push(packetize(videoPes([0x09, 0x03])));
+  transmuxer.push(packetize(videoPes([0x00, 0x04])));
+  transmuxer.push(packetize(videoPes([0x00, 0x05])));
+
+  // flush everything
+  transmuxer.flush();
+
+  equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
+  equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
 });
 
 })(window, window.muxjs);
