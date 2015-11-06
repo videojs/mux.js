@@ -1691,12 +1691,19 @@ test('no options creates combined output', function() {
 test('can specify that we want to generate separate audio and video segments', function() {
   var
     segments = [],
+    segmentLengthOnDone,
     boxes,
     transmuxer = new Transmuxer({remux: false});
 
   transmuxer.on('data', function(segment) {
     segments.push(segment);
   });
+  transmuxer.on('done', function(segment) {
+    if (!segmentLengthOnDone) {
+      segmentLengthOnDone = segments.length;
+    }
+  });
+
   transmuxer.push(packetize(PAT));
   transmuxer.push(packetize(generatePMT({
     hasVideo: true,
@@ -1719,6 +1726,7 @@ test('can specify that we want to generate separate audio and video segments', f
   ], false)));
   transmuxer.flush();
 
+  equal(segmentLengthOnDone, 2, 'emitted both segments before triggering done');
   equal(segments.length, 2, 'generated a video and an audio segment');
   ok(segments[0].type === 'video' || segments[1].type === 'video', 'one segment is video');
   ok(segments[0].type === 'audio' || segments[1].type === 'audio', 'one segment is audio');
