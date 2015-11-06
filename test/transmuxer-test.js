@@ -1186,6 +1186,10 @@ test('concatenates NAL units into AVC elementary streams', function() {
     segment = data.boxes;
   });
   videoSegmentStream.push({
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    data: new Uint8Array([0x09, 0x01])
+  });
+  videoSegmentStream.push({
     data: new Uint8Array([
       0x08,
       0x01, 0x02, 0x03
@@ -1202,9 +1206,11 @@ test('concatenates NAL units into AVC elementary streams', function() {
   ok(segment, 'generated a data event');
   boxes = muxjs.tools.inspectMp4(segment);
   equal(boxes[1].byteLength,
-        (4 + 4) + (4 + 6),
+        (2 + 4) + (4 + 4) + (4 + 6),
         'wrote the correct number of bytes');
   deepEqual(new Uint8Array(segment.subarray(boxes[0].size + 8)), new Uint8Array([
+    0, 0, 0, 2,
+    0x09, 0x01,
     0, 0, 0, 4,
     0x08, 0x01, 0x02, 0x03,
     0, 0, 0, 6,
