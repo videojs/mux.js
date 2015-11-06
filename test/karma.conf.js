@@ -25,6 +25,8 @@ module.exports = function(config) {
       '../lib/m2ts/caption-stream.js',
       '../lib/m2ts/metadata-stream.js',
       '../lib/mp4/transmuxer.js',
+      '../lib/flv/flv-tag.js',
+      '../lib/flv/transmuxer.js',
 
       'sintel-captions.js',
       'test-segment.js',
