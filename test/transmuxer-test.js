@@ -636,10 +636,10 @@ test('parses an elementary stream packet with just a pts', function() {
       0x84,
       // pdf:10 ef:1 erf:0 dtmf:0 acif:0 pcf:0 pef:0
       0xc0,
-      // phdl:0000 0101 '0010' pts:000 mb:1 pts:0000 0000
-      0x05, 0x21, 0x00,
-      // pts:0000 000 mb:1 pts:0000 0000 pts:0000 001 mb:1
-      0x01, 0x00, 0x03,
+      // phdl:0000 0101 '0010' pts:111 mb:1 pts:1111 1111
+      0x05, 0xFF, 0xFF,
+      // pts:1111 111 mb:1 pts:1111 1111 pts:1111 111 mb:1
+      0xFF, 0xFF, 0xFF,
       // "data":0101
       0x11
     ])
@@ -649,7 +649,8 @@ test('parses an elementary stream packet with just a pts', function() {
   ok(packet, 'parsed a packet');
   equal(packet.data.byteLength, 1, 'parsed a single data byte');
   equal(packet.data[0], 0x11, 'parsed the data');
-  equal(packet.pts, 1, 'parsed the pts');
+  // 2^33-1 is the maximum value of a 33-bit unsigned value
+  equal(packet.pts, Math.pow(2, 33) - 1, 'parsed the pts');
 });
 
 test('parses an elementary stream packet with a pts and dts', function() {
