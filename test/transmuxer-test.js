@@ -554,14 +554,14 @@ test('parses metadata events from PSI packets', function() {
     codec: 'avc',
     type: 'video',
     timelineStartInfo: {
-      baseDts: 0
+      baseMediaDecodeTime: 0
     }
   }, {
     id: 2,
     codec: 'adts',
     type: 'audio',
     timelineStartInfo: {
-      baseDts: 0
+      baseMediaDecodeTime: 0
     }
   }], 'identified two tracks');
 });
@@ -849,32 +849,6 @@ test('drops packets with unknown stream types', function() {
   });
 
   equal(packets.length, 0, 'ignored unknown packets');
-});
-
-test('allows setting a baseDts via the constructor', function() {
-  var metadatas = [];
-  elementaryStream = new ElementaryStream(1234);
-  elementaryStream.on('data', function(data) {
-    if (data.type === 'metadata') {
-      metadatas.push(data);
-    }
-  });
-  elementaryStream.push({
-    type: 'pat'
-  });
-  elementaryStream.push({
-    type: 'pmt',
-    programMapTable: {
-      1: 0x1b,
-      2: 0x0f
-    }
-  });
-
-  equal(1, metadatas.length, 'metadata generated');
-  equal(
-    metadatas[0].tracks[0].timelineStartInfo.baseDts,
-    1234,
-    'created a timelineStartInfo object with a proper baseDts value');
 });
 
 module('H264 Stream', {
@@ -1206,7 +1180,7 @@ module('VideoSegmentStream', {
     videoSegmentStream.track.timelineStartInfo = {
       dts: 10,
       pts: 10,
-      baseDts: 0
+      baseMediaDecodeTime: 0
     };
   }
 });
@@ -1483,12 +1457,12 @@ test('calculates baseMediaDecodeTime values from the first DTS ever seen and sub
   equal(tfdt.baseMediaDecodeTime, 90, 'calculated baseMediaDecodeTime');
 });
 
-test('calculates baseMediaDecodeTime values relative to a customizable baseDts', function() {
+test('calculates baseMediaDecodeTime values relative to a customizable baseMediaDecodeTime', function() {
   var segment, boxes, tfdt;
   videoSegmentStream.track.timelineStartInfo = {
     dts: 10,
     pts: 10,
-    baseDts: 1234
+    baseMediaDecodeTime: 1234
   };
   videoSegmentStream.on('data', function(data) {
     segment = data.boxes;
