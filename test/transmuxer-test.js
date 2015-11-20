@@ -553,12 +553,16 @@ test('parses metadata events from PSI packets', function() {
     id: 1,
     codec: 'avc',
     type: 'video',
-    timelineStartInfo: {}
+    timelineStartInfo: {
+      baseMediaDecodeTime: 0
+    }
   }, {
     id: 2,
     codec: 'adts',
     type: 'audio',
-    timelineStartInfo: {}
+    timelineStartInfo: {
+      baseMediaDecodeTime: 0
+    }
   }], 'identified two tracks');
 });
 
@@ -1175,7 +1179,8 @@ module('VideoSegmentStream', {
     videoSegmentStream.track = track;
     videoSegmentStream.track.timelineStartInfo = {
       dts: 10,
-      pts: 10
+      pts: 10,
+      baseMediaDecodeTime: 0
     };
   }
 });
@@ -1450,6 +1455,42 @@ test('calculates baseMediaDecodeTime values from the first DTS ever seen and sub
   boxes = muxjs.tools.inspectMp4(segment);
   tfdt = boxes[0].boxes[1].boxes[1];
   equal(tfdt.baseMediaDecodeTime, 90, 'calculated baseMediaDecodeTime');
+});
+
+test('calculates baseMediaDecodeTime values relative to a customizable baseMediaDecodeTime', function() {
+  var segment, boxes, tfdt;
+  videoSegmentStream.track.timelineStartInfo = {
+    dts: 10,
+    pts: 10,
+    baseMediaDecodeTime: 1234
+  };
+  videoSegmentStream.on('data', function(data) {
+    segment = data.boxes;
+  });
+
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 100,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 200,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 300,
+    pts: 1
+  });
+  videoSegmentStream.flush();
+
+  boxes = muxjs.tools.inspectMp4(segment);
+  tfdt = boxes[0].boxes[1].boxes[1];
+  equal(tfdt.baseMediaDecodeTime, 1324, 'calculated baseMediaDecodeTime');
 });
 
 module('AAC Stream', {
