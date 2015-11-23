@@ -75,6 +75,11 @@
     var transmuxer = new muxjs.mp4.Transmuxer(),
         captions = [];
 
+    // Setting the BMDT to ensure that captions and id3 tags are not
+    // time-shifted by this value when they are output and instead are
+    // zero-based
+    transmuxer.setBaseMediaDecodeTime(100000);
+
     transmuxer.on('data', function(data) {
       if (data.captions) {
         captions = captions.concat(data.captions);
