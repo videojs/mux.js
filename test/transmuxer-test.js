@@ -12,6 +12,8 @@ var
   h264Stream,
   VideoSegmentStream = muxjs.mp4.VideoSegmentStream,
   videoSegmentStream,
+  AudioSegmentStream = muxjs.mp4.AudioSegmentStream,
+  audioSegmentStream,
   AacStream = muxjs.codecs.AacStream,
   aacStream,
   Transmuxer = muxjs.mp4.Transmuxer,
@@ -1682,6 +1684,48 @@ test('skips CRC bytes', function() {
   deepEqual(new Uint8Array(frames[0].data),
             new Uint8Array([0x12, 0x34]),
             'skipped the CRC');
+});
+
+module('AudioSegmentStream', {
+  setup: function() {
+    var track = {
+      type: 'audio',
+      samplerate: 90e3 // no scaling
+    };
+    audioSegmentStream = new AudioSegmentStream(track);
+    audioSegmentStream.track = track;
+    audioSegmentStream.track.timelineStartInfo = {
+      dts: 111,
+      pts: 111,
+      baseMediaDecodeTime: 0
+    };
+  }
+});
+
+test('ensures baseMediaDecodeTime for audio is not negative', function() {
+  var events = [], boxes;
+
+  audioSegmentStream.on('data', function(event) {
+    events.push(event);
+  });
+  audioSegmentStream.track.timelineStartInfo.baseMediaDecodeTime = 10;
+  audioSegmentStream.setEarliestDts(111);
+  audioSegmentStream.push({
+    channelcount: 2,
+    samplerate: 90e3,
+    dts: 111 - 10 - 1, // before the earliest DTS
+    data: new Uint8Array([0])
+  });
+  audioSegmentStream.push({
+    dts: 111 - 10 + 2, // before the earliest DTS
+    data: new Uint8Array([1])
+  });
+  audioSegmentStream.flush();
+
+  equal(events.length, 1, 'a data event fired');
+  equal(events[0].track.samples.length, 1, 'generated only one sample');
+  boxes = muxjs.tools.inspectMp4(events[0].boxes);
+  equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime, 2, 'kept the later sample');
 });
 
 module('Transmuxer - options');
