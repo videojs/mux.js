@@ -9,31 +9,64 @@
     }
   });
 
-  test('parses SEIs larger than 255 bytes', function() {
+  test('parses SEIs messages larger than 255 bytes', function() {
     var packets = [], data;
     captionStream.field1_.push = function(packet) {
       packets.push(packet);
     };
-    data = new Uint8Array(312);
-    data[0] = 0x01, // payload_type !== user_data_registered_itu_t_t35
-    data[1] = 0xFF, // payload_size
-    data[2] = 0x26 // payload_size
-    data[296] = 0x04, // payload_type === user_data_registered_itu_t_t35
-    data[297] = 0x0d, // payload_size
-    data[298] = 181, // itu_t_t35_country_code
-    data[299] = 0x00,
-    data[300] = 0x31, // itu_t_t35_provider_code
-    data[301] = 0x47,
-    data[302] = 0x41,
-    data[303] = 0x39,
-    data[304] = 0x34, // user_identifier, "GA94"
-    data[305] = 0x03, //user_data_type_code, 0x03 is cc_data
-    data[306] = 0xc1, // process_cc_data, cc_count
-    data[307] = 0xff, // reserved
-    data[308] = 0xfc, // cc_valid, cc_type (608, field 1)
-    data[309] = 0xff, // cc_data_1 with parity bit set
-    data[310] = 0x0e, // cc_data_2 without parity bit set
-    data[311] = 0xff // marker_bits
+    data = new Uint8Array(268);
+    data[0] = 0x04; // payload_type === user_data_registered_itu_t_t35
+    data[1] = 0xff; // payload_size
+    data[2] = 0x0d; // payload_size
+    data[3] = 181; // itu_t_t35_country_code
+    data[4] = 0x00;
+    data[5] = 0x31; // itu_t_t35_provider_code
+    data[6] = 0x47;
+    data[7] = 0x41;
+    data[8] = 0x39;
+    data[9] = 0x34; // user_identifier, "GA94"
+    data[10] = 0x03; //user_data_type_code, 0x03 is cc_data
+    data[11] = 0xc1; // process_cc_data, cc_count
+    data[12] = 0xff; // reserved
+    data[13] = 0xfc; // cc_valid, cc_type (608, field 1)
+    data[14] = 0xff; // cc_data_1 with parity bit set
+    data[15] = 0x0e; // cc_data_2 without parity bit set
+    data[16] = 0xff; // marker_bits
+
+    captionStream.push({
+      nalUnitType: 'sei_rbsp',
+      escapedRBSP: data
+    });
+    captionStream.flush();
+    equal(packets.length, 1, 'parsed a caption');
+  });
+
+  test('parses SEIs containing multiple messages', function() {
+    var packets = [], data;
+
+    captionStream.field1_.push = function(packet) {
+      packets.push(packet);
+    };
+
+    data = new Uint8Array(22);
+    data[0] = 0x01; // payload_type !== user_data_registered_itu_t_t35
+    data[1] = 0x04; // payload_size
+    data[6] = 0x04; // payload_type === user_data_registered_itu_t_t35
+    data[7] = 0x0d; // payload_size
+    data[8] = 181; // itu_t_t35_country_code
+    data[9] = 0x00;
+    data[10] = 0x31; // itu_t_t35_provider_code
+    data[11] = 0x47;
+    data[12] = 0x41;
+    data[13] = 0x39;
+    data[14] = 0x34; // user_identifier, "GA94"
+    data[15] = 0x03; //user_data_type_code, 0x03 is cc_data
+    data[16] = 0xc1; // process_cc_data, cc_count
+    data[17] = 0xff; // reserved
+    data[18] = 0xfc; // cc_valid, cc_type (608, field 1)
+    data[19] = 0xff; // cc_data_1 with parity bit set
+    data[20] = 0x0e; // cc_data_2 without parity bit set
+    data[21] = 0xff; // marker_bits
 
     captionStream.push({
       nalUnitType: 'sei_rbsp',
@@ -154,7 +187,7 @@
       { ccData: 0x7e7f },
       // EOC, End of Caption
       { pts: 1000, ccData: 0x142f },
-      // RCL, resume caption loading
+      // Send another command so that the second EOC isn't ignored
       { ccData: 0x1420 },
       // EOC, End of Caption, clear the display
       { pts: 10 * 1000, ccData: 0x142f }
@@ -180,7 +213,7 @@
       { ccData: characters('hi') },
       // EOC, End of Caption. Finished transmitting, begin display
       { pts: 1000, ccData: 0x142f },
-      // RCL, resume caption loading
+      // Send another command so that the second EOC isn't ignored
       { ccData: 0x1420 },
       // EOC, End of Caption. End display
       { pts: 10 * 1000, ccData: 0x142f }
@@ -220,7 +253,7 @@
       { ccData: characters('34') },
       // EOC, End of Caption. Display '34'
       { pts: 3 * 1000, ccData: 0x142f },
-      // RCL, resume caption loading
+      // Send another command so that the second EOC isn't ignored
       { ccData: 0x1420 },
       // EOC, End of Caption
       { pts: 4 * 1000, ccData: 0x142f }
@@ -267,7 +300,7 @@
       { ccData: characters('23') },
       // EOC, End of Caption
       { pts: 1 * 1000, ccData: 0x142f },
-      // RCL, resume caption loading
+      // Send another command so that the second EOC isn't ignored
       { ccData: 0x1420 },
       // EOC, End of Caption
       { pts: 3 * 1000, ccData: 0x142f }
@@ -310,7 +343,7 @@
       { ccData: characters('23') },
       // EOC, End of Caption. Finished transmitting, display '23'
       { pts: 1 * 1000, ccData: 0x142f },
-      // RCL, resume caption loading
+      // Send another command so that the second EOC isn't ignored
       { ccData: 0x1420 },
       // EOC, End of Caption
       { pts: 2 * 1000, ccData: 0x142f }
@@ -344,7 +377,7 @@
       { ccData: characters('01') },
       // EOC, End of Caption
       { pts: 1 * 1000, ccData: 0x142f },
-      // RCL, resume caption loading
+      // Send another command so that the second EOC isn't ignored
       { ccData: 0x1420 },
       // EOC, End of Caption
       { pts: 2 * 1000, ccData: 0x142f }
@@ -580,8 +613,9 @@
       },
       // backspace
       { ccData: 0x1421 },
-      // backspace
-      { ccData: 0x1421 }, // duplicate is ignored
+      // Send another command so that the backspace isn't
+      // ignored as a duplicate command
+      { ccData: 0x1425 },
       // backspace
       { ccData: 0x1421 },
       // CR, carriage return
@@ -650,6 +684,7 @@
     equal(captions.length, 1, 'caption emitted');
     equal(captions[0].text, '01  02', 'PACs are was converted to space');
   });
+
   test('backspaces stop at the beginning of the line', function() {
     var captions = [];
     cea608Stream.on('data', function(caption) {
@@ -665,8 +700,14 @@
       },
       // backspace
       { ccData: 0x1421 },
+      // Send another command so that the backspace isn't
+      // ignored as a duplicate command
+      { ccData: 0x1425 },
       // backspace
       { ccData: 0x1421 },
+      // Send another command so that the backspace isn't
+      // ignored as a duplicate command
+      { ccData: 0x1425 },
       // backspace
       { ccData: 0x1421 },
       // CR, carriage return
