@@ -36,10 +36,11 @@
     // size is stored as a sequence of four 7-bit integers with the
     // high bit of each byte set to zero
     size = result.length - 10;
+
     result[6] = (size >>> 21) & 0x7f;
     result[7] = (size >>> 14) & 0x7f;
-    result[8] = (size >>>  7) & 0x7f;
-    result[9] = (size)        & 0x7f;
+    result[8] = (size >>> 7) & 0x7f;
+    result[9] = size & 0x7f;
 
     return result;
   };
@@ -56,10 +57,11 @@
 
     // set the size
     size = result.length - 10;
-    result[4] = (size >>> 24);
-    result[5] = (size >>> 16) & 0xff;
-    result[6] = (size >>>  8) & 0xff;
-    result[7] = (size)        & 0xff;
+
+    result[4] = (size >>> 21) & 0x7f;
+    result[5] = (size >>> 14) & 0x7f;
+    result[6] = (size >>> 7) & 0x7f;
+    result[7] = size & 0x7f;
 
     return result;
   };
