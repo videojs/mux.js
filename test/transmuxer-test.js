@@ -1438,19 +1438,19 @@ test('calculates baseMediaDecodeTime values from the first DTS ever seen and sub
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 100,
-    pts: 1
+    pts: 100
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 200,
-    pts: 1
+    pts: 200
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 300,
-    pts: 1
+    pts: 300
   });
   videoSegmentStream.flush();
 
@@ -1474,25 +1474,66 @@ test('calculates baseMediaDecodeTime values relative to a customizable baseMedia
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 100,
-    pts: 1
+    pts: 100
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 200,
-    pts: 1
+    pts: 200
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 300,
-    pts: 1
+    pts: 300
   });
   videoSegmentStream.flush();
 
   boxes = muxjs.tools.inspectMp4(segment);
   tfdt = boxes[0].boxes[1].boxes[1];
   equal(tfdt.baseMediaDecodeTime, 1324, 'calculated baseMediaDecodeTime');
+});
+
+test('subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime', function() {
+  var segment, boxes, tfdt;
+  videoSegmentStream.track.timelineStartInfo = {
+    dts: 10,
+    pts: 10,
+    baseMediaDecodeTime: 100
+  };
+  videoSegmentStream.on('data', function(data) {
+    segment = data.boxes;
+  });
+
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 50,
+    pts: 60
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 100,
+    pts: 110
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 150,
+    pts: 160
+  });
+  videoSegmentStream.flush();
+
+  boxes = muxjs.tools.inspectMp4(segment);
+  tfdt = boxes[0].boxes[1].boxes[1];
+
+  // The timelineStartInfo's bMDT is 100 and that corresponds to a dts/pts of 10
+  // The first frame has a dts 50 so the bMDT is calculated as: (50 - 10) + 100 = 140
+  // The first frame has a compositionTimeOffset of: 60 - 50 = 10
+  // The final track's bMDT is therefore: 140 - 10 = 130
+  equal(tfdt.baseMediaDecodeTime, 130, 'calculated baseMediaDecodeTime');
 });
 
 module('AAC Stream', {
@@ -1713,11 +1754,15 @@ test('ensures baseMediaDecodeTime for audio is not negative', function() {
   audioSegmentStream.push({
     channelcount: 2,
     samplerate: 90e3,
+    pts: 111 - 10 - 1, // before the earliest DTS
     dts: 111 - 10 - 1, // before the earliest DTS
     data: new Uint8Array([0])
   });
   audioSegmentStream.push({
-    dts: 111 - 10 + 2, // before the earliest DTS
+    channelcount: 2,
+    samplerate: 90e3,
+    pts: 111 - 10 + 2, // after the earliest DTS
+    dts: 111 - 10 + 2, // after the earliest DTS
     data: new Uint8Array([1])
   });
   audioSegmentStream.flush();
@@ -1726,6 +1771,35 @@ test('ensures baseMediaDecodeTime for audio is not negative', function() {
   equal(events[0].track.samples.length, 1, 'generated only one sample');
   boxes = muxjs.tools.inspectMp4(events[0].boxes);
   equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime, 2, 'kept the later sample');
+});
+
+test('audio track metadata takes on the value of the last metadata seen', function() {
+  var events = [], boxes;
+
+  audioSegmentStream.on('data', function(event) {
+    events.push(event);
+  });
+
+  audioSegmentStream.push({
+    channelcount: 2,
+    samplerate: 90e3,
+    pts: 100,
+    dts: 100,
+    data: new Uint8Array([0])
+  });
+  audioSegmentStream.push({
+    channelcount: 4,
+    samplerate: 10000,
+    pts: 111,
+    dts: 111,
+    data: new Uint8Array([1])
+  });
+  audioSegmentStream.flush();
+
+  equal(events.length, 1, 'a data event fired');
+  equal(events[0].track.samples.length, 2, 'generated two samples');
+  equal(events[0].track.samplerate, 10000, 'kept the later samplerate');
+  equal(events[0].track.channelcount, 4, 'kept the later channelcount');
 });
 
 module('Transmuxer - options');
