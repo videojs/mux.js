@@ -8,7 +8,8 @@
   },
   "main": "lib/mux.js",
   "scripts": {
-    "test": "karma start test/karma.conf.js --single-run"
+    "build": "grunt build",
+    "test": "./node_modules/karma/bin/karma start ./test/karma.conf.js --single-run"
   },
   "keywords": [
     "video",
@@ -26,11 +27,11 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "babelify": "^6.3.0",
-    "browserify-derequire": "^0.9.4",
     "grunt": "^0.4.5",
     "grunt-browserify": "^4.0.1",
     "grunt-contrib-jshint": "^0.11.3",
     "karma": "^0.13.9",
+    "karma-browserify": "^4.4.2",
     "karma-chrome-launcher": "^0.2.0",
     "karma-firefox-launcher": "^0.1.6",
     "karma-qunit": "^0.1.5",
