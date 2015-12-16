@@ -9,7 +9,7 @@ module.exports = function (grunt) {
           standalone: 'muxjs'
         },
         plugin: [
-          ['browserify-derequire']
+        /*  ['browserify-derequire']*/
         ],
         transform: [
           require('babelify').configure({
@@ -20,7 +20,7 @@ module.exports = function (grunt) {
       },
       build: {
         files: {
-          'dist/mux.js': ['lib/mux.js']
+          'dist/mux.js': ['lib/index.js']
         }
       },
       watch: {
@@ -29,7 +29,7 @@ module.exports = function (grunt) {
           keepAlive: true
         },
         files: {
-          'dist/mux.js': ['lib/mux.js']
+          'dist/mux.js': ['lib/index.js']
         }
       }
     },
