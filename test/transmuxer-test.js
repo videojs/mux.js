@@ -1,31 +1,39 @@
-(function(window, muxjs) {
 'use strict';
 
+var mp2t = require('../lib/m2ts'),
+    codecs = require('../lib/codecs'),
+    flv = require('../lib/flv'),
+    id3Generator = require('./id3-generator'),
+    mp4 = require('../lib/mp4');
+
 var
-  TransportPacketStream = muxjs.mp2t.TransportPacketStream,
+
+  TransportPacketStream = mp2t.TransportPacketStream,
   transportPacketStream,
-  TransportParseStream = muxjs.mp2t.TransportParseStream,
+  TransportParseStream = mp2t.TransportParseStream,
   transportParseStream,
-  ElementaryStream = muxjs.mp2t.ElementaryStream,
+  ElementaryStream = mp2t.ElementaryStream,
   elementaryStream,
-  H264Stream = muxjs.codecs.H264Stream,
+  H264Stream = codecs.h264.H264Stream,
   h264Stream,
-  VideoSegmentStream = muxjs.mp4.VideoSegmentStream,
+
+  VideoSegmentStream = mp4.VideoSegmentStream,
   videoSegmentStream,
-  AudioSegmentStream = muxjs.mp4.AudioSegmentStream,
+  AudioSegmentStream = mp4.AudioSegmentStream,
   audioSegmentStream,
-  AacStream = muxjs.codecs.AacStream,
+
+  AacStream = codecs.aac,
   aacStream,
-  Transmuxer = muxjs.mp4.Transmuxer,
-  FlvTransmuxer = muxjs.flv.Transmuxer,
+  Transmuxer = mp4.Transmuxer,
+  FlvTransmuxer = flv.Transmuxer,
   transmuxer,
-  NalByteStream = muxjs.codecs.NalByteStream,
+  NalByteStream = codecs.h264.NalByteStream,
   nalByteStream,
 
-  MP2T_PACKET_LENGTH = muxjs.mp2t.MP2T_PACKET_LENGTH,
-  H264_STREAM_TYPE = muxjs.mp2t.H264_STREAM_TYPE,
-  ADTS_STREAM_TYPE = muxjs.mp2t.ADTS_STREAM_TYPE,
-  METADATA_STREAM_TYPE = muxjs.mp2t.METADATA_STREAM_TYPE,
+  MP2T_PACKET_LENGTH = mp2t.MP2T_PACKET_LENGTH,
+  H264_STREAM_TYPE = mp2t.H264_STREAM_TYPE,
+  ADTS_STREAM_TYPE = mp2t.ADTS_STREAM_TYPE,
+  METADATA_STREAM_TYPE = mp2t.METADATA_STREAM_TYPE,
   packetize,
 
   PAT,
@@ -39,9 +47,11 @@ var
   transportPacket,
   videoPes,
   audioPes,
+  testSegment = require('./test-segment'),
   timedMetadataPes;
+  console.log(ElementaryStream);
 
-module('MP2T Packet Stream', {
+QUnit.module('MP2T Packet Stream', {
   setup: function() {
     transportPacketStream = new TransportPacketStream();
   }
@@ -154,7 +164,7 @@ test('buffers extra after multiple packets', function() {
   equal(188, datas[2].length, 'parsed the finel packet');
 });
 
-module('MP2T TransportParseStream', {
+QUnit.module('MP2T TransportParseStream', {
   setup: function() {
     transportPacketStream = new TransportPacketStream();
     transportParseStream = new TransportParseStream();
@@ -220,7 +230,7 @@ test('parses a PES packet', function() {
 
   // setup a program map table
   transportParseStream.programMapTable = {
-    0x0010: muxjs.mp2t.H264_STREAM_TYPE
+    0x0010: mp2t.H264_STREAM_TYPE
   };
 
   transportParseStream.push(new Uint8Array([
@@ -239,7 +249,7 @@ test('parses packets with variable length adaptation fields and a payload', func
 
   // setup a program map table
   transportParseStream.programMapTable = {
-    0x0010: muxjs.mp2t.H264_STREAM_TYPE
+    0x0010: mp2t.H264_STREAM_TYPE
   };
 
   transportParseStream.push(new Uint8Array([
@@ -508,11 +518,11 @@ audioPes = function(data, first, pts) {
 };
 
 timedMetadataPes = function(data) {
-  var id3 = muxjs.id3;
+  var id3 = id3Generator;
   return transportPacket(0x13, id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01)));
 };
 
-module('MP2T ElementaryStream', {
+QUnit.module('MP2T ElementaryStream', {
   setup: function() {
     elementaryStream = new ElementaryStream();
   }
@@ -853,7 +863,7 @@ test('drops packets with unknown stream types', function() {
   equal(packets.length, 0, 'ignored unknown packets');
 });
 
-module('H264 Stream', {
+QUnit.module('H264 Stream', {
   setup: function() {
     h264Stream = new H264Stream();
   }
@@ -1174,7 +1184,7 @@ test('can be reset', function() {
   equal(data[1].data[1], 7, 'read a payload byte');
 });
 
-module('VideoSegmentStream', {
+QUnit.module('VideoSegmentStream', {
   setup: function() {
     var track = {};
     videoSegmentStream = new VideoSegmentStream(track);
@@ -1212,7 +1222,7 @@ test('concatenates NAL units into AVC elementary streams', function() {
   videoSegmentStream.flush();
 
   ok(segment, 'generated a data event');
-  boxes = muxjs.tools.inspectMp4(segment);
+  boxes = mp4.tools.inspect(segment);
   equal(boxes[1].byteLength,
         (2 + 4) + (4 + 4) + (4 + 6),
         'wrote the correct number of bytes');
@@ -1253,7 +1263,7 @@ test('infers sample durations from DTS values', function() {
   });
   videoSegmentStream.flush();
 
-  boxes = muxjs.tools.inspectMp4(segment);
+  boxes = mp4.tools.inspect(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
   equal(samples.length, 3, 'generated three samples');
   equal(samples[0].duration, 1, 'set the first sample duration');
@@ -1293,7 +1303,7 @@ test('filters pre-IDR samples and caluculate duration correctly', function() {
   });
   videoSegmentStream.flush();
 
-  boxes = muxjs.tools.inspectMp4(segment);
+  boxes = mp4.tools.inspect(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
   equal(samples.length, 2, 'generated two samples, filters out pre-IDR');
   equal(samples[0].duration, 3, 'set the first sample duration');
@@ -1420,7 +1430,7 @@ test('calculates compositionTimeOffset values from the PTS and DTS', function() 
   });
   videoSegmentStream.flush();
 
-  boxes = muxjs.tools.inspectMp4(segment);
+  boxes = mp4.tools.inspect(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
   equal(samples.length, 3, 'generated three samples');
   equal(samples[0].compositionTimeOffset, 0, 'calculated compositionTimeOffset');
@@ -1454,7 +1464,7 @@ test('calculates baseMediaDecodeTime values from the first DTS ever seen and sub
   });
   videoSegmentStream.flush();
 
-  boxes = muxjs.tools.inspectMp4(segment);
+  boxes = mp4.tools.inspect(segment);
   tfdt = boxes[0].boxes[1].boxes[1];
   equal(tfdt.baseMediaDecodeTime, 90, 'calculated baseMediaDecodeTime');
 });
@@ -1490,7 +1500,7 @@ test('calculates baseMediaDecodeTime values relative to a customizable baseMedia
   });
   videoSegmentStream.flush();
 
-  boxes = muxjs.tools.inspectMp4(segment);
+  boxes = mp4.tools.inspect(segment);
   tfdt = boxes[0].boxes[1].boxes[1];
   equal(tfdt.baseMediaDecodeTime, 1324, 'calculated baseMediaDecodeTime');
 });
@@ -1526,7 +1536,7 @@ test('subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime
   });
   videoSegmentStream.flush();
 
-  boxes = muxjs.tools.inspectMp4(segment);
+  boxes = mp4.tools.inspect(segment);
   tfdt = boxes[0].boxes[1].boxes[1];
 
   // The timelineStartInfo's bMDT is 100 and that corresponds to a dts/pts of 10
@@ -1536,7 +1546,7 @@ test('subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime
   equal(tfdt.baseMediaDecodeTime, 130, 'calculated baseMediaDecodeTime');
 });
 
-module('AAC Stream', {
+QUnit.module('AAC Stream', {
   setup: function() {
     aacStream = new AacStream();
   }
@@ -1727,7 +1737,7 @@ test('skips CRC bytes', function() {
             'skipped the CRC');
 });
 
-module('AudioSegmentStream', {
+QUnit.module('AudioSegmentStream', {
   setup: function() {
     var track = {
       type: 'audio',
@@ -1769,7 +1779,7 @@ test('ensures baseMediaDecodeTime for audio is not negative', function() {
 
   equal(events.length, 1, 'a data event fired');
   equal(events[0].track.samples.length, 1, 'generated only one sample');
-  boxes = muxjs.tools.inspectMp4(events[0].boxes);
+  boxes = mp4.tools.inspect(events[0].boxes);
   equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime, 2, 'kept the later sample');
 });
 
@@ -1802,7 +1812,7 @@ test('audio track metadata takes on the value of the last metadata seen', functi
   equal(events[0].track.channelcount, 4, 'kept the later channelcount');
 });
 
-module('Transmuxer - options');
+QUnit.module('Transmuxer - options');
 
 test('no options creates combined output', function() {
   var
@@ -1838,7 +1848,7 @@ test('no options creates combined output', function() {
   equal(segments.length, 1, 'generated a combined video and audio segment');
   equal(segments[0].type, 'combined', 'combined is the segment type');
 
-  boxes = muxjs.tools.inspectMp4(segments[0].data);
+  boxes = mp4.tools.inspect(segments[0].data);
   equal(boxes.length, 6, 'generated 6 top-level boxes');
   equal('ftyp', boxes[0].type, 'generated an ftyp box');
   equal('moov', boxes[1].type, 'generated a single moov box');
@@ -1891,14 +1901,14 @@ test('can specify that we want to generate separate audio and video segments', f
   ok(segments[0].type === 'video' || segments[1].type === 'video', 'one segment is video');
   ok(segments[0].type === 'audio' || segments[1].type === 'audio', 'one segment is audio');
 
-  boxes = muxjs.tools.inspectMp4(segments[0].data);
+  boxes = mp4.tools.inspect(segments[0].data);
   equal(boxes.length, 4, 'generated 4 top-level boxes');
   equal('ftyp', boxes[0].type, 'generated an ftyp box');
   equal('moov', boxes[1].type, 'generated a moov box');
   equal('moof', boxes[2].type, 'generated a moof box');
   equal('mdat', boxes[3].type, 'generated a mdat box');
 
-  boxes = muxjs.tools.inspectMp4(segments[1].data);
+  boxes = mp4.tools.inspect(segments[1].data);
   equal(boxes.length, 4, 'generated 4 top-level boxes');
   equal('ftyp', boxes[0].type, 'generated an ftyp box');
   equal('moov', boxes[1].type, 'generated a moov box');
@@ -1906,7 +1916,7 @@ test('can specify that we want to generate separate audio and video segments', f
   equal('mdat', boxes[3].type, 'generated a mdat box');
 });
 
-module('MP4 - Transmuxer', {
+QUnit.module('MP4 - Transmuxer', {
   setup: function() {
     transmuxer = new Transmuxer();
   }
@@ -1939,7 +1949,7 @@ test('generates a video init segment', function() {
   ok(segments[0].data, 'wrote data in the init segment');
   equal(segments[0].type, 'video', 'video is the segment type');
 
-  boxes = muxjs.tools.inspectMp4(segments[0].data);
+  boxes = mp4.tools.inspect(segments[0].data);
   equal('ftyp', boxes[0].type, 'generated an ftyp box');
   equal('moov', boxes[1].type, 'generated a moov box');
 });
@@ -1962,7 +1972,7 @@ test('generates an audio init segment', function() {
   ok(segments[0].data, 'wrote data in the init segment');
   equal(segments[0].type, 'audio', 'audio is the segment type');
 
-  boxes = muxjs.tools.inspectMp4(segments[0].data);
+  boxes = mp4.tools.inspect(segments[0].data);
   equal('ftyp', boxes[0].type, 'generated an ftyp box');
   equal('moov', boxes[1].type, 'generated a moov box');
 });
@@ -1989,7 +1999,7 @@ test('buffers video samples until flushed', function() {
   // flush everything
   transmuxer.flush();
   equal(samples.length, 1, 'emitted one event');
-  boxes = muxjs.tools.inspectMp4(samples[0].data);
+  boxes = mp4.tools.inspect(samples[0].data);
   equal(boxes.length, 4, 'generated four boxes');
   equal(boxes[2].type, 'moof', 'the third box is a moof');
   equal(boxes[3].type, 'mdat', 'the fourth box is a mdat');
@@ -2144,12 +2154,12 @@ test('parses an example mp2t file and generates combined media segments', functi
       segments.push(segment);
     }
   });
-  transmuxer.push(window.testSegment);
+  transmuxer.push(testSegment);
   transmuxer.flush();
 
   equal(segments.length, 1, 'generated one combined segment');
 
-  boxes = muxjs.tools.inspectMp4(segments[0].data);
+  boxes = mp4.tools.inspect(segments[0].data);
   equal(boxes.length, 6, 'combined segments are composed of six boxes');
   equal(boxes[0].type, 'ftyp', 'the first box is an ftyp');
   equal(boxes[1].type, 'moov', 'the second box is a moov');
@@ -2198,12 +2208,12 @@ test('can be reused for multiple TS segments', function() {
 
   transmuxer.on('data', function(segment) {
     if (segment.type === 'combined') {
-      segments.push(muxjs.tools.inspectMp4(segment.data));
+      segments.push(mp4.tools.inspect(segment.data));
     }
   });
-  transmuxer.push(window.testSegment);
+  transmuxer.push(testSegment);
   transmuxer.flush();
-  transmuxer.push(window.testSegment);
+  transmuxer.push(testSegment);
   transmuxer.flush();
 
   equal(segments.length, 2, 'generated two combined segments');
@@ -2240,7 +2250,7 @@ test('can be reused for multiple TS segments', function() {
             'generated identical audio mdats');
 });
 
-module('NalByteStream', {
+QUnit.module('NalByteStream', {
   setup: function() {
     nalByteStream = new NalByteStream();
   }
@@ -2370,7 +2380,7 @@ test('parses nal units split across multiple packets', function(){
   deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF, 0x12, 0xDD]), 'has the proper payload');
 });
 
-module('FLV - Transmuxer', {
+QUnit.module('FLV - Transmuxer', {
   setup: function() {
     transmuxer = new FlvTransmuxer();
   }
@@ -2474,5 +2484,3 @@ test('buffers video samples until flushed', function() {
   equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
   equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
 });
-
-})(window, window.muxjs);

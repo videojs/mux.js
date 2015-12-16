@@ -10,34 +10,18 @@ module.exports = function(config) {
 
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-    frameworks: ['qunit'],
+    frameworks: ['browserify', 'qunit'],
 
 
     // list of files / patterns to load in the browser
     files: [
-      '../lib/utils/stream.js',
-      '../lib/utils/exp-golomb.js',
-      '../lib/mp4/mp4-generator.js',
-      '../lib/tools/mp4-inspector.js',
-      '../lib/codecs/aac.js',
-      '../lib/codecs/h264.js',
-      '../lib/m2ts/m2ts.js',
-      '../lib/m2ts/caption-stream.js',
-      '../lib/m2ts/metadata-stream.js',
-      '../lib/mp4/transmuxer.js',
-      '../lib/flv/flv-tag.js',
-      '../lib/flv/transmuxer.js',
+      './mp4-generator-test.js',
+      './mp4-inspector-test.js',
+      './exp-golomb-test.js',
+      './metadata-stream-test.js',
+      './transmuxer-test.js',
 
-      'sintel-captions.js',
-      'test-segment.js',
-      'id3-generator.js',
-
-      'exp-golomb-test.js',
-      'mp4-generator-test.js',
-      'mp4-inspector-test.js',
-      'transmuxer-test.js',
-      'metadata-stream-test.js',
-      'caption-stream-test.js'
+      './caption-stream-test.js'
     ],
 
 
@@ -49,6 +33,11 @@ module.exports = function(config) {
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors: {
+      './**/*.js': ['browserify'],
+    },
+    browserify: {
+      debug: true,
+      transform: []
     },
 
 

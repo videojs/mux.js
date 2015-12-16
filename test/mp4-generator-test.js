@@ -1,4 +1,3 @@
-(function(window, muxjs) {
 'use strict';
 /*
   ======== A Handy Little QUnit Reference ========
@@ -21,21 +20,18 @@
   throws(block, [expected], [message])
 */
 var
-  mp4 = muxjs.mp4,
-  inspectMp4 = muxjs.tools.inspectMp4,
+  mp4 = require('../lib/mp4'),
   validateMvhd, validateTrak, validateTkhd, validateMdia,
   validateMdhd, validateHdlr, validateMinf, validateDinf,
   validateStbl, validateStsd, validateMvex,
   validateVideoSample, validateAudioSample;
 
-module('MP4 Generator');
-
 test('generates a BSMFF ftyp', function() {
-  var data = mp4.ftyp(), boxes;
+  var data = mp4.generator.ftyp(), boxes;
 
   ok(data, 'box is not null');
 
-  boxes = inspectMp4(data);
+  boxes = mp4.tools.inspect(data);
   equal(1, boxes.length, 'generated a single box');
   equal(boxes[0].type, 'ftyp', 'generated ftyp type');
   equal(boxes[0].size, data.byteLength, 'generated size');
@@ -291,7 +287,7 @@ validateMvex = function(mvex, options) {
 test('generates a video moov', function() {
   var
     boxes,
-    data = mp4.moov([{
+    data = mp4.generator.moov([{
       id: 7,
       duration: 100,
       width: 600,
@@ -305,7 +301,7 @@ test('generates a video moov', function() {
     }]);
 
   ok(data, 'box is not null');
-  boxes = inspectMp4(data);
+  boxes = mp4.tools.inspect(data);
   equal(boxes.length, 1, 'generated a single box');
   equal(boxes[0].type, 'moov', 'generated a moov type');
   equal(boxes[0].size, data.byteLength, 'generated size');
@@ -322,7 +318,7 @@ test('generates a video moov', function() {
 
 test('generates an audio moov', function() {
   var
-    data = mp4.moov([{
+    data = mp4.generator.moov([{
       id: 7,
       type: 'audio',
       audioobjecttype: 2,
@@ -334,7 +330,7 @@ test('generates an audio moov', function() {
     boxes;
 
   ok(data, 'box is not null');
-  boxes = inspectMp4(data);
+  boxes = mp4.tools.inspect(data);
   equal(boxes.length, 1, 'generated a single box');
   equal(boxes[0].type, 'moov', 'generated a moov type');
   equal(boxes[0].size, data.byteLength, 'generated size');
@@ -352,14 +348,14 @@ test('generates an audio moov', function() {
 
 test('generates a sound hdlr', function() {
   var boxes, hdlr,
-    data = mp4.moov([{
+    data = mp4.generator.moov([{
       duration:100,
       type: 'audio'
     }]);
 
   ok(data, 'box is not null');
 
-  boxes = inspectMp4(data);
+  boxes = mp4.tools.inspect(data);
 
   hdlr = boxes[0].boxes[1].boxes[1].boxes[1];
   equal(hdlr.type, 'hdlr', 'generate an hdlr type');
@@ -369,7 +365,7 @@ test('generates a sound hdlr', function() {
 
 test('generates a video hdlr', function() {
   var boxes, hdlr,
-    data = mp4.moov([{
+    data = mp4.generator.moov([{
       duration: 100,
       width: 600,
       height: 300,
@@ -380,7 +376,7 @@ test('generates a video hdlr', function() {
 
   ok(data, 'box is not null');
 
-  boxes = inspectMp4(data);
+  boxes = mp4.tools.inspect(data);
 
   hdlr = boxes[0].boxes[1].boxes[1].boxes[1];
   equal(hdlr.type, 'hdlr', 'generate an hdlr type');
@@ -390,7 +386,7 @@ test('generates a video hdlr', function() {
 
 test('generates an initialization segment', function() {
   var
-    data = mp4.initSegment([{
+    data = mp4.generator.initSegment([{
       id: 1,
       width: 600,
       height: 300,
@@ -403,7 +399,7 @@ test('generates an initialization segment', function() {
     }]),
     init, mvhd, trak1, trak2, mvex;
 
-  init = muxjs.tools.inspectMp4(data);
+  init = mp4.tools.inspect(data);
   equal(init.length, 2, 'generated two boxes');
   equal(init[0].type, 'ftyp', 'generated a ftyp box');
   equal(init[1].type, 'moov', 'generated a moov box');
@@ -430,7 +426,7 @@ test('generates an initialization segment', function() {
 
 test('generates a minimal moof', function() {
   var
-    data = mp4.moof(7, [{
+    data = mp4.generator.moof(7, [{
       id: 17,
       samples: [{
         duration: 9000,
@@ -460,7 +456,7 @@ test('generates a minimal moof', function() {
         compositionTimeOffset: 1000
       }]
     }]),
-    moof = muxjs.tools.inspectMp4(data),
+    moof = mp4.tools.inspect(data),
     trun,
     sdtp;
 
@@ -529,7 +525,7 @@ test('generates a minimal moof', function() {
 
 test('generates a moof for audio', function() {
   var
-    data = mp4.moof(7, [{
+    data = mp4.generator.moof(7, [{
       id: 17,
       type: 'audio',
       samples: [{
@@ -540,7 +536,7 @@ test('generates a moof for audio', function() {
         size: 11
       }]
     }]),
-    moof = muxjs.tools.inspectMp4(data),
+    moof = mp4.tools.inspect(data),
     trun;
 
   deepEqual(moof[0].boxes[1].boxes.length, 3, 'generated three traf children');
@@ -558,22 +554,20 @@ test('generates a moof for audio', function() {
 
 test('can generate a traf without samples', function() {
   var
-    data = mp4.moof(8, [{
+    data = mp4.generator.moof(8, [{
       trackId: 13
     }]),
-    moof = muxjs.tools.inspectMp4(data);
+    moof = mp4.tools.inspect(data);
 
   equal(moof[0].boxes[1].boxes[2].samples.length, 0, 'generated no samples');
 });
 
 test('generates an mdat', function() {
   var
-    data = mp4.mdat(new Uint8Array([1, 2, 3, 4])),
-    mdat = muxjs.tools.inspectMp4(data);
+    data = mp4.generator.mdat(new Uint8Array([1, 2, 3, 4])),
+    mdat = mp4.tools.inspect(data);
 
   equal(mdat.length, 1, 'generated one box');
   equal(mdat[0].type, 'mdat', 'generated an mdat box');
   deepEqual(mdat[0].byteLength, 4, 'encapsulated the data');
 });
-
-})(window, window.muxjs);
