@@ -49,7 +49,6 @@ var
   audioPes,
   testSegment = require('./test-segment'),
   timedMetadataPes;
-  console.log(ElementaryStream);
 
 QUnit.module('MP2T Packet Stream', {
   setup: function() {

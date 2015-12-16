@@ -3,8 +3,7 @@
 var
   captionStream,
   m2ts = require('../lib/m2ts'),
-  mp4 = require('../lib/mp4'),
-  sintelCaptions = require('./sintel-captions.js');
+  mp4 = require('../lib/mp4');
 
 QUnit.module('Caption Stream', {
   beforeEach: function() {
@@ -141,7 +140,7 @@ test('can be parsed from a segment', function() {
     }
   });
 
-  transmuxer.push(sintelCaptions);
+  transmuxer.push(window.sintelCaptions);
   transmuxer.flush();
 
   equal(captions.length, 2, 'parsed two captions');
