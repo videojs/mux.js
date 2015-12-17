@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>MSE Workbench</title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width">
+
+  <link rel="stylesheet" href="css/normalize.min.css">
+  <link rel="stylesheet" href="css/main.css">
+
+  <script src="js/vendor/modernizr-2.6.2.min.js"></script>
+</head>
+<body>
+  <!--[if lt IE 7]>
+      <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+      <![endif]-->
+
+  <div class="header-container">
+    <header class="wrapper clearfix">
+      <h1 class="title">Media Source Workbench</h1>
+    </header>
+  </div>
+
+  <div class="main-container">
+    <div class="main wrapper clearfix">
+
+      <article>
+        <header>
+          <p>
+            You can manually load video from your filesystem into this
+            player to see how well Media Source Extensions works with
+            them.
+        </header>
+        <section>
+        </section>
+        <section id="video-display">
+          <form>
+            <label>
+              Input video segment:
+              <input type=file id="segment-input" disabled>
+            <label>
+            <label>
+              Transmux input file?
+              <input id="transmux-input" type=checkbox>
+            </label>
+          </form>
+          <video id=video controls></video>
+        </section>
+      </article>
+
+    </div> <!-- #main -->
+  </div> <!-- #main-container -->
+
+  <div class="footer-container">
+    <footer class="wrapper">
+      <h3>footer</h3>
+    </footer>
+  </div>
+
+  <script src="../lib/utils/stream.js"></script>
+  <script src="../lib/utils/exp-golomb.js"></script>
+  <script src="../lib/mp4/mp4-generator.js"></script>
+  <script src="../lib/tools/mp4-inspector.js"></script>
+  <script src="../lib/codecs/aac.js"></script>
+  <script src="../lib/codecs/h264.js"></script>
+  <script src="../lib/m2ts/m2ts.js"></script>
+  <script src="../lib/m2ts/caption-stream.js"></script>
+  <script src="../lib/m2ts/metadata-stream.js"></script>
+  <script src="../lib/mp4/transmuxer.js"></script>
+
+  <script src="js/main.js"></script>
+
+  <script>
+
+    muxjs.debug.prepareVideo(document.getElementById('video'), function(mediaSource, sourceBuffer) {
+      var segmentInput = document.getElementById('segment-input'),
+          transmuxer = new muxjs.mp4.Transmuxer(),
+          pendingSegments = [],
+          checkPending;
+
+      checkPending = function() {
+        if (pendingSegments.length) {
+          sourceBuffer.appendBuffer(pendingSegments.shift());
+        }
+      };
+
+      transmuxer.on('data', function(segment) {
+        pendingSegments.push(segment.data);
+      });
+
+      segmentInput.removeAttribute('disabled');
+      sourceBuffer.addEventListener('updatestart', function() {
+        segmentInput.setAttribute('disabled', 'disabled');
+      });
+      sourceBuffer.addEventListener('updateend', function() {
+        segmentInput.removeAttribute('disabled');
+        checkPending();
+      });
+
+      segmentInput.addEventListener('change', function() {
+        var reader = new FileReader(),
+            transmux = !!document.getElementById('transmux-input').checked;
+
+        reader.addEventListener('loadend', function() {
+          var bytes = new Uint8Array(reader.result);
+
+          if (!transmux && video.buffered.length) {
+            sourceBuffer.timestampOffset = video.buffered.end(0);
+          }
+
+          if (transmux) {
+            transmuxer.push(bytes);
+            transmuxer.flush();
+          } else {
+            pendingSegments.push(bytes);
+          }
+          checkPending();
+        });
+        reader.readAsArrayBuffer(this.files[0]);
+      });
+    });
+  </script>
+</body>
+</html>
