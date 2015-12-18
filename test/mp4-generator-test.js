@@ -26,6 +26,8 @@ var
   validateStbl, validateStsd, validateMvex,
   validateVideoSample, validateAudioSample;
 
+QUnit.module('MP4 Generator');
+
 test('generates a BSMFF ftyp', function() {
   var data = mp4.generator.ftyp(), boxes;
 
