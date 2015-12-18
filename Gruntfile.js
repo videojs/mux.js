@@ -8,15 +8,8 @@ module.exports = function (grunt) {
           debug: true,
           standalone: 'muxjs'
         },
-        plugin: [
-        /*  ['browserify-derequire']*/
-        ],
-        transform: [
-          require('babelify').configure({
-            sourceMapRelative: './',
-            loose: ['all']
-          })
-        ]
+        plugin: [],
+        transform: []
       },
       build: {
         files: {
