@@ -27,7 +27,6 @@
   "author": "Brightcove",
   "license": "Apache-2.0",
   "devDependencies": {
-    "babelify": "^6.3.0",
     "grunt": "^0.4.5",
     "grunt-browserify": "^4.0.1",
     "grunt-contrib-jshint": "^0.11.3",
