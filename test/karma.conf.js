@@ -15,7 +15,6 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      './sintel-captions.js',
       './mp4-generator-test.js',
       './mp4-inspector-test.js',
       './exp-golomb-test.js',
@@ -37,7 +36,8 @@ module.exports = function(config) {
     },
     browserify: {
       debug: true,
-      transform: []
+      transform: [],
+      noparse: './sintel-captions.js'
     },
 
 
