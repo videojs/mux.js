@@ -45,3 +45,10 @@ console.log('The major brand of the first box:', parsed[0].majorBrand);
 document.body.appendChild(document.createTextNode(muxjs.textifyMp4(parsed)));
 ```
 The MP4 inspector is used extensively as a debugging tool for the transmuxer. You can see it in action by cloning the project and opening [the debug page](https://github.com/videojs/mux.js/blob/master/debug/index.html) in your browser.
+
+## Building
+If you're using this project in a node-like environment, just
+require() whatever you need. If you'd like to package up a
+distribution to include separately, run `npm build`. See the
+package.json for other handy scripts if you're thinking about
+contributing.
