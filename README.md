@@ -49,6 +49,6 @@ The MP4 inspector is used extensively as a debugging tool for the transmuxer. Yo
 ## Building
 If you're using this project in a node-like environment, just
 require() whatever you need. If you'd like to package up a
-distribution to include separately, run `npm build`. See the
+distribution to include separately, run `npm run build`. See the
 package.json for other handy scripts if you're thinking about
 contributing.

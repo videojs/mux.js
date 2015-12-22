@@ -9,8 +9,8 @@
   "main": "./lib/index.js",
   "scripts": {
     "test": "jshint lib/**/*.js && karma start ./test/karma.conf.js --single-run",
-    "build": "browserify lib/index.js -o dist/mux.js",
-    "watch": "watchify lib/index.js -v -o dist/mux.js",
+    "build": "mkdir -p dist && browserify lib/index.js -o dist/mux.js",
+    "watch": "mkdir -p dist && watchify lib/index.js -v -o dist/mux.js",
     "lint": "jshint lib/**/*.js"
   },
   "browser": "./lib/index.js",
