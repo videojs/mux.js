@@ -8,8 +8,10 @@
   },
   "main": "./lib/index.js",
   "scripts": {
-    "build": "grunt build",
-    "test": "./node_modules/karma/bin/karma start ./test/karma.conf.js --single-run"
+    "test": "jshint lib/**/*.js && karma start ./test/karma.conf.js --single-run",
+    "build": "browserify lib/index.js -o dist/mux.js",
+    "watch": "watchify lib/index.js -v -o dist/mux.js",
+    "lint": "jshint lib/**/*.js"
   },
   "browser": "./lib/index.js",
   "keywords": [
@@ -27,15 +29,14 @@
   "author": "Brightcove",
   "license": "Apache-2.0",
   "devDependencies": {
-    "grunt": "^0.4.5",
-    "grunt-browserify": "^4.0.1",
-    "grunt-contrib-jshint": "^0.11.3",
+    "browserify": "^12.0.1",
+    "jshint": "^2.9.1-rc2",
     "karma": "^0.13.9",
     "karma-browserify": "^4.4.2",
     "karma-chrome-launcher": "^0.2.0",
     "karma-firefox-launcher": "^0.1.6",
     "karma-qunit": "^0.1.5",
-    "load-grunt-tasks": "^3.3.0",
-    "qunitjs": "^1.18.0"
+    "qunitjs": "^1.18.0",
+    "watchify": "^3.6.1"
   }
 }
