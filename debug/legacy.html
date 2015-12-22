@@ -95,17 +95,7 @@
 
 
   <!-- transmuxing -->
-  <script src="../lib/utils/stream.js"></script>
-  <script src="../lib/utils/exp-golomb.js"></script>
-  <script src="../lib/tools/mp4-inspector.js"></script>
-  <script src="../lib/codecs/aac.js"></script>
-  <script src="../lib/codecs/h264.js"></script>
-  <script src="../lib/m2ts/m2ts.js"></script>
-  <script src="../lib/m2ts/caption-stream.js"></script>
-  <script src="../lib/m2ts/metadata-stream.js"></script>
-  <script src="../lib/flv/flv-tag.js"></script>
-  <script src="../lib/flv/transmuxer.js"></script>
-  <script src="../lib/tools/flv-inspector.js"></script>
+  <script src="../dist/mux.js"></script>
 
   <!-- Include QUnit for object diffs -->
   <script src="../node_modules/qunitjs/qunit/qunit.js"></script>
@@ -117,11 +107,6 @@
         vjsTags = document.querySelector('.vjs-tags'),
         workingTags = document.querySelector('.working-tags'),
         getOrderedTags,
-        tagTypes = {
-          0x08: 'audio',
-          0x09: 'video',
-          0x12: 'metadata'
-        },
         vjsParsed,
         workingParsed,
         // output a diff of the two parsed MP4s
@@ -199,11 +184,11 @@
           // collect all the tags
           for (var i = 0; i < tags.length; i++) {
             tag = tags[i];
-            parseResults.push(muxjs.tools.inspectFlvTag(tag.bytes.subarray(0, tag.bytes.byteLength - 4)));
+            parseResults.push(muxjs.flv.tools.inspectTag(tag.bytes.subarray(0, tag.bytes.byteLength - 4)));
           }
 
           pre = document.createElement('pre');
-          vjsParsed = muxjs.tools.textifyFlv(parseResults);
+          vjsParsed = muxjs.flv.tools.textify(parseResults);
           pre.innerHTML = vjsParsed;
           vjsTags.appendChild(pre);
 
@@ -241,9 +226,9 @@
 
         // clear old tag info
         workingTags.innerHTML = '';
-        parseResults = muxjs.tools.inspectFlv(bytes);
+        parseResults = muxjs.flv.tools.inspect(bytes);
         pre = document.createElement('pre');
-        workingParsed = muxjs.tools.textifyFlv(parseResults)
+        workingParsed = muxjs.flv.tools.textify(parseResults)
         pre.innerHTML = workingParsed;
         workingTags.appendChild(pre);
 

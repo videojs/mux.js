@@ -5,3 +5,5 @@
 *.ipr
 *.iws
 *.swp
+dist
+npm-debug.log

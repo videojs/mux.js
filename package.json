@@ -6,9 +6,12 @@
     "type": "git",
     "url": "https://github.com/videojs/mux.js.git"
   },
+  "main": "./lib/index.js",
   "scripts": {
-    "test": "karma start test/karma.conf.js --single-run"
+    "build": "grunt build",
+    "test": "./node_modules/karma/bin/karma start ./test/karma.conf.js --single-run"
   },
+  "browser": "./lib/index.js",
   "keywords": [
     "video",
     "container",
@@ -17,16 +20,22 @@
     "player",
     "hls",
     "mp4",
+    "flv",
     "aac",
     "h264"
   ],
   "author": "Brightcove",
   "license": "Apache-2.0",
   "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-browserify": "^4.0.1",
+    "grunt-contrib-jshint": "^0.11.3",
     "karma": "^0.13.9",
+    "karma-browserify": "^4.4.2",
     "karma-chrome-launcher": "^0.2.0",
     "karma-firefox-launcher": "^0.1.6",
     "karma-qunit": "^0.1.5",
+    "load-grunt-tasks": "^3.3.0",
     "qunitjs": "^1.18.0"
   }
 }
