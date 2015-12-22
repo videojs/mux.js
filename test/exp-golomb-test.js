@@ -1,4 +1,3 @@
-(function(window) {
   /*
     ======== A Handy Little QUnit Reference ========
     http://api.qunitjs.com/
@@ -21,10 +20,10 @@
   */
 var
   buffer,
-  ExpGolomb = window.muxjs.utils.ExpGolomb,
+  ExpGolomb = require('../lib/utils/exp-golomb'),
   expGolomb;
 
-module('Exponential Golomb coding');
+QUnit.module('Exponential Golomb coding');
 
 test('small numbers are coded correctly', function() {
   var
@@ -112,4 +111,3 @@ test('parses a sequence parameter set', function() {
   strictEqual(expGolomb.readBits(1), 0, 'frame_cropping_flag is false');
 });
 
-})(this);
