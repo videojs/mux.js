@@ -35,6 +35,11 @@
     "aac",
     "h264"
   ],
+  "browserify": {
+    "transform": [
+      "browserify-shim"
+    ]
+  },
   "browserify-shim": {
     "qunit": "global:QUnit"
   },
