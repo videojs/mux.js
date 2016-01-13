@@ -8,11 +8,19 @@
   },
   "main": "./lib/index.js",
   "scripts": {
-    "test": "karma start test/karma.conf.js",
-    "pretest": "npm run lint",
-    "build": "mkdir -p dist/ && browserify lib/index.js -o dist/mux.js",
-    "watch": "mkdir -p dist/ && watchify lib/index.js -v -o dist/mux.js",
-    "lint": "jshint lib/**/*.js"
+    "test": "npm run lint && karma start test/karma/karma.conf.js",
+    "start": "npm-run-all -p watch serve",
+    "serve": "node scripts/server.js",
+    "watch": "npm run mkdirs && npm-run-all -p watch:*",
+    "watch:js": "watchify lib/index.js -v -o dist/mux.js",
+    "watch:test": "watchify test/*.test.js -v -o dist-test/mux.js",
+    "mkdirs": "mkdir -p dist dist-test",
+    "build": "npm run mkirs && npm-run-all -p build:*",
+    "build:js": "browserify lib/index.js -o dist/mux.js",
+    "build:test": "browserify test/**/*.test.js -o dist-test/mux.js",
+    "lint": "npm-run-all -p lint:*",
+    "lint:js": "jshint lib/**/*.js",
+    "lint:test": "jshint test/*.test.js"
   },
   "browser": "./lib/index.js",
   "keywords": [
@@ -27,17 +35,27 @@
     "aac",
     "h264"
   ],
+  "browserify-shim": {
+    "qunit": "global:QUnit"
+  },
   "author": "Brightcove",
   "license": "Apache-2.0",
   "devDependencies": {
     "browserify": "^12.0.1",
+    "express": "^4.13.3",
     "jshint": "^2.9.1-rc2",
     "karma": "^0.13.9",
     "karma-browserify": "^4.4.2",
     "karma-chrome-launcher": "^0.2.0",
     "karma-firefox-launcher": "^0.1.6",
     "karma-qunit": "^0.1.5",
-    "qunitjs": "^1.18.0",
+    "npm-run-all": "^1.4.0",
+    "portscanner": "^1.0.0",
+    "qunitjs": "^1.0.0",
+    "serve-static": "^1.10.0",
     "watchify": "^3.6.1"
+  },
+  "dependencies": {
+    "browserify-shim": "^3.8.12"
   }
 }
