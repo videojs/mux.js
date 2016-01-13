@@ -3,8 +3,10 @@
 var mp2t = require('../lib/m2ts'),
     codecs = require('../lib/codecs'),
     flv = require('../lib/flv'),
-    id3Generator = require('./id3-generator'),
-    mp4 = require('../lib/mp4');
+    id3Generator = require('./utils/id3-generator'),
+    mp4 = require('../lib/mp4'),
+    QUnit = require('qunit'),
+    testSegment = require('./utils/test-segment');
 
 var
 
@@ -47,7 +49,6 @@ var
   transportPacket,
   videoPes,
   audioPes,
-  testSegment = require('./test-segment'),
   timedMetadataPes;
 
 QUnit.module('MP2T Packet Stream', {
@@ -56,11 +57,11 @@ QUnit.module('MP2T Packet Stream', {
   }
 });
 
-test('empty input does not error', function() {
+QUnit.test('empty input does not error', function() {
   transportPacketStream.push(new Uint8Array([]));
-  ok(true, 'did not throw');
+  QUnit.ok(true, 'did not throw');
 });
-test('parses a generic packet', function() {
+QUnit.test('parses a generic packet', function() {
   var
     datas = [],
     packet = new Uint8Array(188);
@@ -73,11 +74,11 @@ test('parses a generic packet', function() {
   transportPacketStream.push(packet);
   transportPacketStream.flush();
 
-  equal(1, datas.length, 'fired one event');
-  equal(datas[0].byteLength, 188, 'delivered the packet');
+  QUnit.equal(1, datas.length, 'fired one event');
+  QUnit.equal(datas[0].byteLength, 188, 'delivered the packet');
 });
 
-test('buffers partial packets', function() {
+QUnit.test('buffers partial packets', function() {
   var
     datas = [],
     partialPacket1 = new Uint8Array(187),
@@ -91,17 +92,17 @@ test('buffers partial packets', function() {
   });
   transportPacketStream.push(partialPacket1);
 
-  equal(0, datas.length, 'did not fire an event');
+  QUnit.equal(0, datas.length, 'did not fire an event');
 
   transportPacketStream.push(partialPacket2);
   transportPacketStream.flush();
 
-  equal(2, datas.length, 'fired events');
-  equal(188, datas[0].byteLength, 'parsed the first packet');
-  equal(188, datas[1].byteLength, 'parsed the second packet');
+  QUnit.equal(2, datas.length, 'fired events');
+  QUnit.equal(188, datas[0].byteLength, 'parsed the first packet');
+  QUnit.equal(188, datas[1].byteLength, 'parsed the second packet');
 });
 
-test('parses multiple packets delivered at once', function() {
+QUnit.test('parses multiple packets delivered at once', function() {
   var datas = [], packetStream = new Uint8Array(188 * 3);
 
   packetStream[0] = 0x47; // Sync-byte
@@ -115,13 +116,13 @@ test('parses multiple packets delivered at once', function() {
   transportPacketStream.push(packetStream);
   transportPacketStream.flush();
 
-  equal(3, datas.length, 'fired three events');
-  equal(188, datas[0].byteLength, 'parsed the first packet');
-  equal(188, datas[1].byteLength, 'parsed the second packet');
-  equal(188, datas[2].byteLength, 'parsed the third packet');
+  QUnit.equal(3, datas.length, 'fired three events');
+  QUnit.equal(188, datas[0].byteLength, 'parsed the first packet');
+  QUnit.equal(188, datas[1].byteLength, 'parsed the second packet');
+  QUnit.equal(188, datas[2].byteLength, 'parsed the third packet');
 });
 
-test('resyncs packets', function() {
+QUnit.test('resyncs packets', function() {
   var datas = [], packetStream = new Uint8Array(188 * 3 - 2);
 
   packetStream[0] = 0x47; // Sync-byte
@@ -135,12 +136,12 @@ test('resyncs packets', function() {
   transportPacketStream.push(packetStream);
   transportPacketStream.flush();
 
-  equal(datas.length, 2, 'fired three events');
-  equal(datas[0].byteLength, 188, 'parsed the first packet');
-  equal(datas[1].byteLength, 188, 'parsed the second packet');
+  QUnit.equal(datas.length, 2, 'fired three events');
+  QUnit.equal(datas[0].byteLength, 188, 'parsed the first packet');
+  QUnit.equal(datas[1].byteLength, 188, 'parsed the second packet');
 });
 
-test('buffers extra after multiple packets', function() {
+QUnit.test('buffers extra after multiple packets', function() {
   var datas = [], packetStream = new Uint8Array(188 * 2 + 10);
 
   packetStream[0] = 0x47; // Sync-byte
@@ -152,15 +153,15 @@ test('buffers extra after multiple packets', function() {
   });
 
   transportPacketStream.push(packetStream);
-  equal(2, datas.length, 'fired three events');
-  equal(188, datas[0].byteLength, 'parsed the first packet');
-  equal(188, datas[1].byteLength, 'parsed the second packet');
+  QUnit.equal(2, datas.length, 'fired three events');
+  QUnit.equal(188, datas[0].byteLength, 'parsed the first packet');
+  QUnit.equal(188, datas[1].byteLength, 'parsed the second packet');
 
   transportPacketStream.push(new Uint8Array(178));
   transportPacketStream.flush();
 
-  equal(3, datas.length, 'fired a final event');
-  equal(188, datas[2].length, 'parsed the finel packet');
+  QUnit.equal(3, datas.length, 'fired a final event');
+  QUnit.equal(188, datas[2].length, 'parsed the finel packet');
 });
 
 QUnit.module('MP2T TransportParseStream', {
@@ -172,7 +173,7 @@ QUnit.module('MP2T TransportParseStream', {
   }
 });
 
-test('parses generic packet properties', function() {
+QUnit.test('parses generic packet properties', function() {
   var packet;
   transportParseStream.on('data', function(data) {
     packet = data;
@@ -186,11 +187,11 @@ test('parses generic packet properties', function() {
     0x40, 0x01, 0x6c
   ]));
 
-  ok(packet.payloadUnitStartIndicator, 'parsed payload_unit_start_indicator');
-  ok(packet.pid, 'parsed PID');
+  QUnit.ok(packet.payloadUnitStartIndicator, 'parsed payload_unit_start_indicator');
+  QUnit.ok(packet.pid, 'parsed PID');
 });
 
-test('parses piped data events', function() {
+QUnit.test('parses piped data events', function() {
   var packet;
   transportParseStream.on('data', function(data) {
     packet = data;
@@ -204,10 +205,10 @@ test('parses piped data events', function() {
     0x40, 0x01, 0x6c
   ]));
 
-  ok(packet, 'parsed a packet');
+  QUnit.ok(packet, 'parsed a packet');
 });
 
-test('parses a data packet with adaptation fields', function() {
+QUnit.test('parses a data packet with adaptation fields', function() {
   var packet;
   transportParseStream.on('data', function(data) {
     packet = data;
@@ -218,10 +219,10 @@ test('parses a data packet with adaptation fields', function() {
     // tei:0 pusi:1 tp:0 pid:0 0000 0000 0000 tsc:01 afc:10 cc:11 afl:00 0000 00 stuffing:00 0000 00 pscp:00 0001 padding:0000
     0x40, 0x00, 0x6c, 0x00, 0x00, 0x10
   ]));
-  strictEqual(packet.type, 'pat', 'parsed the packet type');
+  QUnit.strictEqual(packet.type, 'pat', 'parsed the packet type');
 });
 
-test('parses a PES packet', function() {
+QUnit.test('parses a PES packet', function() {
   var packet;
   transportParseStream.on('data', function(data) {
     packet = data;
@@ -237,10 +238,10 @@ test('parses a PES packet', function() {
     // tei:0 pusi:1 tp:0 pid:0 0000 0000 0010 tsc:01 afc:01 cc:11 padding:00
     0x40, 0x02, 0x5c
   ]));
-  strictEqual(packet.type, 'pes', 'parsed a PES packet');
+  QUnit.strictEqual(packet.type, 'pes', 'parsed a PES packet');
 });
 
-test('parses packets with variable length adaptation fields and a payload', function() {
+QUnit.test('parses packets with variable length adaptation fields and a payload', function() {
   var packet;
   transportParseStream.on('data', function(data) {
     packet = data;
@@ -256,7 +257,7 @@ test('parses packets with variable length adaptation fields and a payload', func
     // tei:0 pusi:1 tp:0 pid:0 0000 0000 0010 tsc:01 afc:11 cc:11 afl:00 0000 11 stuffing:00 0000 0000 00 pscp:00 0001
     0x40, 0x02, 0x7c, 0x0c, 0x00, 0x01
   ]));
-  strictEqual(packet.type, 'pes', 'parsed a PES packet');
+  QUnit.strictEqual(packet.type, 'pes', 'parsed a PES packet');
 });
 
 /*
@@ -298,15 +299,15 @@ PAT = [
   0x00, 0x00, 0x00, 0x00
 ];
 
-test('parses the program map table pid from the program association table (PAT)', function() {
+QUnit.test('parses the program map table pid from the program association table (PAT)', function() {
   var packet;
   transportParseStream.on('data', function(data) {
     packet = data;
   });
 
   transportParseStream.push(new Uint8Array(PAT));
-  ok(packet, 'parsed a packet');
-  strictEqual(0x0010, transportParseStream.pmtPid, 'parsed PMT pid');
+  QUnit.ok(packet, 'parsed a packet');
+  QUnit.strictEqual(0x0010, transportParseStream.pmtPid, 'parsed PMT pid');
 });
 
 generatePMT = function(options) {
@@ -398,7 +399,7 @@ PMT = [
   0x00, 0x00, 0x00, 0x00
 ];
 
-test('parse the elementary streams from a program map table', function() {
+QUnit.test('parse the elementary streams from a program map table', function() {
   var packet;
   transportParseStream.on('data', function(data) {
     packet = data;
@@ -407,12 +408,12 @@ test('parse the elementary streams from a program map table', function() {
 
   transportParseStream.push(new Uint8Array(PMT.concat(0, 0, 0, 0, 0)));
 
-  ok(packet, 'parsed a packet');
-  ok(transportParseStream.programMapTable, 'parsed a program map');
-  strictEqual(0x1b, transportParseStream.programMapTable[0x11], 'associated h264 with pid 0x11');
-  strictEqual(0x0f, transportParseStream.programMapTable[0x12], 'associated adts with pid 0x12');
-  strictEqual(transportParseStream.programMapTable[0], undefined, 'ignored trailing stuffing bytes');
-  deepEqual(transportParseStream.programMapTable, packet.programMapTable, 'recorded the PMT');
+  QUnit.ok(packet, 'parsed a packet');
+  QUnit.ok(transportParseStream.programMapTable, 'parsed a program map');
+  QUnit.strictEqual(0x1b, transportParseStream.programMapTable[0x11], 'associated h264 with pid 0x11');
+  QUnit.strictEqual(0x0f, transportParseStream.programMapTable[0x12], 'associated adts with pid 0x12');
+  QUnit.strictEqual(transportParseStream.programMapTable[0], undefined, 'ignored trailing stuffing bytes');
+  QUnit.deepEqual(transportParseStream.programMapTable, packet.programMapTable, 'recorded the PMT');
 });
 
 pesHeader = function (first, pts) {
@@ -430,7 +431,7 @@ pesHeader = function (first, pts) {
     (first ? 0x01 : 0x00) + (pts ? 0x05 : 0x00)
   ];
 
-  // Only store 15 bits of the PTS for testing purposes
+  // Only store 15 bits of the PTS for QUnit.testing purposes
   if (pts) {
     result.push(0x21);
     result.push(0x00);
@@ -533,7 +534,7 @@ packetize = function(data) {
   return packet;
 };
 
-test('parses metadata events from PSI packets', function() {
+QUnit.test('parses metadata events from PSI packets', function() {
   var
     metadatas = [],
     datas = 0,
@@ -557,10 +558,10 @@ test('parses metadata events from PSI packets', function() {
     }
   });
 
-  equal(1, datas, 'data fired');
-  equal(1, metadatas.length, 'metadata generated');
+  QUnit.equal(1, datas, 'data fired');
+  QUnit.equal(1, metadatas.length, 'metadata generated');
   metadatas[0].tracks.sort(sortById);
-  deepEqual(metadatas[0].tracks, [{
+  QUnit.deepEqual(metadatas[0].tracks, [{
     id: 1,
     codec: 'avc',
     type: 'video',
@@ -577,7 +578,7 @@ test('parses metadata events from PSI packets', function() {
   }], 'identified two tracks');
 });
 
-test('parses standalone program stream packets', function() {
+QUnit.test('parses standalone program stream packets', function() {
   var
     packets = [],
     packetData = [0x01, 0x02],
@@ -594,13 +595,13 @@ test('parses standalone program stream packets', function() {
   });
   elementaryStream.flush();
 
-  equal(packets.length, 1, 'built one packet');
-  equal(packets[0].type, 'audio', 'identified audio data');
-  equal(packets[0].data.byteLength, packetData.length, 'parsed the correct payload size');
-  equal(packets[0].pts, 7, 'correctly parsed the pts value');
+  QUnit.equal(packets.length, 1, 'built one packet');
+  QUnit.equal(packets[0].type, 'audio', 'identified audio data');
+  QUnit.equal(packets[0].data.byteLength, packetData.length, 'parsed the correct payload size');
+  QUnit.equal(packets[0].pts, 7, 'correctly parsed the pts value');
 });
 
-test('aggregates program stream packets from the transport stream', function() {
+QUnit.test('aggregates program stream packets from the transport stream', function() {
   var
     events = [],
     packetData = [0x01, 0x02],
@@ -617,7 +618,7 @@ test('aggregates program stream packets from the transport stream', function() {
     data: new Uint8Array(pesHead.slice(0, 4)) // Spread PES Header across packets
   });
 
-  equal(events.length, 0, 'buffers partial packets');
+  QUnit.equal(events.length, 0, 'buffers partial packets');
 
   elementaryStream.push({
     type: 'pes',
@@ -626,13 +627,13 @@ test('aggregates program stream packets from the transport stream', function() {
   });
   elementaryStream.flush();
 
-  equal(events.length, 1, 'built one packet');
-  equal(events[0].type, 'video', 'identified video data');
-  equal(events[0].pts, 7, 'correctly parsed the pts');
-  equal(events[0].data.byteLength, packetData.length, 'concatenated transport packets');
+  QUnit.equal(events.length, 1, 'built one packet');
+  QUnit.equal(events[0].type, 'video', 'identified video data');
+  QUnit.equal(events[0].pts, 7, 'correctly parsed the pts');
+  QUnit.equal(events[0].data.byteLength, packetData.length, 'concatenated transport packets');
 });
 
-test('parses an elementary stream packet with just a pts', function() {
+QUnit.test('parses an elementary stream packet with just a pts', function() {
   var packet;
   elementaryStream.on('data', function(data) {
     packet = data;
@@ -661,14 +662,14 @@ test('parses an elementary stream packet with just a pts', function() {
   });
   elementaryStream.flush();
 
-  ok(packet, 'parsed a packet');
-  equal(packet.data.byteLength, 1, 'parsed a single data byte');
-  equal(packet.data[0], 0x11, 'parsed the data');
+  QUnit.ok(packet, 'parsed a packet');
+  QUnit.equal(packet.data.byteLength, 1, 'parsed a single data byte');
+  QUnit.equal(packet.data[0], 0x11, 'parsed the data');
   // 2^33-1 is the maximum value of a 33-bit unsigned value
-  equal(packet.pts, Math.pow(2, 33) - 1, 'parsed the pts');
+  QUnit.equal(packet.pts, Math.pow(2, 33) - 1, 'parsed the pts');
 });
 
-test('parses an elementary stream packet with a pts and dts', function() {
+QUnit.test('parses an elementary stream packet with a pts and dts', function() {
   var packet;
   elementaryStream.on('data', function(data) {
     packet = data;
@@ -701,14 +702,14 @@ test('parses an elementary stream packet with a pts and dts', function() {
   });
   elementaryStream.flush();
 
-  ok(packet, 'parsed a packet');
-  equal(packet.data.byteLength, 1, 'parsed a single data byte');
-  equal(packet.data[0], 0x11, 'parsed the data');
-  equal(packet.pts, 4, 'parsed the pts');
-  equal(packet.dts, 2, 'parsed the dts');
+  QUnit.ok(packet, 'parsed a packet');
+  QUnit.equal(packet.data.byteLength, 1, 'parsed a single data byte');
+  QUnit.equal(packet.data[0], 0x11, 'parsed the data');
+  QUnit.equal(packet.pts, 4, 'parsed the pts');
+  QUnit.equal(packet.dts, 2, 'parsed the dts');
 });
 
-test('parses an elementary stream packet without a pts or dts', function() {
+QUnit.test('parses an elementary stream packet without a pts or dts', function() {
   var packet;
   elementaryStream.on('data', function(data) {
     packet = data;
@@ -722,15 +723,15 @@ test('parses an elementary stream packet without a pts or dts', function() {
   });
   elementaryStream.flush();
 
-  ok(packet, 'parsed a packet');
-  equal(packet.data.byteLength, 2, 'parsed two data bytes');
-  equal(packet.data[0], 0xaf, 'parsed the first data byte');
-  equal(packet.data[1], 0x01, 'parsed the second data byte');
-  ok(!packet.pts, 'did not parse a pts');
-  ok(!packet.dts, 'did not parse a dts');
+  QUnit.ok(packet, 'parsed a packet');
+  QUnit.equal(packet.data.byteLength, 2, 'parsed two data bytes');
+  QUnit.equal(packet.data[0], 0xaf, 'parsed the first data byte');
+  QUnit.equal(packet.data[1], 0x01, 'parsed the second data byte');
+  QUnit.ok(!packet.pts, 'did not parse a pts');
+  QUnit.ok(!packet.dts, 'did not parse a dts');
 });
 
-test('buffers audio and video program streams individually', function() {
+QUnit.test('buffers audio and video program streams individually', function() {
   var events = [];
   elementaryStream.on('data', function(event) {
     events.push(event);
@@ -748,7 +749,7 @@ test('buffers audio and video program streams individually', function() {
     streamType: ADTS_STREAM_TYPE,
     data: new Uint8Array(1)
   });
-  equal(0, events.length, 'buffers partial packets');
+  QUnit.equal(0, events.length, 'buffers partial packets');
 
   elementaryStream.push({
     type: 'pes',
@@ -761,12 +762,12 @@ test('buffers audio and video program streams individually', function() {
     data: new Uint8Array(1)
   });
   elementaryStream.flush();
-  equal(2, events.length, 'parsed a complete packet');
-  equal('video', events[0].type, 'identified video data');
-  equal('audio', events[1].type, 'identified audio data');
+  QUnit.equal(2, events.length, 'parsed a complete packet');
+  QUnit.equal('video', events[0].type, 'identified video data');
+  QUnit.equal('audio', events[1].type, 'identified audio data');
 });
 
-test('flushes the buffered packets when a new one of that type is started', function() {
+QUnit.test('flushes the buffered packets when a new one of that type is started', function() {
   var packets = [];
   elementaryStream.on('data', function(packet) {
     packets.push(packet);
@@ -788,7 +789,7 @@ test('flushes the buffered packets when a new one of that type is started', func
     streamType: H264_STREAM_TYPE,
     data: new Uint8Array(1)
   });
-  equal(0, packets.length, 'buffers packets by type');
+  QUnit.equal(0, packets.length, 'buffers packets by type');
 
   elementaryStream.push({
     type: 'pes',
@@ -796,19 +797,19 @@ test('flushes the buffered packets when a new one of that type is started', func
     streamType: H264_STREAM_TYPE,
     data: new Uint8Array(1)
   });
-  equal(1, packets.length, 'built one packet');
-  equal('video', packets[0].type, 'identified video data');
-  equal(2, packets[0].data.byteLength, 'concatenated packets');
+  QUnit.equal(1, packets.length, 'built one packet');
+  QUnit.equal('video', packets[0].type, 'identified video data');
+  QUnit.equal(2, packets[0].data.byteLength, 'concatenated packets');
 
   elementaryStream.flush();
-  equal(3, packets.length, 'built two more packets');
-  equal('video', packets[1].type, 'identified video data');
-  equal(1, packets[1].data.byteLength, 'parsed the video payload');
-  equal('audio', packets[2].type, 'identified audio data');
-  equal(7, packets[2].data.byteLength, 'parsed the audio payload');
+  QUnit.equal(3, packets.length, 'built two more packets');
+  QUnit.equal('video', packets[1].type, 'identified video data');
+  QUnit.equal(1, packets[1].data.byteLength, 'parsed the video payload');
+  QUnit.equal('audio', packets[2].type, 'identified audio data');
+  QUnit.equal(7, packets[2].data.byteLength, 'parsed the audio payload');
 });
 
-test('buffers and emits timed-metadata', function() {
+QUnit.test('buffers and emits timed-metadata', function() {
   var packets = [];
   elementaryStream.on('data', function(packet) {
     packets.push(packet);
@@ -825,7 +826,7 @@ test('buffers and emits timed-metadata', function() {
     streamType: METADATA_STREAM_TYPE,
     data: new Uint8Array([2, 3])
   });
-  equal(packets.length, 0, 'buffers metadata until the next start indicator');
+  QUnit.equal(packets.length, 0, 'buffers metadata until the next start indicator');
 
   elementaryStream.push({
     type: 'pes',
@@ -833,17 +834,17 @@ test('buffers and emits timed-metadata', function() {
     streamType: METADATA_STREAM_TYPE,
     data: new Uint8Array([4, 5])
   });
-  equal(packets.length, 1, 'built a packet');
-  equal(packets[0].type, 'timed-metadata', 'identified timed-metadata');
-  deepEqual(packets[0].data, new Uint8Array([0, 1, 2, 3]), 'concatenated the data');
+  QUnit.equal(packets.length, 1, 'built a packet');
+  QUnit.equal(packets[0].type, 'timed-metadata', 'identified timed-metadata');
+  QUnit.deepEqual(packets[0].data, new Uint8Array([0, 1, 2, 3]), 'concatenated the data');
 
   elementaryStream.flush();
-  equal(packets.length, 2, 'flushed a packet');
-  equal(packets[1].type, 'timed-metadata', 'identified timed-metadata');
-  deepEqual(packets[1].data, new Uint8Array([4, 5]), 'included the data');
+  QUnit.equal(packets.length, 2, 'flushed a packet');
+  QUnit.equal(packets[1].type, 'timed-metadata', 'identified timed-metadata');
+  QUnit.deepEqual(packets[1].data, new Uint8Array([4, 5]), 'included the data');
 });
 
-test('drops packets with unknown stream types', function() {
+QUnit.test('drops packets with unknown stream types', function() {
   var packets = [];
   elementaryStream.on('data', function(packet) {
     packets.push(packet);
@@ -859,7 +860,7 @@ test('drops packets with unknown stream types', function() {
     data: new Uint8Array(1)
   });
 
-  equal(packets.length, 0, 'ignored unknown packets');
+  QUnit.equal(packets.length, 0, 'ignored unknown packets');
 });
 
 QUnit.module('H264 Stream', {
@@ -868,7 +869,7 @@ QUnit.module('H264 Stream', {
   }
 });
 
-test('properly parses seq_parameter_set_rbsp nal units', function() {
+QUnit.test('properly parses seq_parameter_set_rbsp nal units', function() {
   var
     data,
     expectedRBSP = new Uint8Array([
@@ -891,7 +892,7 @@ test('properly parses seq_parameter_set_rbsp nal units', function() {
     data = event;
   });
 
-  // test SPS:
+  // QUnit.test SPS:
   h264Stream.push({
     type: 'video',
     data: new Uint8Array([
@@ -906,14 +907,14 @@ test('properly parses seq_parameter_set_rbsp nal units', function() {
     ])
   });
 
-  ok(data, 'generated a data event');
-  equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified an sequence parameter set');
-  deepEqual(data.escapedRBSP, expectedRBSP, 'properly removed Emulation Prevention Bytes from the RBSP');
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified an sequence parameter set');
+  QUnit.deepEqual(data.escapedRBSP, expectedRBSP, 'properly removed Emulation Prevention Bytes from the RBSP');
 
-  deepEqual(data.config, expectedConfig, 'parsed the sps');
+  QUnit.deepEqual(data.config, expectedConfig, 'parsed the sps');
 });
 
-test('unpacks nal units from simple byte stream framing', function() {
+QUnit.test('unpacks nal units from simple byte stream framing', function() {
   var data;
   h264Stream.on('data', function(event) {
     data = event;
@@ -929,13 +930,13 @@ test('unpacks nal units from simple byte stream framing', function() {
     ])
   });
 
-  ok(data, 'generated a data event');
-  equal(data.nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
-  equal(data.data.length, 2, 'calculated nal unit length');
-  equal(data.data[1], 7, 'read a payload byte');
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
+  QUnit.equal(data.data.length, 2, 'calculated nal unit length');
+  QUnit.equal(data.data[1], 7, 'read a payload byte');
 });
 
-test('unpacks nal units from byte streams split across pushes', function() {
+QUnit.test('unpacks nal units from byte streams split across pushes', function() {
   var data;
   h264Stream.on('data', function(event) {
     data = event;
@@ -950,7 +951,7 @@ test('unpacks nal units from byte streams split across pushes', function() {
       0x04
     ])
   });
-  ok(!data, 'buffers NAL units across events');
+  QUnit.ok(!data, 'buffers NAL units across events');
 
   h264Stream.push({
     type: 'video',
@@ -959,13 +960,13 @@ test('unpacks nal units from byte streams split across pushes', function() {
       0x00, 0x00, 0x01
     ])
   });
-  ok(data, 'generated a data event');
-  equal(data.nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
-  equal(data.data.length, 8, 'calculated nal unit length');
-  equal(data.data[1], 7, 'read a payload byte');
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
+  QUnit.equal(data.data.length, 8, 'calculated nal unit length');
+  QUnit.equal(data.data[1], 7, 'read a payload byte');
 });
 
-test('buffers nal unit trailing zeros across pushes', function() {
+QUnit.test('buffers nal unit trailing zeros across pushes', function() {
   var data = [];
   h264Stream.on('data', function(event) {
     data.push(event);
@@ -982,7 +983,7 @@ test('buffers nal unit trailing zeros across pushes', function() {
       0x00
     ])
   });
-  equal(data.length, 1, 'delivered the first nal');
+  QUnit.equal(data.length, 1, 'delivered the first nal');
 
   h264Stream.push({
     type: 'video',
@@ -993,14 +994,14 @@ test('buffers nal unit trailing zeros across pushes', function() {
       0x00, 0x00, 0x01
     ])
   });
-  equal(data.length, 2, 'generated data events');
-  equal(data[0].data.length, 2, 'ignored trailing zeros');
-  equal(data[0].data[0], 0x09, 'found the first nal start');
-  equal(data[1].data.length, 2, 'found the following nal start');
-  equal(data[1].data[0], 0x09, 'found the second nal start');
+  QUnit.equal(data.length, 2, 'generated data events');
+  QUnit.equal(data[0].data.length, 2, 'ignored trailing zeros');
+  QUnit.equal(data[0].data[0], 0x09, 'found the first nal start');
+  QUnit.equal(data[1].data.length, 2, 'found the following nal start');
+  QUnit.equal(data[1].data[0], 0x09, 'found the second nal start');
 });
 
-test('unpacks nal units from byte streams with split sync points', function() {
+QUnit.test('unpacks nal units from byte streams with split sync points', function() {
   var data;
   h264Stream.on('data', function(event) {
     data = event;
@@ -1014,7 +1015,7 @@ test('unpacks nal units from byte streams with split sync points', function() {
       0x09, 0x07,
       0x00])
   });
-  ok(!data, 'buffers NAL units across events');
+  QUnit.ok(!data, 'buffers NAL units across events');
 
   h264Stream.push({
     type: 'video',
@@ -1022,13 +1023,13 @@ test('unpacks nal units from byte streams with split sync points', function() {
       0x00, 0x01
     ])
   });
-  ok(data, 'generated a data event');
-  equal(data.nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
-  equal(data.data.length, 2, 'calculated nal unit length');
-  equal(data.data[1], 7, 'read a payload byte');
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
+  QUnit.equal(data.data.length, 2, 'calculated nal unit length');
+  QUnit.equal(data.data[1], 7, 'read a payload byte');
 });
 
-test('parses nal unit types', function() {
+QUnit.test('parses nal unit types', function() {
   var data;
   h264Stream.on('data', function(event) {
     data = event;
@@ -1043,8 +1044,8 @@ test('parses nal unit types', function() {
   });
   h264Stream.flush();
 
-  ok(data, 'generated a data event');
-  equal(data.nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
 
   data = null;
   h264Stream.push({
@@ -1060,8 +1061,8 @@ test('parses nal unit types', function() {
     ])
   });
   h264Stream.flush();
-  ok(data, 'generated a data event');
-  equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified a sequence parameter set');
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified a sequence parameter set');
 
   data = null;
   h264Stream.push({
@@ -1072,8 +1073,8 @@ test('parses nal unit types', function() {
     ])
   });
   h264Stream.flush();
-  ok(data, 'generated a data event');
-  equal(data.nalUnitType, 'pic_parameter_set_rbsp', 'identified a picture parameter set');
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'pic_parameter_set_rbsp', 'identified a picture parameter set');
 
   data = null;
   h264Stream.push({
@@ -1084,8 +1085,8 @@ test('parses nal unit types', function() {
     ])
   });
   h264Stream.flush();
-  ok(data, 'generated a data event');
-  equal(data.nalUnitType, 'slice_layer_without_partitioning_rbsp_idr', 'identified a key frame');
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'slice_layer_without_partitioning_rbsp_idr', 'identified a key frame');
 
   data = null;
   h264Stream.push({
@@ -1096,8 +1097,8 @@ test('parses nal unit types', function() {
     ])
   });
   h264Stream.flush();
-  ok(data, 'generated a data event');
-  equal(data.nalUnitType, 'sei_rbsp', 'identified a supplemental enhancement information unit');
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'sei_rbsp', 'identified a supplemental enhancement information unit');
 });
 
 // MP4 expects H264 (aka AVC) data to be in storage format. Storage
@@ -1108,7 +1109,7 @@ test('parses nal unit types', function() {
 // Details on the byte stream format can be found in Annex B of
 // Recommendation ITU-T H.264.
 // The storage format is described in ISO/IEC 14496-15
-test('strips byte stream framing during parsing', function() {
+QUnit.test('strips byte stream framing during parsing', function() {
   var data = [];
   h264Stream.on('data', function(event) {
     data.push(event);
@@ -1145,20 +1146,20 @@ test('strips byte stream framing during parsing', function() {
   });
   h264Stream.flush();
 
-  equal(data.length, 2, 'parsed two NAL units');
-  deepEqual(new Uint8Array([
+  QUnit.equal(data.length, 2, 'parsed two NAL units');
+  QUnit.deepEqual(new Uint8Array([
     0x08,
     0x01, 0x02, 0x03, 0x04,
     0x05, 0x06, 0x07
   ]), new Uint8Array(data[0].data), 'parsed the first NAL unit');
-  deepEqual(new Uint8Array([
+  QUnit.deepEqual(new Uint8Array([
     0x09,
     0x06, 0x05, 0x04, 0x03,
     0x02, 0x01, 0x00
   ]), new Uint8Array(data[1].data), 'parsed the second NAL unit');
 });
 
-test('can be reset', function() {
+QUnit.test('can be reset', function() {
   var input = {
     type: 'video',
     data: new Uint8Array([
@@ -1167,7 +1168,7 @@ test('can be reset', function() {
       0x00, 0x00, 0x01
     ])
   }, data = [];
-  // only the latest event is relevant for this test
+  // only the laQUnit.test event is relevant for this QUnit.test
   h264Stream.on('data', function(event) {
     data.push(event);
   });
@@ -1177,10 +1178,10 @@ test('can be reset', function() {
   h264Stream.push(input);
   h264Stream.flush();
 
-  equal(data.length, 2, 'generated two data events');
-  equal(data[1].nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
-  equal(data[1].data.length, 2, 'calculated nal unit length');
-  equal(data[1].data[1], 7, 'read a payload byte');
+  QUnit.equal(data.length, 2, 'generated two data events');
+  QUnit.equal(data[1].nalUnitType, 'access_unit_delimiter_rbsp', 'identified an access unit delimiter');
+  QUnit.equal(data[1].data.length, 2, 'calculated nal unit length');
+  QUnit.equal(data[1].data[1], 7, 'read a payload byte');
 });
 
 QUnit.module('VideoSegmentStream', {
@@ -1197,7 +1198,7 @@ QUnit.module('VideoSegmentStream', {
 });
 
 // see ISO/IEC 14496-15, Section 5 "AVC elementary streams and sample definitions"
-test('concatenates NAL units into AVC elementary streams', function() {
+QUnit.test('concatenates NAL units into AVC elementary streams', function() {
   var segment, boxes;
   videoSegmentStream.on('data', function(data) {
     segment = data.boxes;
@@ -1220,12 +1221,12 @@ test('concatenates NAL units into AVC elementary streams', function() {
   });
   videoSegmentStream.flush();
 
-  ok(segment, 'generated a data event');
+  QUnit.ok(segment, 'generated a data event');
   boxes = mp4.tools.inspect(segment);
-  equal(boxes[1].byteLength,
+  QUnit.equal(boxes[1].byteLength,
         (2 + 4) + (4 + 4) + (4 + 6),
         'wrote the correct number of bytes');
-  deepEqual(new Uint8Array(segment.subarray(boxes[0].size + 8)), new Uint8Array([
+  QUnit.deepEqual(new Uint8Array(segment.subarray(boxes[0].size + 8)), new Uint8Array([
     0, 0, 0, 2,
     0x09, 0x01,
     0, 0, 0, 4,
@@ -1235,7 +1236,7 @@ test('concatenates NAL units into AVC elementary streams', function() {
   ]), 'wrote an AVC stream into the mdat');
 });
 
-test('infers sample durations from DTS values', function() {
+QUnit.test('infers sample durations from DTS values', function() {
   var segment, boxes, samples;
   videoSegmentStream.on('data', function(data) {
     segment = data.boxes;
@@ -1264,13 +1265,13 @@ test('infers sample durations from DTS values', function() {
 
   boxes = mp4.tools.inspect(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
-  equal(samples.length, 3, 'generated three samples');
-  equal(samples[0].duration, 1, 'set the first sample duration');
-  equal(samples[1].duration, 2, 'set the second sample duration');
-  equal(samples[2].duration, 2, 'inferred the final sample duration');
+  QUnit.equal(samples.length, 3, 'generated three samples');
+  QUnit.equal(samples[0].duration, 1, 'set the first sample duration');
+  QUnit.equal(samples[1].duration, 2, 'set the second sample duration');
+  QUnit.equal(samples[2].duration, 2, 'inferred the final sample duration');
 });
 
-test('filters pre-IDR samples and caluculate duration correctly', function() {
+QUnit.test('filters pre-IDR samples and caluculate duration correctly', function() {
   var segment, boxes, samples;
   videoSegmentStream.on('data', function(data) {
     segment = data.boxes;
@@ -1304,12 +1305,12 @@ test('filters pre-IDR samples and caluculate duration correctly', function() {
 
   boxes = mp4.tools.inspect(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
-  equal(samples.length, 2, 'generated two samples, filters out pre-IDR');
-  equal(samples[0].duration, 3, 'set the first sample duration');
-  equal(samples[1].duration, 2, 'set the second sample duration');
+  QUnit.equal(samples.length, 2, 'generated two samples, filters out pre-IDR');
+  QUnit.equal(samples[0].duration, 3, 'set the first sample duration');
+  QUnit.equal(samples[1].duration, 2, 'set the second sample duration');
 });
 
-test('track values from seq_parameter_set_rbsp should be cleared by a flush', function() {
+QUnit.test('track values from seq_parameter_set_rbsp should be cleared by a flush', function() {
   var track;
   videoSegmentStream.on('data', function(data) {
     track = data.track;
@@ -1340,12 +1341,12 @@ test('track values from seq_parameter_set_rbsp should be cleared by a flush', fu
   });
   videoSegmentStream.flush();
 
-  equal(track.width, 123, 'width is set by first SPS');
-  equal(track.height, 321, 'height is set by first SPS');
-  equal(track.sps[0][0], 0xFF, 'first sps is 0xFF');
-  equal(track.profileIdc, 1, 'profileIdc is set by first SPS');
-  equal(track.levelIdc, 2, 'levelIdc is set by first SPS');
-  equal(track.profileCompatibility, 3, 'profileCompatibility is set by first SPS');
+  QUnit.equal(track.width, 123, 'width is set by first SPS');
+  QUnit.equal(track.height, 321, 'height is set by first SPS');
+  QUnit.equal(track.sps[0][0], 0xFF, 'first sps is 0xFF');
+  QUnit.equal(track.profileIdc, 1, 'profileIdc is set by first SPS');
+  QUnit.equal(track.levelIdc, 2, 'levelIdc is set by first SPS');
+  QUnit.equal(track.profileCompatibility, 3, 'profileCompatibility is set by first SPS');
 
   videoSegmentStream.push({
     data: new Uint8Array([0x99]),
@@ -1361,16 +1362,16 @@ test('track values from seq_parameter_set_rbsp should be cleared by a flush', fu
   });
   videoSegmentStream.flush();
 
-  equal(track.width, 300, 'width is set by first SPS after flush');
-  equal(track.height, 200, 'height is set by first SPS after flush');
-  equal(track.sps.length, 1, 'there is one sps');
-  equal(track.sps[0][0], 0x99, 'first sps is 0x99');
-  equal(track.profileIdc, 11, 'profileIdc is set by first SPS after flush');
-  equal(track.levelIdc, 12, 'levelIdc is set by first SPS after flush');
-  equal(track.profileCompatibility, 13, 'profileCompatibility is set by first SPS after flush');
+  QUnit.equal(track.width, 300, 'width is set by first SPS after flush');
+  QUnit.equal(track.height, 200, 'height is set by first SPS after flush');
+  QUnit.equal(track.sps.length, 1, 'there is one sps');
+  QUnit.equal(track.sps[0][0], 0x99, 'first sps is 0x99');
+  QUnit.equal(track.profileIdc, 11, 'profileIdc is set by first SPS after flush');
+  QUnit.equal(track.levelIdc, 12, 'levelIdc is set by first SPS after flush');
+  QUnit.equal(track.profileCompatibility, 13, 'profileCompatibility is set by first SPS after flush');
 });
 
-test('track pps from pic_parameter_set_rbsp should be cleared by a flush', function() {
+QUnit.test('track pps from pic_parameter_set_rbsp should be cleared by a flush', function() {
   var track;
   videoSegmentStream.on('data', function(data) {
     track = data.track;
@@ -1387,7 +1388,7 @@ test('track pps from pic_parameter_set_rbsp should be cleared by a flush', funct
   });
   videoSegmentStream.flush();
 
-  equal(track.pps[0][0], 0x01, 'first pps is 0x01');
+  QUnit.equal(track.pps[0][0], 0x01, 'first pps is 0x01');
 
   videoSegmentStream.push({
     data: new Uint8Array([0x03]),
@@ -1396,10 +1397,10 @@ test('track pps from pic_parameter_set_rbsp should be cleared by a flush', funct
   });
   videoSegmentStream.flush();
 
-  equal(track.pps[0][0], 0x03, 'first pps is 0x03 after a flush');
+  QUnit.equal(track.pps[0][0], 0x03, 'first pps is 0x03 after a flush');
 });
 
-test('calculates compositionTimeOffset values from the PTS and DTS', function() {
+QUnit.test('calculates compositionTimeOffset values from the PTS and DTS', function() {
   var segment, boxes, samples;
   videoSegmentStream.on('data', function(data) {
     segment = data.boxes;
@@ -1431,13 +1432,13 @@ test('calculates compositionTimeOffset values from the PTS and DTS', function() 
 
   boxes = mp4.tools.inspect(segment);
   samples = boxes[0].boxes[1].boxes[2].samples;
-  equal(samples.length, 3, 'generated three samples');
-  equal(samples[0].compositionTimeOffset, 0, 'calculated compositionTimeOffset');
-  equal(samples[1].compositionTimeOffset, 1, 'calculated compositionTimeOffset');
-  equal(samples[2].compositionTimeOffset, 3, 'calculated compositionTimeOffset');
+  QUnit.equal(samples.length, 3, 'generated three samples');
+  QUnit.equal(samples[0].compositionTimeOffset, 0, 'calculated compositionTimeOffset');
+  QUnit.equal(samples[1].compositionTimeOffset, 1, 'calculated compositionTimeOffset');
+  QUnit.equal(samples[2].compositionTimeOffset, 3, 'calculated compositionTimeOffset');
 });
 
-test('calculates baseMediaDecodeTime values from the first DTS ever seen and subsequent segments\' lowest DTS', function() {
+QUnit.test('calculates baseMediaDecodeTime values from the first DTS ever seen and subsequent segments\' lowest DTS', function() {
   var segment, boxes, tfdt;
   videoSegmentStream.on('data', function(data) {
     segment = data.boxes;
@@ -1465,10 +1466,10 @@ test('calculates baseMediaDecodeTime values from the first DTS ever seen and sub
 
   boxes = mp4.tools.inspect(segment);
   tfdt = boxes[0].boxes[1].boxes[1];
-  equal(tfdt.baseMediaDecodeTime, 90, 'calculated baseMediaDecodeTime');
+  QUnit.equal(tfdt.baseMediaDecodeTime, 90, 'calculated baseMediaDecodeTime');
 });
 
-test('calculates baseMediaDecodeTime values relative to a customizable baseMediaDecodeTime', function() {
+QUnit.test('calculates baseMediaDecodeTime values relative to a customizable baseMediaDecodeTime', function() {
   var segment, boxes, tfdt;
   videoSegmentStream.track.timelineStartInfo = {
     dts: 10,
@@ -1501,10 +1502,10 @@ test('calculates baseMediaDecodeTime values relative to a customizable baseMedia
 
   boxes = mp4.tools.inspect(segment);
   tfdt = boxes[0].boxes[1].boxes[1];
-  equal(tfdt.baseMediaDecodeTime, 1324, 'calculated baseMediaDecodeTime');
+  QUnit.equal(tfdt.baseMediaDecodeTime, 1324, 'calculated baseMediaDecodeTime');
 });
 
-test('subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime', function() {
+QUnit.test('subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime', function() {
   var segment, boxes, tfdt;
   videoSegmentStream.track.timelineStartInfo = {
     dts: 10,
@@ -1542,7 +1543,7 @@ test('subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime
   // The first frame has a dts 50 so the bMDT is calculated as: (50 - 10) + 100 = 140
   // The first frame has a compositionTimeOffset of: 60 - 50 = 10
   // The final track's bMDT is therefore: 140 - 10 = 130
-  equal(tfdt.baseMediaDecodeTime, 130, 'calculated baseMediaDecodeTime');
+  QUnit.equal(tfdt.baseMediaDecodeTime, 130, 'calculated baseMediaDecodeTime');
 });
 
 QUnit.module('AAC Stream', {
@@ -1551,7 +1552,7 @@ QUnit.module('AAC Stream', {
   }
 });
 
-test('generates AAC frame events from ADTS bytes', function() {
+QUnit.test('generates AAC frame events from ADTS bytes', function() {
   var frames = [];
   aacStream.on('data', function(frame) {
     frames.push(frame);
@@ -1568,20 +1569,20 @@ test('generates AAC frame events from ADTS bytes', function() {
     ])
   });
 
-  equal(frames.length, 1, 'generated one frame');
-  deepEqual(new Uint8Array(frames[0].data),
+  QUnit.equal(frames.length, 1, 'generated one frame');
+  QUnit.deepEqual(new Uint8Array(frames[0].data),
             new Uint8Array([0x12, 0x34]),
             'extracted AAC frame');
-  equal(frames[0].channelcount, 2, 'parsed channelcount');
-  equal(frames[0].samplerate, 44100, 'parsed samplerate');
+  QUnit.equal(frames[0].channelcount, 2, 'parsed channelcount');
+  QUnit.equal(frames[0].samplerate, 44100, 'parsed samplerate');
 
   // Chrome only supports 8, 16, and 32 bit sample sizes. Assuming the
   // default value of 16 in ISO/IEC 14496-12 AudioSampleEntry is
   // acceptable.
-  equal(frames[0].samplesize, 16, 'parsed samplesize');
+  QUnit.equal(frames[0].samplesize, 16, 'parsed samplesize');
 });
 
-test('parses across packets', function() {
+QUnit.test('parses across packets', function() {
   var frames = [];
   aacStream.on('data', function(frame) {
     frames.push(frame);
@@ -1608,13 +1609,13 @@ test('parses across packets', function() {
     ])
   });
 
-  equal(frames.length, 2, 'parsed two frames');
-  deepEqual(new Uint8Array(frames[1].data),
+  QUnit.equal(frames.length, 2, 'parsed two frames');
+  QUnit.deepEqual(new Uint8Array(frames[1].data),
             new Uint8Array([0x9a, 0xbc]),
             'extracted the second AAC frame');
 });
 
-test('parses frames segmented across packet', function() {
+QUnit.test('parses frames segmented across packet', function() {
   var frames = [];
   aacStream.on('data', function(frame) {
     frames.push(frame);
@@ -1642,16 +1643,16 @@ test('parses frames segmented across packet', function() {
     ])
   });
 
-  equal(frames.length, 2, 'parsed two frames');
-  deepEqual(new Uint8Array(frames[0].data),
+  QUnit.equal(frames.length, 2, 'parsed two frames');
+  QUnit.deepEqual(new Uint8Array(frames[0].data),
             new Uint8Array([0x12, 0x34]),
             'extracted the first AAC frame');
-  deepEqual(new Uint8Array(frames[1].data),
+  QUnit.deepEqual(new Uint8Array(frames[1].data),
             new Uint8Array([0x9a, 0xbc]),
             'extracted the second AAC frame');
 });
 
-test('resyncs data in aac frames that contain garbage', function() {
+QUnit.test('resyncs data in aac frames that contain garbage', function() {
   var frames = [];
   aacStream.on('data', function(frame) {
     frames.push(frame);
@@ -1681,16 +1682,16 @@ test('resyncs data in aac frames that contain garbage', function() {
     ])
   });
 
-  equal(frames.length, 2, 'parsed two frames');
-  deepEqual(new Uint8Array(frames[0].data),
+  QUnit.equal(frames.length, 2, 'parsed two frames');
+  QUnit.deepEqual(new Uint8Array(frames[0].data),
             new Uint8Array([0x9a, 0xbc]),
             'extracted the first AAC frame');
-  deepEqual(new Uint8Array(frames[1].data),
+  QUnit.deepEqual(new Uint8Array(frames[1].data),
             new Uint8Array([0x12, 0x34]),
             'extracted the second AAC frame');
 });
 
-test('ignores audio "MPEG version" bit in adts header', function() {
+QUnit.test('ignores audio "MPEG version" bit in adts header', function() {
   var frames = [];
   aacStream.on('data', function(frame) {
     frames.push(frame);
@@ -1707,13 +1708,13 @@ test('ignores audio "MPEG version" bit in adts header', function() {
     ])
   });
 
-  equal(frames.length, 1, 'parsed a frame');
-  deepEqual(new Uint8Array(frames[0].data),
+  QUnit.equal(frames.length, 1, 'parsed a frame');
+  QUnit.deepEqual(new Uint8Array(frames[0].data),
             new Uint8Array([0x12, 0x34]),
             'skipped the CRC');
 });
 
-test('skips CRC bytes', function() {
+QUnit.test('skips CRC bytes', function() {
   var frames = [];
   aacStream.on('data', function(frame) {
     frames.push(frame);
@@ -1730,8 +1731,8 @@ test('skips CRC bytes', function() {
     ])
   });
 
-  equal(frames.length, 1, 'parsed a frame');
-  deepEqual(new Uint8Array(frames[0].data),
+  QUnit.equal(frames.length, 1, 'parsed a frame');
+  QUnit.deepEqual(new Uint8Array(frames[0].data),
             new Uint8Array([0x12, 0x34]),
             'skipped the CRC');
 });
@@ -1752,7 +1753,7 @@ QUnit.module('AudioSegmentStream', {
   }
 });
 
-test('ensures baseMediaDecodeTime for audio is not negative', function() {
+QUnit.test('ensures baseMediaDecodeTime for audio is not negative', function() {
   var events = [], boxes;
 
   audioSegmentStream.on('data', function(event) {
@@ -1776,13 +1777,13 @@ test('ensures baseMediaDecodeTime for audio is not negative', function() {
   });
   audioSegmentStream.flush();
 
-  equal(events.length, 1, 'a data event fired');
-  equal(events[0].track.samples.length, 1, 'generated only one sample');
+  QUnit.equal(events.length, 1, 'a data event fired');
+  QUnit.equal(events[0].track.samples.length, 1, 'generated only one sample');
   boxes = mp4.tools.inspect(events[0].boxes);
-  equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime, 2, 'kept the later sample');
+  QUnit.equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime, 2, 'kept the later sample');
 });
 
-test('audio track metadata takes on the value of the last metadata seen', function() {
+QUnit.test('audio track metadata takes on the value of the last metadata seen', function() {
   var events = [], boxes;
 
   audioSegmentStream.on('data', function(event) {
@@ -1805,15 +1806,15 @@ test('audio track metadata takes on the value of the last metadata seen', functi
   });
   audioSegmentStream.flush();
 
-  equal(events.length, 1, 'a data event fired');
-  equal(events[0].track.samples.length, 2, 'generated two samples');
-  equal(events[0].track.samplerate, 10000, 'kept the later samplerate');
-  equal(events[0].track.channelcount, 4, 'kept the later channelcount');
+  QUnit.equal(events.length, 1, 'a data event fired');
+  QUnit.equal(events[0].track.samples.length, 2, 'generated two samples');
+  QUnit.equal(events[0].track.samplerate, 10000, 'kept the later samplerate');
+  QUnit.equal(events[0].track.channelcount, 4, 'kept the later channelcount');
 });
 
 QUnit.module('Transmuxer - options');
 
-test('no options creates combined output', function() {
+QUnit.test('no options creates combined output', function() {
   var
     segments = [],
     boxes,
@@ -1844,20 +1845,20 @@ test('no options creates combined output', function() {
   ], false)));
   transmuxer.flush();
 
-  equal(segments.length, 1, 'generated a combined video and audio segment');
-  equal(segments[0].type, 'combined', 'combined is the segment type');
+  QUnit.equal(segments.length, 1, 'generated a combined video and audio segment');
+  QUnit.equal(segments[0].type, 'combined', 'combined is the segment type');
 
   boxes = mp4.tools.inspect(segments[0].data);
-  equal(boxes.length, 6, 'generated 6 top-level boxes');
-  equal('ftyp', boxes[0].type, 'generated an ftyp box');
-  equal('moov', boxes[1].type, 'generated a single moov box');
-  equal('moof', boxes[2].type, 'generated a first moof box');
-  equal('mdat', boxes[3].type, 'generated a first mdat box');
-  equal('moof', boxes[4].type, 'generated a second moof box');
-  equal('mdat', boxes[5].type, 'generated a second mdat box');
+  QUnit.equal(boxes.length, 6, 'generated 6 top-level boxes');
+  QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
+  QUnit.equal('moov', boxes[1].type, 'generated a single moov box');
+  QUnit.equal('moof', boxes[2].type, 'generated a first moof box');
+  QUnit.equal('mdat', boxes[3].type, 'generated a first mdat box');
+  QUnit.equal('moof', boxes[4].type, 'generated a second moof box');
+  QUnit.equal('mdat', boxes[5].type, 'generated a second mdat box');
 });
 
-test('can specify that we want to generate separate audio and video segments', function() {
+QUnit.test('can specify that we want to generate separate audio and video segments', function() {
   var
     segments = [],
     segmentLengthOnDone,
@@ -1895,24 +1896,24 @@ test('can specify that we want to generate separate audio and video segments', f
   ], false)));
   transmuxer.flush();
 
-  equal(segmentLengthOnDone, 2, 'emitted both segments before triggering done');
-  equal(segments.length, 2, 'generated a video and an audio segment');
-  ok(segments[0].type === 'video' || segments[1].type === 'video', 'one segment is video');
-  ok(segments[0].type === 'audio' || segments[1].type === 'audio', 'one segment is audio');
+  QUnit.equal(segmentLengthOnDone, 2, 'emitted both segments before triggering done');
+  QUnit.equal(segments.length, 2, 'generated a video and an audio segment');
+  QUnit.ok(segments[0].type === 'video' || segments[1].type === 'video', 'one segment is video');
+  QUnit.ok(segments[0].type === 'audio' || segments[1].type === 'audio', 'one segment is audio');
 
   boxes = mp4.tools.inspect(segments[0].data);
-  equal(boxes.length, 4, 'generated 4 top-level boxes');
-  equal('ftyp', boxes[0].type, 'generated an ftyp box');
-  equal('moov', boxes[1].type, 'generated a moov box');
-  equal('moof', boxes[2].type, 'generated a moof box');
-  equal('mdat', boxes[3].type, 'generated a mdat box');
+  QUnit.equal(boxes.length, 4, 'generated 4 top-level boxes');
+  QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
+  QUnit.equal('moov', boxes[1].type, 'generated a moov box');
+  QUnit.equal('moof', boxes[2].type, 'generated a moof box');
+  QUnit.equal('mdat', boxes[3].type, 'generated a mdat box');
 
   boxes = mp4.tools.inspect(segments[1].data);
-  equal(boxes.length, 4, 'generated 4 top-level boxes');
-  equal('ftyp', boxes[0].type, 'generated an ftyp box');
-  equal('moov', boxes[1].type, 'generated a moov box');
-  equal('moof', boxes[2].type, 'generated a moof box');
-  equal('mdat', boxes[3].type, 'generated a mdat box');
+  QUnit.equal(boxes.length, 4, 'generated 4 top-level boxes');
+  QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
+  QUnit.equal('moov', boxes[1].type, 'generated a moov box');
+  QUnit.equal('moof', boxes[2].type, 'generated a moof box');
+  QUnit.equal('mdat', boxes[3].type, 'generated a mdat box');
 });
 
 QUnit.module('MP4 - Transmuxer', {
@@ -1921,7 +1922,7 @@ QUnit.module('MP4 - Transmuxer', {
   }
 });
 
-test('generates a video init segment', function() {
+QUnit.test('generates a video init segment', function() {
   var segments = [], boxes;
   transmuxer.on('data', function(segment) {
     segments.push(segment);
@@ -1944,16 +1945,16 @@ test('generates a video init segment', function() {
   ], false)));
   transmuxer.flush();
 
-  equal(segments.length, 1, 'generated a segment');
-  ok(segments[0].data, 'wrote data in the init segment');
-  equal(segments[0].type, 'video', 'video is the segment type');
+  QUnit.equal(segments.length, 1, 'generated a segment');
+  QUnit.ok(segments[0].data, 'wrote data in the init segment');
+  QUnit.equal(segments[0].type, 'video', 'video is the segment type');
 
   boxes = mp4.tools.inspect(segments[0].data);
-  equal('ftyp', boxes[0].type, 'generated an ftyp box');
-  equal('moov', boxes[1].type, 'generated a moov box');
+  QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
+  QUnit.equal('moov', boxes[1].type, 'generated a moov box');
 });
 
-test('generates an audio init segment', function() {
+QUnit.test('generates an audio init segment', function() {
   var segments = [], boxes;
   transmuxer.on('data', function(segment) {
     segments.push(segment);
@@ -1967,16 +1968,16 @@ test('generates an audio init segment', function() {
   ], true)));
   transmuxer.flush();
 
-  equal(segments.length, 1, 'generated a segment');
-  ok(segments[0].data, 'wrote data in the init segment');
-  equal(segments[0].type, 'audio', 'audio is the segment type');
+  QUnit.equal(segments.length, 1, 'generated a segment');
+  QUnit.ok(segments[0].data, 'wrote data in the init segment');
+  QUnit.equal(segments[0].type, 'audio', 'audio is the segment type');
 
   boxes = mp4.tools.inspect(segments[0].data);
-  equal('ftyp', boxes[0].type, 'generated an ftyp box');
-  equal('moov', boxes[1].type, 'generated a moov box');
+  QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
+  QUnit.equal('moov', boxes[1].type, 'generated a moov box');
 });
 
-test('buffers video samples until flushed', function() {
+QUnit.test('buffers video samples until flushed', function() {
   var samples = [], offset, boxes;
   transmuxer.on('data', function(data) {
     samples.push(data);
@@ -1997,14 +1998,14 @@ test('buffers video samples until flushed', function() {
 
   // flush everything
   transmuxer.flush();
-  equal(samples.length, 1, 'emitted one event');
+  QUnit.equal(samples.length, 1, 'emitted one event');
   boxes = mp4.tools.inspect(samples[0].data);
-  equal(boxes.length, 4, 'generated four boxes');
-  equal(boxes[2].type, 'moof', 'the third box is a moof');
-  equal(boxes[3].type, 'mdat', 'the fourth box is a mdat');
+  QUnit.equal(boxes.length, 4, 'generated four boxes');
+  QUnit.equal(boxes[2].type, 'moof', 'the third box is a moof');
+  QUnit.equal(boxes[3].type, 'mdat', 'the fourth box is a mdat');
 
   offset = boxes[0].size + boxes[1].size + boxes[2].size + 8;
-  deepEqual(new Uint8Array(samples[0].data.subarray(offset)),
+  QUnit.deepEqual(new Uint8Array(samples[0].data.subarray(offset)),
             new Uint8Array([
               0, 0, 0, 2,
               0x09, 0x01,
@@ -2019,11 +2020,11 @@ test('buffers video samples until flushed', function() {
             'concatenated NALs into an mdat');
 });
 
-test('creates a metadata stream', function() {
-  ok(transmuxer.metadataStream, 'created a metadata stream');
+QUnit.test('creates a metadata stream', function() {
+  QUnit.ok(transmuxer.metadataStream, 'created a metadata stream');
 });
 
-test('pipes timed metadata to the metadata stream', function() {
+QUnit.test('pipes timed metadata to the metadata stream', function() {
   var metadatas = [];
   transmuxer.metadataStream.on('data', function(data) {
     metadatas.push(data);
@@ -2033,90 +2034,90 @@ test('pipes timed metadata to the metadata stream', function() {
   transmuxer.push(packetize(timedMetadataPes([0x03])));
 
   transmuxer.flush();
-  equal(metadatas.length, 1, 'emitted timed metadata');
+  QUnit.equal(metadatas.length, 1, 'emitted timed metadata');
 });
 
 
 validateTrack = function(track, metadata) {
   var mdia, handlerType;
-  equal(track.type, 'trak', 'wrote the track type');
-  equal(track.boxes.length, 2, 'wrote track children');
-  equal(track.boxes[0].type, 'tkhd', 'wrote the track header');
+  QUnit.equal(track.type, 'trak', 'wrote the track type');
+  QUnit.equal(track.boxes.length, 2, 'wrote track children');
+  QUnit.equal(track.boxes[0].type, 'tkhd', 'wrote the track header');
   if (metadata) {
     if (metadata.trackId) {
-      equal(track.boxes[0].trackId, metadata.trackId, 'wrote the track id');
+      QUnit.equal(track.boxes[0].trackId, metadata.trackId, 'wrote the track id');
     }
     if (metadata.width) {
-      equal(track.boxes[0].width, metadata.width, 'wrote the width');
+      QUnit.equal(track.boxes[0].width, metadata.width, 'wrote the width');
     }
     if (metadata.height) {
-      equal(track.boxes[0].height, metadata.height, 'wrote the height');
+      QUnit.equal(track.boxes[0].height, metadata.height, 'wrote the height');
     }
   }
 
   mdia = track.boxes[1];
-  equal(mdia.type, 'mdia', 'wrote the media');
-  equal(mdia.boxes.length, 3, 'wrote the mdia children');
+  QUnit.equal(mdia.type, 'mdia', 'wrote the media');
+  QUnit.equal(mdia.boxes.length, 3, 'wrote the mdia children');
 
-  equal(mdia.boxes[0].type, 'mdhd', 'wrote the media header');
-  equal(mdia.boxes[0].language, 'und', 'the language is undefined');
-  equal(mdia.boxes[0].duration, 0xffffffff, 'the duration is at maximum');
+  QUnit.equal(mdia.boxes[0].type, 'mdhd', 'wrote the media header');
+  QUnit.equal(mdia.boxes[0].language, 'und', 'the language is undefined');
+  QUnit.equal(mdia.boxes[0].duration, 0xffffffff, 'the duration is at maximum');
 
-  equal(mdia.boxes[1].type, 'hdlr', 'wrote the media handler');
+  QUnit.equal(mdia.boxes[1].type, 'hdlr', 'wrote the media handler');
   handlerType = mdia.boxes[1].handlerType;
 
-  equal(mdia.boxes[2].type, 'minf', 'wrote the media info');
+  QUnit.equal(mdia.boxes[2].type, 'minf', 'wrote the media info');
 };
 
 validateTrackFragment = function(track, segment, metadata, type) {
   var tfhd, trun, sdtp, i, j, sample, nalUnitType;
-  equal(track.type, 'traf', 'wrote a track fragment');
+  QUnit.equal(track.type, 'traf', 'wrote a track fragment');
 
   if (type === 'video') {
-    equal(track.boxes.length, 4, 'wrote four track fragment children');
+    QUnit.equal(track.boxes.length, 4, 'wrote four track fragment children');
   } else if (type === 'audio') {
-    equal(track.boxes.length, 3, 'wrote three track fragment children');
+    QUnit.equal(track.boxes.length, 3, 'wrote three track fragment children');
   }
 
   tfhd = track.boxes[0];
-  equal(tfhd.type, 'tfhd', 'wrote a track fragment header');
-  equal(tfhd.trackId, metadata.trackId, 'wrote the track id');
+  QUnit.equal(tfhd.type, 'tfhd', 'wrote a track fragment header');
+  QUnit.equal(tfhd.trackId, metadata.trackId, 'wrote the track id');
 
-  equal(track.boxes[1].type,
+  QUnit.equal(track.boxes[1].type,
         'tfdt',
         'wrote a track fragment decode time box');
-  ok(track.boxes[1].baseMediaDecodeTime >= 0, 'base decode time is non-negative');
+  QUnit.ok(track.boxes[1].baseMediaDecodeTime >= 0, 'base decode time is non-negative');
 
   trun = track.boxes[2];
-  ok(trun.dataOffset >= 0, 'set data offset');
+  QUnit.ok(trun.dataOffset >= 0, 'set data offset');
 
-  equal(trun.dataOffset,
+  QUnit.equal(trun.dataOffset,
         metadata.mdatOffset + 8,
         'trun data offset is the size of the moof');
 
-  ok(trun.samples.length > 0, 'generated media samples');
+  QUnit.ok(trun.samples.length > 0, 'generated media samples');
   for (i = 0, j = metadata.baseOffset + trun.dataOffset;
        i < trun.samples.length;
        i++) {
     sample = trun.samples[i];
-    ok(sample.size > 0, 'wrote a positive size for sample ' + i);
+    QUnit.ok(sample.size > 0, 'wrote a positive size for sample ' + i);
     if (type === 'video') {
-      ok(sample.duration > 0, 'wrote a positive duration for sample ' + i);
-      ok(sample.compositionTimeOffset >= 0,
+      QUnit.ok(sample.duration > 0, 'wrote a positive duration for sample ' + i);
+      QUnit.ok(sample.compositionTimeOffset >= 0,
          'wrote a positive composition time offset for sample ' + i);
-      ok(sample.flags, 'wrote sample flags');
-      equal(sample.flags.isLeading, 0, 'the leading nature is unknown');
+      QUnit.ok(sample.flags, 'wrote sample flags');
+      QUnit.equal(sample.flags.isLeading, 0, 'the leading nature is unknown');
 
-      notEqual(sample.flags.dependsOn, 0, 'sample dependency is not unknown');
-      notEqual(sample.flags.dependsOn, 4, 'sample dependency is valid');
+      QUnit.notEqual(sample.flags.dependsOn, 0, 'sample dependency is not unknown');
+      QUnit.notEqual(sample.flags.dependsOn, 4, 'sample dependency is valid');
       nalUnitType = segment[j + 4] & 0x1F;
-      equal(nalUnitType, 9, 'samples begin with an access_unit_delimiter_rbsp');
+      QUnit.equal(nalUnitType, 9, 'samples begin with an access_unit_delimiter_rbsp');
 
-      equal(sample.flags.isDependedOn, 0, 'dependency of other samples is unknown');
-      equal(sample.flags.hasRedundancy, 0, 'sample redundancy is unknown');
-      equal(sample.flags.degradationPriority, 0, 'sample degradation priority is zero');
+      QUnit.equal(sample.flags.isDependedOn, 0, 'dependency of other samples is unknown');
+      QUnit.equal(sample.flags.hasRedundancy, 0, 'sample redundancy is unknown');
+      QUnit.equal(sample.flags.degradationPriority, 0, 'sample degradation priority is zero');
     } else {
-      equal(sample.duration, 1024,
+      QUnit.equal(sample.duration, 1024,
             'aac sample duration is always 1024');
     }
     j += sample.size; // advance to the next sample in the mdat
@@ -2124,26 +2125,26 @@ validateTrackFragment = function(track, segment, metadata, type) {
 
   if (type === 'video') {
     sdtp = track.boxes[3];
-    equal(trun.samples.length,
+    QUnit.equal(trun.samples.length,
           sdtp.samples.length,
-          'wrote an equal number of trun and sdtp samples');
+          'wrote an QUnit.equal number of trun and sdtp samples');
     for (i = 0; i < sdtp.samples.length; i++) {
       sample = sdtp.samples[i];
-      notEqual(sample.dependsOn, 0, 'sample dependency is not unknown');
-      equal(trun.samples[i].flags.dependsOn,
+      QUnit.notEqual(sample.dependsOn, 0, 'sample dependency is not unknown');
+      QUnit.equal(trun.samples[i].flags.dependsOn,
             sample.dependsOn,
             'wrote a consistent dependsOn');
-      equal(trun.samples[i].flags.isDependedOn,
+      QUnit.equal(trun.samples[i].flags.isDependedOn,
             sample.isDependedOn,
             'wrote a consistent isDependedOn');
-      equal(trun.samples[i].flags.hasRedundancy,
+      QUnit.equal(trun.samples[i].flags.hasRedundancy,
             sample.hasRedundancy,
             'wrote a consistent hasRedundancy');
     }
   }
 };
 
-test('parses an example mp2t file and generates combined media segments', function() {
+QUnit.test('parses an example mp2t file and generates combined media segments', function() {
   var
     segments = [],
     i, j, boxes, mfhd, trackType = 'video', trackId = 256, baseOffset = 0;
@@ -2156,13 +2157,13 @@ test('parses an example mp2t file and generates combined media segments', functi
   transmuxer.push(testSegment);
   transmuxer.flush();
 
-  equal(segments.length, 1, 'generated one combined segment');
+  QUnit.equal(segments.length, 1, 'generated one combined segment');
 
   boxes = mp4.tools.inspect(segments[0].data);
-  equal(boxes.length, 6, 'combined segments are composed of six boxes');
-  equal(boxes[0].type, 'ftyp', 'the first box is an ftyp');
-  equal(boxes[1].type, 'moov', 'the second box is a moov');
-  equal(boxes[1].boxes[0].type, 'mvhd', 'generated an mvhd');
+  QUnit.equal(boxes.length, 6, 'combined segments are composed of six boxes');
+  QUnit.equal(boxes[0].type, 'ftyp', 'the first box is an ftyp');
+  QUnit.equal(boxes[1].type, 'moov', 'the second box is a moov');
+  QUnit.equal(boxes[1].boxes[0].type, 'mvhd', 'generated an mvhd');
   validateTrack(boxes[1].boxes[1], {
     trackId: 256
   });
@@ -2171,13 +2172,13 @@ test('parses an example mp2t file and generates combined media segments', functi
   });
 
   for (i = 2; i < boxes.length; i += 2) {
-    equal(boxes[i].type, 'moof', 'first box is a moof');
-    equal(boxes[i].boxes.length, 2, 'the moof has two children');
+    QUnit.equal(boxes[i].type, 'moof', 'first box is a moof');
+    QUnit.equal(boxes[i].boxes.length, 2, 'the moof has two children');
 
     mfhd = boxes[i].boxes[0];
-    equal(mfhd.type, 'mfhd', 'mfhd is a child of the moof');
+    QUnit.equal(mfhd.type, 'mfhd', 'mfhd is a child of the moof');
 
-    equal(boxes[i + 1].type, 'mdat', 'second box is an mdat');
+    QUnit.equal(boxes[i + 1].type, 'mdat', 'second box is an mdat');
 
     // Only do even numbered boxes because the odd-offsets will be mdat
     if (i % 2 === 0) {
@@ -2199,7 +2200,7 @@ test('parses an example mp2t file and generates combined media segments', functi
   }
 });
 
-test('can be reused for multiple TS segments', function() {
+QUnit.test('can be reused for multiple TS segments', function() {
   var
     segments = [],
     sequenceNumber = window.Infinity,
@@ -2215,36 +2216,36 @@ test('can be reused for multiple TS segments', function() {
   transmuxer.push(testSegment);
   transmuxer.flush();
 
-  equal(segments.length, 2, 'generated two combined segments');
-  deepEqual(segments[0][0],
+  QUnit.equal(segments.length, 2, 'generated two combined segments');
+  QUnit.deepEqual(segments[0][0],
             segments[1][0],
             'generated identical ftyps');
-  deepEqual(segments[0][1],
+  QUnit.deepEqual(segments[0][1],
             segments[1][1],
             'generated identical moovs');
-  deepEqual(segments[0][2].boxes[1],
+  QUnit.deepEqual(segments[0][2].boxes[1],
             segments[1][2].boxes[1],
             'generated identical video trafs');
-  equal(segments[0][2].boxes[0].sequenceNumber,
+  QUnit.equal(segments[0][2].boxes[0].sequenceNumber,
         0,
         'set the correct video sequence number');
-  equal(segments[1][2].boxes[0].sequenceNumber,
+  QUnit.equal(segments[1][2].boxes[0].sequenceNumber,
         1,
         'set the correct video sequence number');
-  deepEqual(segments[0][3],
+  QUnit.deepEqual(segments[0][3],
             segments[1][3],
             'generated identical video mdats');
 
-  deepEqual(segments[0][4].boxes[3],
+  QUnit.deepEqual(segments[0][4].boxes[3],
             segments[1][4].boxes[3],
             'generated identical audio trafs');
-  equal(segments[0][4].boxes[0].sequenceNumber,
+  QUnit.equal(segments[0][4].boxes[0].sequenceNumber,
         0,
         'set the correct video sequence number');
-  equal(segments[1][4].boxes[0].sequenceNumber,
+  QUnit.equal(segments[1][4].boxes[0].sequenceNumber,
         1,
         'set the correct video sequence number');
-  deepEqual(segments[0][5],
+  QUnit.deepEqual(segments[0][5],
             segments[1][5],
             'generated identical audio mdats');
 });
@@ -2255,7 +2256,7 @@ QUnit.module('NalByteStream', {
   }
 });
 
-test('parses nal units with 4-byte start code', function(){
+QUnit.test('parses nal units with 4-byte start code', function(){
   var nalUnits = [];
   nalByteStream.on('data', function (data) {
     nalUnits.push(data);
@@ -2269,11 +2270,11 @@ test('parses nal units with 4-byte start code', function(){
     ])
   });
 
-  equal(nalUnits.length, 1, 'found one nal');
-  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+  QUnit.equal(nalUnits.length, 1, 'found one nal');
+  QUnit.deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
 });
 
-test('parses nal units with 3-byte start code', function(){
+QUnit.test('parses nal units with 3-byte start code', function(){
   var nalUnits = [];
   nalByteStream.on('data', function (data) {
     nalUnits.push(data);
@@ -2287,11 +2288,11 @@ test('parses nal units with 3-byte start code', function(){
     ])
   });
 
-  equal(nalUnits.length, 1, 'found one nal');
-  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+  QUnit.equal(nalUnits.length, 1, 'found one nal');
+  QUnit.deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
 });
 
-test('parses multiple nal units', function(){
+QUnit.test('parses multiple nal units', function(){
   var nalUnits = [];
   nalByteStream.on('data', function (data) {
     nalUnits.push(data);
@@ -2308,12 +2309,12 @@ test('parses multiple nal units', function(){
     ])
   });
 
-  equal(nalUnits.length, 2, 'found two nals');
-  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
-  deepEqual(nalUnits[1], new Uint8Array([0x12, 0xDD]), 'has the proper payload');
+  QUnit.equal(nalUnits.length, 2, 'found two nals');
+  QUnit.deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+  QUnit.deepEqual(nalUnits[1], new Uint8Array([0x12, 0xDD]), 'has the proper payload');
 });
 
-test('parses nal units surrounded by an unreasonable amount of zero-bytes', function(){
+QUnit.test('parses nal units surrounded by an unreasonable amount of zero-bytes', function(){
   var nalUnits = [];
   nalByteStream.on('data', function (data) {
     nalUnits.push(data);
@@ -2351,12 +2352,12 @@ test('parses nal units surrounded by an unreasonable amount of zero-bytes', func
     ])
   });
 
-  equal(nalUnits.length, 2, 'found two nals');
-  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
-  deepEqual(nalUnits[1], new Uint8Array([0x12, 0xDD]), 'has the proper payload');
+  QUnit.equal(nalUnits.length, 2, 'found two nals');
+  QUnit.deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
+  QUnit.deepEqual(nalUnits[1], new Uint8Array([0x12, 0xDD]), 'has the proper payload');
 });
 
-test('parses nal units split across multiple packets', function(){
+QUnit.test('parses nal units split across multiple packets', function(){
   var nalUnits = [];
   nalByteStream.on('data', function (data) {
     nalUnits.push(data);
@@ -2375,8 +2376,8 @@ test('parses nal units split across multiple packets', function(){
     ])
   });
 
-  equal(nalUnits.length, 1, 'found two nals');
-  deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF, 0x12, 0xDD]), 'has the proper payload');
+  QUnit.equal(nalUnits.length, 1, 'found two nals');
+  QUnit.deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF, 0x12, 0xDD]), 'has the proper payload');
 });
 
 QUnit.module('FLV - Transmuxer', {
@@ -2385,7 +2386,7 @@ QUnit.module('FLV - Transmuxer', {
   }
 });
 
-test('generates video tags', function() {
+QUnit.test('generates video tags', function() {
   var segments = [], boxes;
   transmuxer.on('data', function(segment) {
     segments.push(segment);
@@ -2404,11 +2405,11 @@ test('generates video tags', function() {
 
   transmuxer.flush();
 
-  equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
-  equal(segments[0].tags.videoTags.length, 2, 'generated a two video tags');
+  QUnit.equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
+  QUnit.equal(segments[0].tags.videoTags.length, 2, 'generated a two video tags');
 });
 
-test('drops nalUnits at the start of a segment not preceeded by an access_unit_delimiter_rbsp', function() {
+QUnit.test('drops nalUnits at the start of a segment not preceeded by an access_unit_delimiter_rbsp', function() {
   var segments = [], boxes;
   transmuxer.on('data', function(segment) {
     segments.push(segment);
@@ -2435,11 +2436,11 @@ test('drops nalUnits at the start of a segment not preceeded by an access_unit_d
 
   transmuxer.flush();
 
-  equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
-  equal(segments[0].tags.videoTags.length, 1, 'generated a single video tag');
+  QUnit.equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
+  QUnit.equal(segments[0].tags.videoTags.length, 1, 'generated a single video tag');
 });
 
-test('generates an audio tags', function() {
+QUnit.test('generates an audio tags', function() {
   var segments = [], boxes;
   transmuxer.on('data', function(segment) {
     segments.push(segment);
@@ -2454,11 +2455,11 @@ test('generates an audio tags', function() {
 
   transmuxer.flush();
 
-  equal(segments[0].tags.audioTags.length, 3, 'generated three audio tags');
-  equal(segments[0].tags.videoTags.length, 0, 'generated no video tags');
+  QUnit.equal(segments[0].tags.audioTags.length, 3, 'generated three audio tags');
+  QUnit.equal(segments[0].tags.videoTags.length, 0, 'generated no video tags');
 });
 
-test('buffers video samples until flushed', function() {
+QUnit.test('buffers video samples until flushed', function() {
   var segments = [], offset, boxes;
   transmuxer.on('data', function(data) {
     segments.push(data);
@@ -2480,6 +2481,6 @@ test('buffers video samples until flushed', function() {
   // flush everything
   transmuxer.flush();
 
-  equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
-  equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
+  QUnit.equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
+  QUnit.equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
 });
