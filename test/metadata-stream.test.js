@@ -20,10 +20,11 @@
   throws(block, [expected], [message])
 */
 
-var metadataStream, stringToInts, stringToCString, id3Tag, id3Frame, id3Generator, mp2t;
+var metadataStream, stringToInts, stringToCString, id3Tag, id3Frame, id3Generator, mp2t, QUnit;
 
 mp2t = require('../lib/m2ts');
-id3Generator = require('./id3-generator');
+QUnit = require('qunit');
+id3Generator = require('./utils/id3-generator');
 stringToInts = id3Generator.stringToInts;
 stringToCString = id3Generator.stringToCString;
 id3Tag = id3Generator.id3Tag;
@@ -35,12 +36,12 @@ QUnit.module('MetadataStream', {
   }
 });
 
-test('can construct a MetadataStream', function() {
-  ok(metadataStream, 'does not return null');
+QUnit.test('can construct a MetadataStream', function() {
+ QUnit.ok(metadataStream, 'does not return null');
 });
 
 
-test('parses simple ID3 metadata out of PES packets', function() {
+QUnit.test('parses simple ID3 metadata out of PES packets', function() {
   var
     events = [],
     wxxxPayload = [
@@ -94,21 +95,21 @@ test('parses simple ID3 metadata out of PES packets', function() {
     data: id3Bytes
   });
 
-  equal(events.length, 1, 'parsed one tag');
-  equal(events[0].frames.length, 2, 'parsed two frames');
-  equal(events[0].frames[0].key, 'WXXX', 'parsed a WXXX frame');
-  deepEqual(new Uint8Array(events[0].frames[0].data),
+  QUnit.equal(events.length, 1, 'parsed one tag');
+  QUnit.equal(events[0].frames.length, 2, 'parsed two frames');
+  QUnit.equal(events[0].frames[0].key, 'WXXX', 'parsed a WXXX frame');
+  QUnit.deepEqual(new Uint8Array(events[0].frames[0].data),
             new Uint8Array(wxxxPayload),
             'attached the frame payload');
-  equal(events[0].frames[1].key, 'XINF', 'parsed a user-defined frame');
-  deepEqual(new Uint8Array(events[0].frames[1].data),
+  QUnit.equal(events[0].frames[1].key, 'XINF', 'parsed a user-defined frame');
+  QUnit.deepEqual(new Uint8Array(events[0].frames[1].data),
             new Uint8Array([0x04, 0x03, 0x02, 0x01]),
             'attached the frame payload');
-  equal(events[0].pts, 1000, 'did not modify the PTS');
-  equal(events[0].dts, 1000, 'did not modify the PTS');
+  QUnit.equal(events[0].pts, 1000, 'did not modify the PTS');
+  QUnit.equal(events[0].dts, 1000, 'did not modify the PTS');
 });
 
-test('skips non-ID3 metadata events', function() {
+QUnit.test('skips non-ID3 metadata events', function() {
   var events = [];
   metadataStream.on('data', function(event) {
     events.push(event);
@@ -124,7 +125,7 @@ test('skips non-ID3 metadata events', function() {
     data: new Uint8Array([0])
   });
 
-  equal(events.length, 0, 'did not emit an event');
+  QUnit.equal(events.length, 0, 'did not emit an event');
 });
 
 // missing cases:
@@ -137,7 +138,7 @@ test('skips non-ID3 metadata events', function() {
 // too large/small tag size values
 // too large/small frame size values
 
-test('parses TXXX frames', function() {
+QUnit.test('parses TXXX frames', function() {
   var events = [];
   metadataStream.on('data', function(event) {
     events.push(event);
@@ -157,14 +158,14 @@ test('parses TXXX frames', function() {
                                 [0x00, 0x00]))
   });
 
-  equal(events.length, 1, 'parsed one tag');
-  equal(events[0].frames.length, 1, 'parsed one frame');
-  equal(events[0].frames[0].key, 'TXXX', 'parsed the frame key');
-  equal(events[0].frames[0].description, 'get done', 'parsed the description');
-  deepEqual(JSON.parse(events[0].frames[0].data), { key: 'value' }, 'parsed the data');
+  QUnit.equal(events.length, 1, 'parsed one tag');
+  QUnit.equal(events[0].frames.length, 1, 'parsed one frame');
+  QUnit.equal(events[0].frames[0].key, 'TXXX', 'parsed the frame key');
+  QUnit.equal(events[0].frames[0].description, 'get done', 'parsed the description');
+  QUnit.deepEqual(JSON.parse(events[0].frames[0].data), { key: 'value' }, 'parsed the data');
 });
 
-test('parses WXXX frames', function() {
+QUnit.test('parses WXXX frames', function() {
   var events = [], url = 'http://example.com/path/file?abc=7&d=4#ty';
   metadataStream.on('data', function(event) {
     events.push(event);
@@ -184,14 +185,14 @@ test('parses WXXX frames', function() {
                                 [0x00, 0x00]))
   });
 
-  equal(events.length, 1, 'parsed one tag');
-  equal(events[0].frames.length, 1, 'parsed one frame');
-  equal(events[0].frames[0].key, 'WXXX', 'parsed the frame key');
-  equal(events[0].frames[0].description, '', 'parsed the description');
-  equal(events[0].frames[0].url, url, 'parsed the value');
+  QUnit.equal(events.length, 1, 'parsed one tag');
+  QUnit.equal(events[0].frames.length, 1, 'parsed one frame');
+  QUnit.equal(events[0].frames[0].key, 'WXXX', 'parsed the frame key');
+  QUnit.equal(events[0].frames[0].description, '', 'parsed the description');
+  QUnit.equal(events[0].frames[0].url, url, 'parsed the value');
 });
 
-test('parses TXXX frames with characters that have a single-digit hexadecimal representation', function() {
+QUnit.test('parses TXXX frames with characters that have a single-digit hexadecimal representation', function() {
   var events = [], value = String.fromCharCode(7);
   metadataStream.on('data', function(event) {
     events.push(event);
@@ -211,12 +212,12 @@ test('parses TXXX frames with characters that have a single-digit hexadecimal re
                                 [0x00, 0x00]))
   });
 
-  equal(events[0].frames[0].data,
+  QUnit.equal(events[0].frames[0].data,
         value,
         'parsed the single-digit character');
 });
 
-test('parses PRIV frames', function() {
+QUnit.test('parses PRIV frames', function() {
   var
     events = [],
     payload = stringToInts('arbitrary data may be included in the payload ' +
@@ -238,17 +239,17 @@ test('parses PRIV frames', function() {
                                           payload)))
   });
 
-  equal(events.length, 1, 'parsed a tag');
-  equal(events[0].frames.length, 1, 'parsed a frame');
-  equal(events[0].frames[0].key, 'PRIV', 'frame key is PRIV');
-  equal(events[0].frames[0].owner, 'priv-owner@example.com', 'parsed the owner');
-  deepEqual(new Uint8Array(events[0].frames[0].data),
+  QUnit.equal(events.length, 1, 'parsed a tag');
+  QUnit.equal(events[0].frames.length, 1, 'parsed a frame');
+  QUnit.equal(events[0].frames[0].key, 'PRIV', 'frame key is PRIV');
+  QUnit.equal(events[0].frames[0].owner, 'priv-owner@example.com', 'parsed the owner');
+  QUnit.deepEqual(new Uint8Array(events[0].frames[0].data),
             new Uint8Array(payload),
             'parsed the frame private data');
 
 });
 
-test('parses tags split across pushes', function() {
+QUnit.test('parses tags split across pushes', function() {
   var
     events = [],
     owner = stringToCString('owner@example.com'),
@@ -274,7 +275,7 @@ test('parses tags split across pushes', function() {
     dataAlignmentIndicator: true
   });
 
-  equal(events.length, 0, 'parsed zero tags');
+  QUnit.equal(events.length, 0, 'parsed zero tags');
 
   metadataStream.push({
     type: 'timed-metadata',
@@ -285,9 +286,9 @@ test('parses tags split across pushes', function() {
     dataAlignmentIndicator: false
   });
 
-  equal(events.length, 1, 'parsed a tag');
-  equal(events[0].frames.length, 1, 'parsed a frame');
-  equal(events[0].frames[0].data.byteLength,
+  QUnit.equal(events.length, 1, 'parsed a tag');
+  QUnit.equal(events[0].frames.length, 1, 'parsed a frame');
+  QUnit.equal(events[0].frames[0].data.byteLength,
         payload.length,
         'collected data across pushes');
 
@@ -314,14 +315,14 @@ test('parses tags split across pushes', function() {
     dataAlignmentIndicator: false
   });
 
-  equal(events.length, 1, 'parsed a tag');
-  equal(events[0].frames.length, 1, 'parsed a frame');
-  equal(events[0].frames[0].data.byteLength,
+  QUnit.equal(events.length, 1, 'parsed a tag');
+  QUnit.equal(events[0].frames.length, 1, 'parsed a frame');
+  QUnit.equal(events[0].frames[0].data.byteLength,
         2 * payload.length,
         'collected data across pushes');
 });
 
-test('id3 frame is malformed first time but gets corrected in the next frame', function() {
+QUnit.test('id3 frame is malformed first time but gets corrected in the next frame', function() {
   var
     events = [],
     owner = stringToCString('owner@example.com'),
@@ -347,7 +348,7 @@ test('id3 frame is malformed first time but gets corrected in the next frame', f
     dataAlignmentIndicator: true
   });
 
-  equal(events.length, 0, 'parsed zero tags');
+  QUnit.equal(events.length, 0, 'parsed zero tags');
 
   // receives complete id3
   metadataStream.push({
@@ -359,14 +360,14 @@ test('id3 frame is malformed first time but gets corrected in the next frame', f
     dataAlignmentIndicator: true
   });
 
-  equal(events.length, 1, 'parsed a tag');
-  equal(events[0].frames.length, 1, 'parsed a frame');
-  equal(events[0].frames[0].data.byteLength,
+  QUnit.equal(events.length, 1, 'parsed a tag');
+  QUnit.equal(events[0].frames.length, 1, 'parsed a frame');
+  QUnit.equal(events[0].frames[0].data.byteLength,
         payload.length,
         'collected data across pushes');
 });
 
-test('id3 frame reports more data than its tagsize ', function() {
+QUnit.test('id3 frame reports more data than its tagsize ', function() {
   var
     events = [],
     owner = stringToCString('owner@example.com'),
@@ -395,14 +396,14 @@ test('id3 frame reports more data than its tagsize ', function() {
     dataAlignmentIndicator: true
   });
 
-  equal(events.length, 1, 'parsed a tag');
-  equal(events[0].frames.length, 1, 'parsed a frame');
-  equal(events[0].frames[0].data.byteLength,
+  QUnit.equal(events.length, 1, 'parsed a tag');
+  QUnit.equal(events[0].frames.length, 1, 'parsed a frame');
+  QUnit.equal(events[0].frames[0].data.byteLength,
         payload.length,
         'collected data across pushes');
 });
 
-test('ignores tags when the header is fragmented', function() {
+QUnit.test('ignores tags when the header is fragmented', function() {
 
   var
     events = [],
@@ -432,7 +433,7 @@ test('ignores tags when the header is fragmented', function() {
     data: back
   });
 
-  equal(events.length, 0, 'parsed zero tags');
+  QUnit.equal(events.length, 0, 'parsed zero tags');
 
   metadataStream.push({
     type: 'timed-metadata',
@@ -443,15 +444,15 @@ test('ignores tags when the header is fragmented', function() {
                                           stringToCString('owner2'),
                                           stringToInts('payload2'))))
   });
-  equal(events.length, 1, 'parsed one tag');
-  equal(events[0].frames[0].owner, 'owner2', 'dropped the first tag');
+  QUnit.equal(events.length, 1, 'parsed one tag');
+  QUnit.equal(events[0].frames[0].owner, 'owner2', 'dropped the first tag');
 });
 
 // https://html.spec.whatwg.org/multipage/embedded-content.html#steps-to-expose-a-media-resource-specific-text-track
-test('constructs the dispatch type', function() {
+QUnit.test('constructs the dispatch type', function() {
   metadataStream = new mp2t.MetadataStream({
     descriptor: new Uint8Array([0x03, 0x02, 0x01, 0x00])
   });
 
-  equal(metadataStream.dispatchType, '1503020100', 'built the dispatch type');
+  QUnit.equal(metadataStream.dispatchType, '1503020100', 'built the dispatch type');
 });
