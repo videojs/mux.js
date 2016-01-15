@@ -14,7 +14,7 @@
     "watch": "npm run mkdirs && npm-run-all -p watch:*",
     "watch:test": "watchify test/*.test.js -v -o dist-test/mux.js",
     "mkdirs": "mkdir -p dist dist-test",
-    "build": "npm run mkirs && npm-run-all -p build:*",
+    "build": "npm run mkdirs && npm-run-all -p build:*",
     "build:js": "browserify lib/index.js -o dist/mux.js",
     "lint": "npm-run-all -p lint:*",
     "lint:js": "jshint lib/**/*.js",
