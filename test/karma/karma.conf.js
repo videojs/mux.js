@@ -5,7 +5,7 @@ module.exports = function(config) {
   config.set({
 
     // base path that will be used to resolve all patterns (eg. files, exclude)
-    basePath: '',
+    basePath: '../..',
 
 
     // frameworks to use
@@ -15,29 +15,27 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-      './mp4-generator-test.js',
-      './mp4-inspector-test.js',
-      './exp-golomb-test.js',
-      './metadata-stream-test.js',
-      './transmuxer-test.js',
-      './caption-stream-test.js'
+      'test/*.test.js',
     ],
 
 
     // list of files to exclude
     exclude: [
+      'test/utils/**',
     ],
 
 
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors: {
-      './**/*.js': ['browserify'],
+      'test/*.test.js': ['browserify'],
     },
     browserify: {
       debug: true,
-      transform: [],
-      noparse: './sintel-captions.js'
+      transform: [
+        'browserify-shim',
+      ],
+      noparse: 'test/utils/**'
     },
 
 
@@ -73,4 +71,4 @@ module.exports = function(config) {
     // if true, Karma captures browsers, runs the tests and exits
     singleRun: true
   });
-}
+};
