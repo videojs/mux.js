@@ -10,8 +10,8 @@
   "scripts": {
     "test": "karma start test/karma.conf.js",
     "pretest": "npm run lint",
-    "build": "mkdir -p dist/ && browserify lib/index.js -o dist/mux.js",
-    "watch": "mkdir -p dist/ && watchify lib/index.js -v -o dist/mux.js",
+    "build": "mkdir -p dist/ && browserify -s muxjs -e lib/index.js -o dist/mux.js",
+    "watch": "mkdir -p dist/ && watchify -s muxjs -e lib/index.js -v -o dist/mux.js",
     "lint": "jshint lib/**/*.js"
   },
   "browser": "./lib/index.js",
