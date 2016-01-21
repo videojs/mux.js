@@ -20,11 +20,14 @@
   throws(block, [expected], [message])
 */
 
-var metadataStream, stringToInts, stringToCString, id3Tag, id3Frame, id3Generator, mp2t, QUnit;
+var metadataStream, stringToInts, stringToCString, id3Tag, id3Frame, id3Generator, mp2t, QUnit,
+    webworkify, metadataStreamTestWorker;
 
 mp2t = require('../lib/m2ts');
 QUnit = require('qunit');
 id3Generator = require('./utils/id3-generator');
+webworkify = require('webworkify');
+metadataStreamTestWorker = require('./metadata-stream-test-worker');
 stringToInts = id3Generator.stringToInts;
 stringToCString = id3Generator.stringToCString;
 id3Tag = id3Generator.id3Tag;
@@ -455,4 +458,54 @@ QUnit.test('constructs the dispatch type', function() {
   });
 
   QUnit.equal(metadataStream.dispatchType, '1503020100', 'built the dispatch type');
+});
+
+QUnit.test('can parse PRIV frames in web worker', function(assert) {
+  var payload = stringToInts('arbitrary'),
+      worker = webworkify(metadataStreamTestWorker),
+      done = assert.async();
+
+  worker.addEventListener('message', function(e) {
+    QUnit.equal(e.data.frames[0].key, 'PRIV', 'frame key is PRIV');
+    QUnit.deepEqual(new Uint8Array(e.data.frames[0].data), new Uint8Array(payload),
+                    'parsed the frame private data');
+    done();
+  });
+
+  worker.postMessage({
+    type: 'timed-metadata',
+    trackId: 7,
+    pts: 1000,
+    dts: 900,
+    // header
+    data: new Uint8Array(id3Tag(id3Frame('PRIV',
+                                          stringToCString('priv-owner@example.com'),
+                                          payload)))
+  });
+});
+
+QUnit.test('can parse TXXX frames in web worker', function(assert) {
+  var payload = stringToInts('arbitrary'),
+      worker = webworkify(metadataStreamTestWorker),
+      done = assert.async();
+
+  worker.addEventListener('message', function(e) {
+    QUnit.equal(e.data.frames[0].key, 'TXXX', 'frame key is TXXX');
+    QUnit.equal(e.data.frames[0].description, 'get done', 'parsed the description');
+    QUnit.deepEqual(JSON.parse(e.data.frames[0].data), { key: 'value' }, 'parsed the data');
+    done();
+  });
+
+  worker.postMessage({
+    type: 'timed-metadata',
+    trackId: 7,
+    pts: 1000,
+    dts: 900,
+    // header
+    data: new Uint8Array(id3Tag(id3Frame('TXXX',
+                                          0x03, // utf-8
+                                          stringToCString('get done'),
+                                          stringToCString('{ "key": "value" }')),
+                                [0x00, 0x00]))
+  });
 });
