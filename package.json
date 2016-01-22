@@ -9,16 +9,20 @@
   "main": "./lib/index.js",
   "scripts": {
     "test": "npm run lint && karma start test/karma/karma.conf.js",
+    "test": "npm run lint && karma start test/karma/karma.conf.js",
     "start": "npm-run-all -p watch serve",
     "serve": "node scripts/server.js",
     "watch": "npm run mkdirs && npm-run-all -p watch:*",
+    "watch:js": "watchify -s muxjs lib/index.js -v -o dist/mux.js",
     "watch:test": "watchify test/*.test.js -v -o dist-test/mux.js",
     "mkdirs": "mkdir -p dist dist-test",
     "build": "npm run mkdirs && npm-run-all -p build:*",
-    "build:js": "browserify lib/index.js -o dist/mux.js",
+    "build:js": "browserify -s muxjs lib/index.js -o dist/mux.js",
+    "build:test": "browserify test/*.test.js -o dist-test/mux.js",
     "lint": "npm-run-all -p lint:*",
     "lint:js": "jshint lib/**/*.js",
-    "lint:test": "jshint test/*.test.js"
+    "lint:test": "jshint test/*.test.js",
+    "clean": "rm -rf dist dist-test"
   },
   "browser": "./lib/index.js",
   "keywords": [
