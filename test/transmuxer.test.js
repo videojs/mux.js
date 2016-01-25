@@ -24,8 +24,8 @@ var
   AudioSegmentStream = mp4.AudioSegmentStream,
   audioSegmentStream,
 
-  AacStream = codecs.aac,
-  aacStream,
+  AdtsStream = codecs.adts,
+  adtsStream,
   Transmuxer = mp4.Transmuxer,
   FlvTransmuxer = flv.Transmuxer,
   transmuxer,
@@ -1546,18 +1546,18 @@ QUnit.test('subtract the first frame\'s compositionTimeOffset from baseMediaDeco
   QUnit.equal(tfdt.baseMediaDecodeTime, 130, 'calculated baseMediaDecodeTime');
 });
 
-QUnit.module('AAC Stream', {
+QUnit.module('ADTS Stream', {
   setup: function() {
-    aacStream = new AacStream();
+    adtsStream = new AdtsStream();
   }
 });
 
 QUnit.test('generates AAC frame events from ADTS bytes', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf1,       // no CRC
@@ -1584,10 +1584,10 @@ QUnit.test('generates AAC frame events from ADTS bytes', function() {
 
 QUnit.test('parses across packets', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf1,       // no CRC
@@ -1597,7 +1597,7 @@ QUnit.test('parses across packets', function() {
       0x12, 0x34        // AAC payload 1
     ])
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf1,       // no CRC
@@ -1617,10 +1617,10 @@ QUnit.test('parses across packets', function() {
 
 QUnit.test('parses frames segmented across packet', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf1,       // no CRC
@@ -1630,7 +1630,7 @@ QUnit.test('parses frames segmented across packet', function() {
       0x12        // incomplete AAC payload 1
     ])
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0x34,             // remainder of the previous frame's payload
@@ -1654,11 +1654,11 @@ QUnit.test('parses frames segmented across packet', function() {
 
 QUnit.test('resyncs data in aac frames that contain garbage', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
 
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0x67,             // garbage
@@ -1670,7 +1670,7 @@ QUnit.test('resyncs data in aac frames that contain garbage', function() {
       0xde, 0xf0        // extra junk that should be ignored
     ])
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0x67,             // garbage
@@ -1693,10 +1693,10 @@ QUnit.test('resyncs data in aac frames that contain garbage', function() {
 
 QUnit.test('ignores audio "MPEG version" bit in adts header', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf8,       // MPEG-2 audio, CRC
@@ -1716,10 +1716,10 @@ QUnit.test('ignores audio "MPEG version" bit in adts header', function() {
 
 QUnit.test('skips CRC bytes', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf0,       // with CRC
