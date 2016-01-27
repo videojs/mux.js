@@ -60,7 +60,8 @@
     "portscanner": "^1.0.0",
     "qunitjs": "^1.0.0",
     "serve-static": "^1.10.0",
-    "watchify": "^3.6.1"
+    "watchify": "^3.6.1",
+    "webworkify": "^1.0.2"
   },
   "dependencies": {
     "browserify-shim": "^3.8.12"
