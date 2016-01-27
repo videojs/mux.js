@@ -239,6 +239,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
       codecsArray = codecs.value.split(',');
 
       mediaSource.addEventListener('sourceopen', function () {
+        mediaSource.duration = 0;
         if (combined) {
           buffer = mediaSource.addSourceBuffer('video/mp4;codecs="' + codecs.value + '"');
         } else if (outputType === 'video') {
@@ -278,8 +279,10 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
             remuxedBytesLength = 0,
             bytes,
             i, j;
-
-        if (combined) {
+        if ((/\.aac$/i).test(original.value)) {
+          transmuxer = new muxjs.mp4.Transmuxer({remux: false, aacfile: true});
+          outputType = 'audio';
+        } else if (combined) {
             transmuxer = new muxjs.mp4.Transmuxer();
         } else {
             transmuxer = new muxjs.mp4.Transmuxer({remux: false});
