@@ -284,31 +284,23 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
       }
 
       reader.addEventListener('loadend', function() {
-        var
-          segment = new Uint8Array(reader.result),
-          combined = $('#combined-output').checked,
-          outputType = $('input[name="output"]:checked').value,
-          remuxedSegments = [],
-          remuxedBytesLength = 0,
-          bytes,
-          i,
-          j,
-          resetTransmuxer = $('#reset-tranmsuxer').checked;
 
-        if (resetTransmuxer || !window.transmuxer){
-          if (combined) {
-              window.transmuxer = new muxjs.mp4.Transmuxer();
-          } else {
-              window.transmuxer = new muxjs.mp4.Transmuxer({remux: false});
-          }
-
-          // transmux the MPEG-TS data to BMFF segments
-          transmuxer.on('data', function(segment) {
-            if (combined || segment.type === outputType) {
-              remuxedSegments.push(segment);
-              remuxedBytesLength += segment.data.byteLength;
-            }
-          });
+        var segment = new Uint8Array(reader.result),
+            combined = document.querySelector('#combined-output').checked,
+            outputType = document.querySelector('input[name="output"]:checked').value,
+            transmuxer,
+            remuxedSegments = [],
+            remuxedBytesLength = 0,
+            bytes,
+            i, j;
+        if ((/\.aac$/i).test(original.value)) {
+          transmuxer = new muxjs.mp4.Transmuxer({remux: false, aacfile: true});
+          outputType = 'audio';
+        } else if (combined) {
+            transmuxer = new muxjs.mp4.Transmuxer();
+        } else {
+            transmuxer = new muxjs.mp4.Transmuxer({remux: false});
+        }
 
           transmuxer.on('done', function () {
             bytes = new Uint8Array(remuxedBytesLength);
