@@ -1321,31 +1321,50 @@ QUnit.test('holds onto the last GOP and prepends the subsequent push operation w
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 1,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x00, 0x00]),
+    nalUnitType: 'seq_parameter_set_rbsp',
+    config: {},
+    dts: 1,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x00, 0x00]),
+    nalUnitType: 'pic_parameter_set_rbsp',
+    dts: 1,
     pts: 1
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x66, 0x66]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 1,
     pts: 1
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x02]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 2,
     pts: 2
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x03]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 3,
     pts: 3
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x99, 0x99]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 3,
     pts: 3
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x04]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 4,
     pts: 4
   });
   videoSegmentStream.flush();
@@ -1357,16 +1376,31 @@ QUnit.test('holds onto the last GOP and prepends the subsequent push operation w
   videoSegmentStream.push({
     data: new Uint8Array([0x02, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 5,
     pts: 5
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x02, 0x02]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 6,
     pts: 6
   });
   videoSegmentStream.push({
+    data: new Uint8Array([0x00, 0x00]),
+    nalUnitType: 'seq_parameter_set_rbsp',
+    config: {},
+    dts: 1,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x00, 0x00]),
+    nalUnitType: 'pic_parameter_set_rbsp',
+    dts: 1,
+    pts: 1
+  });  videoSegmentStream.push({
     data: new Uint8Array([0x11, 0x11]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 6,
     pts: 6
   });
   videoSegmentStream.flush();
@@ -1377,7 +1411,7 @@ QUnit.test('holds onto the last GOP and prepends the subsequent push operation w
   QUnit.equal(samples[0].size, 12, 'first sample is an AUD + IDR pair');
   QUnit.equal(samples[1].size, 6, 'second sample is an AUD');
   QUnit.equal(samples[2].size, 6, 'third sample is an AUD');
-  QUnit.equal(samples[3].size, 12, 'fourth sample is an AUD + IDR pair');
+  QUnit.equal(samples[3].size, 24, 'fourth sample is an AUD + PPS + SPS + IDR');
 });
 
 QUnit.test('doesn\'t prepend the last GOP if the next segment has earlier PTS', function() {
@@ -1386,31 +1420,37 @@ QUnit.test('doesn\'t prepend the last GOP if the next segment has earlier PTS', 
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 10,
     pts: 10
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x66, 0x66]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 10,
     pts: 10
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x02]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 11,
     pts: 11
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x03]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 12,
     pts: 12
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x99, 0x99]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 12,
     pts: 12
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x04]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 13,
     pts: 13
   });
   videoSegmentStream.flush();
@@ -1422,16 +1462,19 @@ QUnit.test('doesn\'t prepend the last GOP if the next segment has earlier PTS', 
   videoSegmentStream.push({
     data: new Uint8Array([0x02, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 5,
     pts: 5
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x02, 0x02]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 6,
     pts: 6
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x11, 0x11]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 6,
     pts: 6
   });
   videoSegmentStream.flush();
@@ -1442,37 +1485,56 @@ QUnit.test('doesn\'t prepend the last GOP if the next segment has earlier PTS', 
   QUnit.equal(samples[0].size, 12, 'first sample is an AUD + IDR pair');
 });
 
-QUnit.test('doesn\'t prepend the last GOP if the next segment is more than 10 seconds in the future', function() {
+QUnit.test('doesn\'t prepend the last GOP if the next segment has different PPS or SPS', function() {
   var segment, boxes, samples;
 
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 1,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x00, 0x00]),
+    nalUnitType: 'seq_parameter_set_rbsp',
+    config: {},
+    dts: 1,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x00, 0x00]),
+    nalUnitType: 'pic_parameter_set_rbsp',
+    dts: 1,
     pts: 1
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x66, 0x66]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 1,
     pts: 1
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x02]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 2,
     pts: 2
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x03]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 3,
     pts: 3
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x99, 0x99]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 3,
     pts: 3
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x04]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 4,
     pts: 4
   });
   videoSegmentStream.flush();
@@ -1484,16 +1546,102 @@ QUnit.test('doesn\'t prepend the last GOP if the next segment is more than 10 se
   videoSegmentStream.push({
     data: new Uint8Array([0x02, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 5,
+    pts: 5
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x02, 0x02]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 6,
+    pts: 6
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x00, 0x01]),
+    nalUnitType: 'seq_parameter_set_rbsp',
+    config: {},
+    dts: 1,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x00, 0x01]),
+    nalUnitType: 'pic_parameter_set_rbsp',
+    dts: 1,
+    pts: 1
+  });  videoSegmentStream.push({
+    data: new Uint8Array([0x11, 0x11]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 6,
+    pts: 6
+  });
+  videoSegmentStream.flush();
+
+  boxes = mp4.tools.inspect(segment);
+  samples = boxes[0].boxes[1].boxes[2].samples;
+  QUnit.equal(samples.length, 1, 'generated one sample');
+  QUnit.equal(samples[0].size, 24, 'first sample is an AUD + PPS + SPS + IDR');
+});
+
+QUnit.test('doesn\'t prepend the last GOP if the next segment is more than 1 seconds in the future', function() {
+  var segment, boxes, samples;
+
+  videoSegmentStream.push({
+    data: new Uint8Array([0x01, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 1,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x66, 0x66]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 1,
+    pts: 1
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x01, 0x02]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 2,
+    pts: 2
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x01, 0x03]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 3,
+    pts: 3
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x99, 0x99]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 3,
+    pts: 3
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x01, 0x04]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 4,
+    pts: 4
+  });
+  videoSegmentStream.flush();
+
+  videoSegmentStream.on('data', function(data) {
+    segment = data.boxes;
+  });
+
+  videoSegmentStream.push({
+    data: new Uint8Array([0x02, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 1000000,
     pts: 1000000
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x02, 0x02]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 1000001,
     pts: 1000001
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x11, 0x11]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 1000001,
     pts: 1000001
   });
   videoSegmentStream.flush();
