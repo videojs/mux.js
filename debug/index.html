@@ -77,6 +77,10 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
                 <label><input id="audio-output" type=radio name=output disabled checked value="audio">&nbsp;Audio
                 </label>
               </div>
+              <div>
+                <label><input id="reset-tranmsuxer" type=checkbox name=reset checked value="reset">&nbsp;Recreate the Transmuxer &amp; MediaSource for each file open?
+                </label>
+              </div>
             </fieldset>
             <fieldset>
               <legend>MP4 Input</legend>
@@ -135,29 +139,32 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
   <script src="../node_modules/qunitjs/qunit/qunit.js"></script>
   <script>
     'use strict';
-    var inputs = document.getElementById('inputs'),
-        original = document.getElementById('original'),
-        working = document.getElementById('working'),
+    var
+      $ = document.querySelector.bind(document),
+      inputs = $('#inputs'),
+      original = $('#original'),
+      working = $('#working'),
 
-        vjsParsed,
-        workingParsed,
-        diffParsed,
-        vjsBytes,
-        workingBytes,
-        saveConfig,
-        restoreConfig,
+      vjsParsed,
+      workingParsed,
+      diffParsed,
+      vjsBytes,
+      workingBytes,
+      saveConfig,
+      restoreConfig,
 
-        vjsBoxes = document.querySelector('.vjs-boxes'),
-        workingBoxes = document.querySelector('.working-boxes'),
+      vjsBoxes = $('.vjs-boxes'),
+      workingBoxes = $('.working-boxes'),
+      workingBoxes = $('.working-boxes'),
 
-        video,
-        mediaSource,
-        logevent,
-        prepareSourceBuffer;
+      video,
+      mediaSource,
+      logevent,
+      prepareSourceBuffer;
 
-        logevent = function(event) {
-          console.log(event.type);
-        };
+      logevent = function(event) {
+        console.log(event.type);
+      };
 
     saveConfig = function () {
       var inputs = [].slice.call(document.querySelectorAll('input:not([type=file])'));
@@ -195,7 +202,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         // wait until both inputs have been provided
         return;
       }
-      comparison = document.querySelector('#comparison');
+      comparison = $('#comparison');
       transmuxed = vjsParsed;
       diff = '<p>A <del>red background</del> indicates ' +
         'properties present in the transmuxed file but missing from the ' +
@@ -214,11 +221,17 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
       var
         buffer,
         codecs,
-        codecsArray;
+        codecsArray,
+        resetTransmuxer = $('#reset-tranmsuxer').checked;
 
       if (typeof combined === 'function') {
         callback = combined;
         combined = true;
+      }
+
+      // Our work here is done if the sourcebuffer has already been created
+      if (!resetTransmuxer && window.vjsBuffer) {
+        return callback();
       }
 
       video = document.createElement('video');
@@ -227,18 +240,19 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
       video.src = URL.createObjectURL(mediaSource);
       window.vjsVideo = video;
       window.vjsMediaSource = mediaSource;
-      document.querySelector('#video-place').innerHTML = '';
-      document.querySelector('#video-place').appendChild(video);
+      $('#video-place').innerHTML = '';
+      $('#video-place').appendChild(video);
 
       mediaSource.addEventListener('error', logevent);
       mediaSource.addEventListener('opened', logevent);
       mediaSource.addEventListener('closed', logevent);
       mediaSource.addEventListener('sourceended', logevent);
 
-      codecs = document.querySelector('#codecs');
+      codecs = $('#codecs');
       codecsArray = codecs.value.split(',');
 
       mediaSource.addEventListener('sourceopen', function () {
+        mediaSource.duration = 0;
         if (combined) {
           buffer = mediaSource.addSourceBuffer('video/mp4;codecs="' + codecs.value + '"');
         } else if (outputType === 'video') {
@@ -270,52 +284,62 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
       }
 
       reader.addEventListener('loadend', function() {
-        var segment = new Uint8Array(reader.result),
-            combined = document.querySelector('#combined-output').checked,
-            outputType = document.querySelector('input[name="output"]:checked').value,
-            transmuxer,
-            remuxedSegments = [],
-            remuxedBytesLength = 0,
-            bytes,
-            i, j;
+        var
+          segment = new Uint8Array(reader.result),
+          combined = $('#combined-output').checked,
+          outputType = $('input[name="output"]:checked').value,
+          remuxedSegments = [],
+          remuxedBytesLength = 0,
+          bytes,
+          i,
+          j,
+          resetTransmuxer = $('#reset-tranmsuxer').checked;
 
-        if (combined) {
-            transmuxer = new muxjs.mp4.Transmuxer();
-        } else {
-            transmuxer = new muxjs.mp4.Transmuxer({remux: false});
-        }
+        if (resetTransmuxer || !window.transmuxer){
+          if (combined) {
+              window.transmuxer = new muxjs.mp4.Transmuxer();
+          } else {
+              window.transmuxer = new muxjs.mp4.Transmuxer({remux: false});
+          }
 
-        if (document.querySelector('#original-active').checked) {
-          prepareSourceBuffer(combined, outputType, function () {
-            window.vjsBuffer.appendBuffer(bytes);
-            video.play();
+          // transmux the MPEG-TS data to BMFF segments
+          transmuxer.on('data', function(segment) {
+            if (combined || segment.type === outputType) {
+              remuxedSegments.push(segment);
+              remuxedBytesLength += segment.data.byteLength;
+            }
+          });
+
+          transmuxer.on('done', function () {
+            bytes = new Uint8Array(remuxedBytesLength);
+
+            for (j = 0, i = 0; j < remuxedSegments.length; j++) {
+              bytes.set(remuxedSegments[j].data, i);
+              i += remuxedSegments[j].byteLength;
+            }
+            remuxedSegments = [];
+            remuxedBytesLength = 0;
+
+            vjsBytes = bytes;
+            vjsParsed = muxjs.mp4.tools.inspect(bytes);
+            console.log('transmuxed', vjsParsed);
+            diffParsed();
+
+            // clear old box info
+            vjsBoxes.innerHTML = muxjs.mp4.tools.textify(vjsParsed, null, ' ');
+
+            if ($('#original-active').checked) {
+              prepareSourceBuffer(combined, outputType, function () {
+                console.log('appending...');
+                window.vjsBuffer.appendBuffer(bytes);
+                video.play();
+              });
+            }
           });
         }
 
-        // transmux the MPEG-TS data to BMFF segments
-        transmuxer.on('data', function(segment) {
-          if (combined || segment.type === outputType) {
-            remuxedSegments.push(segment);
-            remuxedBytesLength += segment.data.byteLength;
-          }
-        });
-
         transmuxer.push(segment);
         transmuxer.flush();
-        bytes = new Uint8Array(remuxedBytesLength);
-
-        for (j = 0, i = 0; j < remuxedSegments.length; j++) {
-          bytes.set(remuxedSegments[j].data, i);
-          i += remuxedSegments[j].byteLength;
-        }
-
-        vjsBytes = bytes;
-        vjsParsed = muxjs.mp4.tools.inspect(bytes);
-        console.log('transmuxed', vjsParsed);
-        diffParsed();
-
-        // clear old box info
-        vjsBoxes.innerHTML = muxjs.mp4.tools.textify(vjsParsed, null, ' ');
       });
 
       reader.readAsArrayBuffer(this.files[0]);
@@ -327,7 +351,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
       reader.addEventListener('loadend', function() {
         var bytes = new Uint8Array(reader.result);
 
-        if (document.querySelector('#working-active').checked) {
+        if ($('#working-active').checked) {
           prepareSourceBuffer(function() {
             window.vjsBuffer.appendBuffer(bytes);
             video.play();
@@ -344,7 +368,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
       });
       reader.readAsArrayBuffer(this.files[0]);
     }, false);
-    document.querySelector('#combined-output').addEventListener('change', function () {
+    $('#combined-output').addEventListener('change', function () {
         Array.prototype.slice.call(document.querySelectorAll('[name="output"'))
           .forEach(function (el) {
             el.disabled = this.checked;
