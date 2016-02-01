@@ -578,6 +578,88 @@ QUnit.test('parses metadata events from PSI packets', function() {
   }], 'identified two tracks');
 });
 
+QUnit.test('Transmuxer drops elementary audio stream on the fly', function() {
+  var audioCount = 0,
+    videoCount = 0;
+
+  elementaryStream.on('data', function(data) {
+    if (data.type === 'audio') {
+      audioCount += 1;
+    } else if(data.type === 'video') {
+      videoCount += 1;
+    }
+  });
+  elementaryStream.excludeAudio();
+
+  elementaryStream.push({
+    type: 'pes',
+    payloadUnitStartIndicator: true,
+    streamType: H264_STREAM_TYPE,
+    data: new Uint8Array(1)
+  });
+  elementaryStream.push({
+    type: 'pes',
+    payloadUnitStartIndicator: true,
+    streamType: ADTS_STREAM_TYPE,
+    data: new Uint8Array(1)
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: H264_STREAM_TYPE,
+    data: new Uint8Array(1)
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    data: new Uint8Array(1)
+  });
+  elementaryStream.flush();
+  QUnit.equal(audioCount, 0, 'Elemetary stream drops all outgoing audio events');
+  QUnit.equal(videoCount, 1, "Elemetary stream doesn't drop outgoing video events");
+
+});
+
+QUnit.test('Transmuxer drops elementary audio stream on the fly', function() {
+  var audioCount = 0,
+    videoCount = 0;
+
+  elementaryStream.on('data', function(data) {
+    if (data.type === 'audio') {
+      audioCount += 1;
+    } else if(data.type === 'video') {
+      videoCount += 1;
+    }
+  });
+  elementaryStream.excludeVideo();
+
+  elementaryStream.push({
+    type: 'pes',
+    payloadUnitStartIndicator: true,
+    streamType: H264_STREAM_TYPE,
+    data: new Uint8Array(1)
+  });
+  elementaryStream.push({
+    type: 'pes',
+    payloadUnitStartIndicator: true,
+    streamType: ADTS_STREAM_TYPE,
+    data: new Uint8Array(1)
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: H264_STREAM_TYPE,
+    data: new Uint8Array(1)
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    data: new Uint8Array(1)
+  });
+  elementaryStream.flush();
+  QUnit.equal(audioCount, 1, "Elemetary stream doesn't drop outgoing audio events");
+  QUnit.equal(videoCount, 0, 'Elemetary stream drops all outgoing video events');
+
+});
+
 QUnit.test('parses standalone program stream packets', function() {
   var
     packets = [],
