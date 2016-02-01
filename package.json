@@ -1,6 +1,6 @@
 {
   "name": "mux.js",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A collection of lightweight utilities for inspecting and manipulating video container formats.",
   "repository": {
     "type": "git",
@@ -8,7 +8,6 @@
   },
   "main": "./lib/index.js",
   "scripts": {
-    "test": "npm run lint && karma start test/karma/karma.conf.js",
     "test": "npm run lint && karma start test/karma/karma.conf.js",
     "start": "npm-run-all -p watch serve",
     "serve": "node scripts/server.js",
