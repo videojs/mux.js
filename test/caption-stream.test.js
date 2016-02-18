@@ -5,7 +5,8 @@ var
   m2ts = require('../lib/m2ts'),
   mp4 = require('../lib/mp4'),
   QUnit = require('qunit'),
-  sintelCaptions = require('./utils/sintel-captions');
+  sintelCaptions = require('./utils/sintel-captions'),
+  multichannelCaptions = require('./utils/multi-channel-captions');
 
 QUnit.module('Caption Stream', {
   beforeEach: function() {
@@ -146,7 +147,7 @@ QUnit.test('can be parsed from a segment', function() {
   transmuxer.flush();
 
   QUnit.equal(captions.length, 2, 'parsed two captions');
-  QUnit.equal(captions[0].text.indexOf('  ASUKA'), 0, 'parsed the start of the first caption');
+  QUnit.equal(captions[0].text.indexOf('ASUKA'), 0, 'parsed the start of the first caption');
   QUnit.ok(captions[0].text.indexOf('Japanese') > 0, 'parsed the end of the first caption');
   QUnit.equal(captions[0].startTime, 1, 'parsed the start time');
   QUnit.equal(captions[0].endTime, 4, 'parsed the end time');
@@ -672,7 +673,7 @@ QUnit.test('a second identical control code immediately following the first is i
   QUnit.equal(captions[0].text, '01', 'only two backspaces processed');
 });
 
-QUnit.test('preable address codes are converted into spaces', function() {
+QUnit.test('preamble address codes are converted into spaces', function() {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -699,7 +700,7 @@ QUnit.test('preable address codes are converted into spaces', function() {
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'caption emitted');
-  QUnit.equal(captions[0].text, '01  02', 'PACs are was converted to space');
+  QUnit.equal(captions[0].text, '01 02', 'PACs were converted to space');
 });
 
 QUnit.test('backspaces stop at the beginning of the line', function() {
@@ -738,4 +739,29 @@ QUnit.test('backspaces stop at the beginning of the line', function() {
 QUnit.skip('paint-on display mode', function() {
   QUnit.ok(false, 'not implemented');
 });
+
+QUnit.test('segment with multiple caption channels, we only parse 0', function() {
+  var transmuxer = new mp4.Transmuxer(),
+      captions = [];
+
+  // Setting the BMDT to ensure that captions and id3 tags are not
+  // time-shifted by this value when they are output and instead are
+  // zero-based
+  transmuxer.setBaseMediaDecodeTime(100000);
+
+  transmuxer.on('data', function(data) {
+    if (data.captions) {
+      captions = captions.concat(data.captions);
+    }
+  });
+
+  transmuxer.push(multichannelCaptions);
+  transmuxer.flush();
+
+  QUnit.equal(captions.length, 3, 'parsed three captions');
+  QUnit.equal(captions[0].text, 'BUT IT\'S NOT SUFFERING RIGHW.', 'parsed first caption correctly');
+  QUnit.equal(captions[1].text, 'IT\'S NOT A THREAT TO ANYBODY.', 'parsed second caption correctly');
+  QUnit.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN IF WE DON\'T HAVE TO.', 'parsed second caption correctly');
+});
+
 
