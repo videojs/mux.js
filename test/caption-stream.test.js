@@ -741,27 +741,17 @@ QUnit.skip('paint-on display mode', function() {
 });
 
 QUnit.test('segment with multiple caption channels, we only parse 0', function() {
-  var transmuxer = new mp4.Transmuxer(),
-      captions = [];
-
-  // Setting the BMDT to ensure that captions and id3 tags are not
-  // time-shifted by this value when they are output and instead are
-  // zero-based
-  transmuxer.setBaseMediaDecodeTime(100000);
-
-  transmuxer.on('data', function(data) {
-    if (data.captions) {
-      captions = captions.concat(data.captions);
-    }
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
   });
 
-  transmuxer.push(multichannelCaptions);
-  transmuxer.flush();
+  multichannelCaptions.forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 3, 'parsed three captions');
   QUnit.equal(captions[0].text, 'BUT IT\'S NOT SUFFERING RIGHW.', 'parsed first caption correctly');
-  QUnit.equal(captions[1].text, 'IT\'S NOT A THREAT TO ANYBODY.', 'parsed second caption correctly');
+  // there is also bad data in the captions, so we end up with a null ascii character here
+  QUnit.equal(captions[1].text, 'IT\'S NOT A THREAT TO ANYBODY.' + String.fromCharCode(0x00), 'parsed second caption correctly');
   QUnit.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN IF WE DON\'T HAVE TO.', 'parsed second caption correctly');
 });
-
 
