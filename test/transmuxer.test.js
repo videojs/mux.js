@@ -1318,6 +1318,8 @@ QUnit.test('filters pre-IDR samples and calculate duration correctly', function(
 QUnit.test('holds onto the last GOP and prepends the subsequent push operation with that GOP', function() {
   var segment, boxes, samples;
 
+  videoSegmentStream.track.timelineStartInfo.dts = 0;
+
   videoSegmentStream.push({
     data: new Uint8Array([0x01, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
