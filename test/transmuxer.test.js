@@ -2,6 +2,8 @@
 
 var mp2t = require('../lib/m2ts'),
     codecs = require('../lib/codecs'),
+    fs = require('fs'),
+    aac = require('../lib/aac'),
     flv = require('../lib/flv'),
     id3Generator = require('./utils/id3-generator'),
     mp4 = require('../lib/mp4'),
@@ -16,6 +18,8 @@ var
   transportParseStream,
   ElementaryStream = mp2t.ElementaryStream,
   elementaryStream,
+  AacStream = aac,
+  aacStream,
   H264Stream = codecs.h264.H264Stream,
   h264Stream,
 
@@ -24,8 +28,8 @@ var
   AudioSegmentStream = mp4.AudioSegmentStream,
   audioSegmentStream,
 
-  AacStream = codecs.aac,
-  aacStream,
+  AdtsStream = codecs.adts,
+  adtsStream,
   Transmuxer = mp4.Transmuxer,
   FlvTransmuxer = flv.Transmuxer,
   transmuxer,
@@ -56,7 +60,9 @@ QUnit.module('MP2T Packet Stream', {
     transportPacketStream = new TransportPacketStream();
   }
 });
-
+QUnit.test('tester', function() {
+  QUnit.ok(true, 'did not throw');
+});
 QUnit.test('empty input does not error', function() {
   transportPacketStream.push(new Uint8Array([]));
   QUnit.ok(true, 'did not throw');
@@ -1546,18 +1552,18 @@ QUnit.test('subtract the first frame\'s compositionTimeOffset from baseMediaDeco
   QUnit.equal(tfdt.baseMediaDecodeTime, 130, 'calculated baseMediaDecodeTime');
 });
 
-QUnit.module('AAC Stream', {
+QUnit.module('ADTS Stream', {
   setup: function() {
-    aacStream = new AacStream();
+    adtsStream = new AdtsStream();
   }
 });
 
 QUnit.test('generates AAC frame events from ADTS bytes', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf1,       // no CRC
@@ -1584,10 +1590,10 @@ QUnit.test('generates AAC frame events from ADTS bytes', function() {
 
 QUnit.test('parses across packets', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf1,       // no CRC
@@ -1597,7 +1603,7 @@ QUnit.test('parses across packets', function() {
       0x12, 0x34        // AAC payload 1
     ])
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf1,       // no CRC
@@ -1617,10 +1623,10 @@ QUnit.test('parses across packets', function() {
 
 QUnit.test('parses frames segmented across packet', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf1,       // no CRC
@@ -1630,7 +1636,7 @@ QUnit.test('parses frames segmented across packet', function() {
       0x12        // incomplete AAC payload 1
     ])
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0x34,             // remainder of the previous frame's payload
@@ -1654,11 +1660,11 @@ QUnit.test('parses frames segmented across packet', function() {
 
 QUnit.test('resyncs data in aac frames that contain garbage', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
 
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0x67,             // garbage
@@ -1670,7 +1676,7 @@ QUnit.test('resyncs data in aac frames that contain garbage', function() {
       0xde, 0xf0        // extra junk that should be ignored
     ])
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0x67,             // garbage
@@ -1693,10 +1699,10 @@ QUnit.test('resyncs data in aac frames that contain garbage', function() {
 
 QUnit.test('ignores audio "MPEG version" bit in adts header', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf8,       // MPEG-2 audio, CRC
@@ -1716,10 +1722,10 @@ QUnit.test('ignores audio "MPEG version" bit in adts header', function() {
 
 QUnit.test('skips CRC bytes', function() {
   var frames = [];
-  aacStream.on('data', function(frame) {
+  adtsStream.on('data', function(frame) {
     frames.push(frame);
   });
-  aacStream.push({
+  adtsStream.push({
     type: 'audio',
     data: new Uint8Array([
       0xff, 0xf0,       // with CRC
@@ -2484,3 +2490,106 @@ QUnit.test('buffers video samples until flushed', function() {
   QUnit.equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
   QUnit.equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
 });
+
+QUnit.module('AAC Stream');
+QUnit.test('parses correct ID3 tag size', function() {
+  var packetStream = new Uint8Array(10),
+    aacStream = new AacStream(),
+    parser = aacStream.parseId3TagSize;
+
+  packetStream[9] = 63;
+  QUnit.equal(parser(packetStream, 0),73, 'ParseID3 correctly parsed a header without a footer');
+});
+
+QUnit.test('parses correct ADTS Frame size', function() {
+  var packetStream = new Uint8Array(6),
+    aacStream = new AacStream(),
+    parser = aacStream.parseAdtsSize;
+  packetStream[3] = 128;
+  packetStream[4] = 29;
+  packetStream[5] = 255;
+  QUnit.equal(parser(packetStream, 0),239, 'ParseADTS correctly parsed framesize');
+});
+
+QUnit.test('emits data after receiving push', function() {
+
+  var array = new Uint8Array(109),
+    aacStream,
+    count = 0;
+  aacStream = new AacStream();
+
+  array[0] = 255;
+  array[1] = 241;
+  array[2] = 92;
+  array[3] = 128;
+  array[4] = 13;
+  array[5] = 191;
+  array[6] = 252;
+  array[7] = 33;
+  array[8] = 32;
+  array[9] = 3;
+  array[10] = 64;
+  array[11] = 104;
+  array[12] = 27;
+  array[13] = 212;
+  aacStream.setTimestamp(90);
+  aacStream.on('data', function(frame) {
+    if (frame.pts === 90 && frame.dts === 90) {
+      count += 1;
+    }
+  });
+  aacStream.push(array);
+  QUnit.equal(count,1);
+});
+
+QUnit.test('continues parsing after corrupted stream', function() {
+
+  var array = new Uint8Array(10000),
+    aacStream,
+    adtsCount = 0,
+    id3Count = 0;
+  aacStream = new AacStream();
+  //an ID3 frame
+  array[0] = 73;
+  array[1] = 68;
+  array[2] = 51;
+  array[3] = 4;
+  array[4] = 0;
+  array[5] = 0;
+  array[6] = 0;
+  array[7] = 0;
+  array[8] = 0;
+  array[9] = 63;
+  array[10] = 80;
+  array[11] = 82;
+  array[12] = 73;
+  array[13] = 86;
+
+  //an atds frame
+  array[1020] = 255;
+  array[1021] = 241;
+  array[1022] = 92;
+  array[1023] = 128;
+  array[1024] = 13;
+  array[1025] = 191;
+  array[1026] = 252;
+  array[1027] = 33;
+  array[1028] = 32;
+  array[1029] = 3;
+  array[1030] = 64;
+  array[1031] = 104;
+  array[1032] = 27;
+  array[1033] = 212;
+
+  aacStream.on('data', function(frame) {
+    if (frame.type === 'timed-metadata') {
+      id3Count += 1;
+    } else if (frame.type === 'audio') {
+      adtsCount += 1;
+    }
+  });
+  aacStream.push(array);
+  QUnit.equal(adtsCount,1);
+  QUnit.equal(id3Count,1);
+});
+

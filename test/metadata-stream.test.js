@@ -460,6 +460,7 @@ QUnit.test('constructs the dispatch type', function() {
   QUnit.equal(metadataStream.dispatchType, '1503020100', 'built the dispatch type');
 });
 
+
 QUnit.test('can parse PRIV frames in web worker', function(assert) {
   var payload = stringToInts('arbitrary'),
       worker = webworkify(metadataStreamTestWorker),
@@ -508,4 +509,46 @@ QUnit.test('can parse TXXX frames in web worker', function(assert) {
                                           stringToCString('{ "key": "value" }')),
                                 [0x00, 0x00]))
   });
+});
+
+QUnit.test('triggers special event after parsing a timestamp ID3 tag', function() {
+  var array = new Uint8Array(73),
+    streamTimestamp = "com.apple.streaming.transportStreamTimestamp",
+    id3 = 'ID3',
+    priv = 'PRIV',
+    count = 0,
+    metadataStream,
+    chunk,
+    i;
+
+  metadataStream = new mp2t.MetadataStream();
+
+  metadataStream.on('timestamp', function(frame) {
+    QUnit.equal(frame.timeStamp, 900000, 'Initial timestamp fired and calculated correctly');
+    count += 1;
+  });
+  array[0] = 73;
+  array[1] = 68;
+  array[2] = 51;
+  array[3] = 4;
+  array[9] = 63;
+  array[17] = 53;
+  array[70] = 13;
+  array[71] = 187;
+  array[72] = 160;
+
+  for (i = 0; i < priv.length; i++) {
+    array[i+10] = priv.charCodeAt(i);
+  }
+  for (i = 0; i < streamTimestamp.length; i++) {
+    array[i + 20] = streamTimestamp.charCodeAt(i);
+  }
+
+  chunk = {
+    type: 'timed-metadata',
+    data: array
+  };
+
+  metadataStream.push(chunk);
+  QUnit.equal(count, 1, 'timestamp event triggered once');
 });
