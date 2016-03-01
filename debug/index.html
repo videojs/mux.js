@@ -302,33 +302,37 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
             transmuxer = new muxjs.mp4.Transmuxer({remux: false});
         }
 
-          transmuxer.on('done', function () {
-            bytes = new Uint8Array(remuxedBytesLength);
+        transmuxer.on('data', function(event) {
+          remuxedSegments.push(event);
+          remuxedBytesLength += event.data.byteLength;
+        });
 
-            for (j = 0, i = 0; j < remuxedSegments.length; j++) {
-              bytes.set(remuxedSegments[j].data, i);
-              i += remuxedSegments[j].byteLength;
-            }
-            remuxedSegments = [];
-            remuxedBytesLength = 0;
+        transmuxer.on('done', function () {
+          bytes = new Uint8Array(remuxedBytesLength);
 
-            vjsBytes = bytes;
-            vjsParsed = muxjs.mp4.tools.inspect(bytes);
-            console.log('transmuxed', vjsParsed);
-            diffParsed();
+          for (j = 0, i = 0; j < remuxedSegments.length; j++) {
+            bytes.set(remuxedSegments[j].data, i);
+            i += remuxedSegments[j].byteLength;
+          }
+          remuxedSegments = [];
+          remuxedBytesLength = 0;
 
-            // clear old box info
-            vjsBoxes.innerHTML = muxjs.mp4.tools.textify(vjsParsed, null, ' ');
+          vjsBytes = bytes;
+          vjsParsed = muxjs.mp4.tools.inspect(bytes);
+          console.log('transmuxed', vjsParsed);
+          diffParsed();
 
-            if ($('#original-active').checked) {
-              prepareSourceBuffer(combined, outputType, function () {
-                console.log('appending...');
-                window.vjsBuffer.appendBuffer(bytes);
-                video.play();
-              });
-            }
-          });
-        }
+          // clear old box info
+          vjsBoxes.innerHTML = muxjs.mp4.tools.textify(vjsParsed, null, ' ');
+
+          if ($('#original-active').checked) {
+            prepareSourceBuffer(combined, outputType, function () {
+              console.log('appending...');
+              window.vjsBuffer.appendBuffer(bytes);
+              video.play();
+            });
+          }
+        });
 
         transmuxer.push(segment);
         transmuxer.flush();
