@@ -1671,6 +1671,10 @@ QUnit.test('track values from seq_parameter_set_rbsp should be cleared by a flus
   });
   videoSegmentStream.push({
     data: new Uint8Array([0xFF]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0xFF]),
     nalUnitType: 'seq_parameter_set_rbsp',
     config: {
       width: 123,
@@ -1733,6 +1737,10 @@ QUnit.test('track pps from pic_parameter_set_rbsp should be cleared by a flush',
   videoSegmentStream.push({
     data: new Uint8Array([0xFF]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0xFF]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01]),
@@ -1810,6 +1818,12 @@ QUnit.test('calculates baseMediaDecodeTime values from the first DTS ever seen a
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 100,
+    pts: 100
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 200,
     pts: 200
@@ -1846,6 +1860,12 @@ QUnit.test('calculates baseMediaDecodeTime values relative to a customizable bas
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 100,
+    pts: 100
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
     dts: 200,
     pts: 200
@@ -1877,6 +1897,12 @@ QUnit.test('subtract the first frame\'s compositionTimeOffset from baseMediaDeco
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 50,
+    pts: 60
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
     dts: 50,
     pts: 60
   });
@@ -2204,6 +2230,9 @@ QUnit.test('no options creates combined output', function() {
     0x06, 0xb6, 0xc2, 0xb5,
     0xef, 0x7c, 0x04
   ], false)));
+  transmuxer.push(packetize(videoPes([
+      0x05, 0x01 //slice_layer_without_partitioning_rbsp_idr
+  ], true)));
   transmuxer.flush();
 
   QUnit.equal(segments.length, 1, 'generated a combined video and audio segment');
@@ -2258,6 +2287,9 @@ QUnit.test('can specify that we want to generate separate audio and video segmen
     0x06, 0xb6, 0xc2, 0xb5,
     0xef, 0x7c, 0x04
   ], false)));
+  transmuxer.push(packetize(videoPes([
+      0x05, 0x01 //slice_layer_without_partitioning_rbsp_idr
+  ], true)));
   transmuxer.flush();
 
   QUnit.equal(segmentLengthOnDone, 2, 'emitted both segments before triggering done');
@@ -2310,6 +2342,9 @@ QUnit.test('generates a video init segment', function() {
     0x06, 0xb6, 0xc2, 0xb5,
     0xef, 0x7c, 0x04
   ], false)));
+  transmuxer.push(packetize(videoPes([
+      0x05, 0x01 //slice_layer_without_partitioning_rbsp_idr
+  ], true)));
   transmuxer.flush();
 
   QUnit.equal(segments.length, 1, 'generated a segment');
