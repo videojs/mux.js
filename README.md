@@ -9,7 +9,7 @@ Feed in `Uint8Array`s of an MPEG-2 transport stream, get out a fragmented MP4:
 
 ```js
 // create a transmuxer:
-var transmuxer = new muxjs.mp2t.Transmuxer(initOptions);
+var transmuxer = new muxjs.mp4.Transmuxer(initOptions);
 // data events signal a new fMP4 segment is ready:
 transmuxer.on('data', function (segment) {
   // Tada! Now you have an MP4 that you could use with Media Source Extensions
