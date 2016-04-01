@@ -4,15 +4,15 @@ var serveStatic = require('serve-static');
 var portscanner = require('portscanner');
 
 // Configuration for the server.
-const PORT = 9999;
-const MAX_PORT = PORT + 100;
-const HOST = '127.0.0.1';
+var PORT = 9999;
+var MAX_PORT = PORT + 100;
+var HOST = '127.0.0.1';
 
 var app = express();
 
 app.use(serveStatic(path.join(__dirname, '..')));
 
-portscanner.findAPortNotInUse(PORT, MAX_PORT, HOST, (error, port) => {
+portscanner.findAPortNotInUse(PORT, MAX_PORT, HOST, function(error, port) {
   if (error) {
     throw error;
   }
