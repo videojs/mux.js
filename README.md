@@ -17,6 +17,18 @@ transmuxer.on('data', function (segment) {
 });
 ```
 
+## Packed Audio File (AAC) to fMP4 Transmuxer
+Feed in `Uint8Array`s of an AAC transport stream, get out a fragmented MP4:
+
+```js
+// create a transmuxer:
+var transmuxer = new muxjs.mp2t.Transmuxer({aacfile: true});
+transmuxer.on('data', function(segment) {
+  // Tada! Now you have an MP4 that you could use with Media Source Extensions
+  sourceBuffer.appendBuffer(segment.data.buffer);
+});
+```
+
 ### Metadata
 The transmuxer can also parse out supplementary video data like timed ID3 metadata and CEA-608 captions.
 You can find both attached to the data event object:
