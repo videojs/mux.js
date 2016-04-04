@@ -62,7 +62,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
               <div>
                 <input id="original-active" type=radio name=active checked value="original">
                 <label>
-                  Your original MP2T segment:
+                  Your original .TS or .AAC segment:
                   <input type="file" id="original">
                 </label>
               </div>
@@ -293,10 +293,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
             remuxedBytesLength = 0,
             bytes,
             i, j;
-        if ((/\.aac$/i).test(original.value)) {
-          transmuxer = new muxjs.mp4.Transmuxer({remux: false, aacfile: true});
-          outputType = 'audio';
-        } else if (combined) {
+        if (combined) {
             transmuxer = new muxjs.mp4.Transmuxer();
         } else {
             transmuxer = new muxjs.mp4.Transmuxer({remux: false});
