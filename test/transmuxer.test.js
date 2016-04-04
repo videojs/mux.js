@@ -52,6 +52,7 @@ var
   pesHeader,
   transportPacket,
   videoPes,
+  adtsFrame,
   audioPes,
   timedMetadataPes;
 
@@ -506,21 +507,31 @@ videoPes = function(data, first, pts) {
 standalonePes = videoPes([0xaf, 0x01], true);
 
 /**
- * Helper function to create audio PES packets
- * @param data {arraylike} - the payload bytes
- * @payload first {boolean} - true if this PES should be a payload
- * unit start
+ * Helper function to create audio ADTS frame header
+ * @param dataLength {number} - the payload byte count
  */
-audioPes = function(data, first, pts) {
-  var frameLength = data.length + 7;
-  return transportPacket(0x12, [
+adtsFrame = function (dataLength) {
+  var frameLength = dataLength + 7;
+  return [
     0xff, 0xf1,                            // no CRC
     0x10,                                  // AAC Main, 44.1KHz
     0xb0 | ((frameLength & 0x1800) >> 11), // 2 channels
     (frameLength & 0x7f8) >> 3,
     ((frameLength & 0x07) << 5) + 7,       // frame length in bytes
     0x00                                   // one AAC per ADTS frame
-  ].concat(data), first, pts);
+  ];
+};
+
+/**
+ * Helper function to create audio PES packets
+ * @param data {arraylike} - the payload bytes
+ * @payload first {boolean} - true if this PES should be a payload
+ * unit start
+ */
+audioPes = function(data, first, pts) {
+  return transportPacket(0x12,
+    adtsFrame(data.length).concat(data),
+    first, pts);
 };
 
 timedMetadataPes = function(data) {
@@ -2423,15 +2434,16 @@ QUnit.test('buffers video samples until flushed', function() {
 });
 
 QUnit.test('creates a metadata stream', function() {
+  transmuxer.push(packetize(PAT));
   QUnit.ok(transmuxer.metadataStream, 'created a metadata stream');
 });
 
 QUnit.test('pipes timed metadata to the metadata stream', function() {
   var metadatas = [];
+  transmuxer.push(packetize(PAT));
   transmuxer.metadataStream.on('data', function(data) {
     metadatas.push(data);
   });
-  transmuxer.push(packetize(PAT));
   transmuxer.push(packetize(PMT));
   transmuxer.push(packetize(timedMetadataPes([0x03])));
 
@@ -2439,6 +2451,79 @@ QUnit.test('pipes timed metadata to the metadata stream', function() {
   QUnit.equal(metadatas.length, 1, 'emitted timed metadata');
 });
 
+QUnit.test('pipeline dynamically configures itself based on input', function() {
+  var id3 = id3Generator;
+
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasAudio: true
+  })));
+  transmuxer.push(packetize(timedMetadataPes([0x03])));
+  transmuxer.flush();
+  QUnit.equal(transmuxer.currentPipeline_, 'ts', 'detected TS file data');
+
+  transmuxer.push(new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01))));
+  transmuxer.flush();
+  QUnit.equal(transmuxer.currentPipeline_, 'aac', 'detected AAC file data');
+});
+
+QUnit.test('reuses audio track object when the pipeline reconfigures itself', function() {
+  var boxes, segments = [],
+    id3Tag = new Uint8Array(73),
+    streamTimestamp = "com.apple.streaming.transportStreamTimestamp",
+    priv = 'PRIV',
+    i;
+
+  id3Tag[0] = 73;
+  id3Tag[1] = 68;
+  id3Tag[2] = 51;
+  id3Tag[3] = 4;
+  id3Tag[9] = 63;
+  id3Tag[17] = 53;
+  id3Tag[70] = 13;
+  id3Tag[71] = 187;
+  id3Tag[72] = 160;
+
+  for (i = 0; i < priv.length; i++) {
+    id3Tag[i+10] = priv.charCodeAt(i);
+  }
+  for (i = 0; i < streamTimestamp.length; i++) {
+    id3Tag[i + 20] = streamTimestamp.charCodeAt(i);
+  }
+
+  transmuxer.on('data', function(segment) {
+    segments.push(segment);
+  });
+
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(packetize(generatePMT({
+    hasAudio: true
+  }))));
+  transmuxer.push(packetize(audioPes([0x19, 0x47], true, 10000)));
+  transmuxer.flush();
+
+  boxes = mp4.tools.inspect(segments[0].data);
+
+  QUnit.equal(boxes[2].boxes[1].boxes[1].baseMediaDecodeTime,
+    0,
+    'first segment starts at 0 pts');
+
+  var adtsPayload = new Uint8Array(adtsFrame(2).concat([0x19, 0x47]));
+
+  transmuxer.push(id3Tag);
+  transmuxer.push(adtsPayload);
+  transmuxer.flush();
+
+  boxes = mp4.tools.inspect(segments[1].data);
+
+  QUnit.equal(boxes[2].boxes[1].boxes[1].baseMediaDecodeTime,
+    // The first segment had a PTS of 10,000 and the second segment 900,000
+    // Audio PTS is specified in a clock equal to samplerate (44.1khz)
+    // So you have to take the different between the PTSs (890,000)
+    // and transform it from 90khz to 44.1khz clock
+    Math.floor((900000 - 10000) / (90000 / 44100)),
+    'second segment starts at the right time');
+});
 
 validateTrack = function(track, metadata) {
   var mdia, handlerType;
