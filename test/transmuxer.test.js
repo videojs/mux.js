@@ -2361,6 +2361,7 @@ QUnit.test('generates a video init segment', function() {
   QUnit.equal(segments.length, 1, 'generated a segment');
   QUnit.ok(segments[0].data, 'wrote data in the init segment');
   QUnit.equal(segments[0].type, 'video', 'video is the segment type');
+  QUnit.ok(segments[0].info, 'video info is alongside video segments/bytes');
 
   boxes = mp4.tools.inspect(segments[0].data);
   QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
@@ -2384,6 +2385,7 @@ QUnit.test('generates an audio init segment', function() {
   QUnit.equal(segments.length, 1, 'generated a segment');
   QUnit.ok(segments[0].data, 'wrote data in the init segment');
   QUnit.equal(segments[0].type, 'audio', 'audio is the segment type');
+  QUnit.ok(segments[0].info, 'audio info is alongside audio segments/bytes');
 
   boxes = mp4.tools.inspect(segments[0].data);
   QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
