@@ -2435,13 +2435,13 @@ QUnit.test('buffers video samples until flushed', function() {
 
 QUnit.test('creates a metadata stream', function() {
   transmuxer.push(packetize(PAT));
-  QUnit.ok(transmuxer.metadataStream, 'created a metadata stream');
+  QUnit.ok(transmuxer.transmuxPipeline_.metadataStream, 'created a metadata stream');
 });
 
 QUnit.test('pipes timed metadata to the metadata stream', function() {
   var metadatas = [];
   transmuxer.push(packetize(PAT));
-  transmuxer.metadataStream.on('data', function(data) {
+  transmuxer.transmuxPipeline_.metadataStream.on('data', function(data) {
     metadatas.push(data);
   });
   transmuxer.push(packetize(PMT));
@@ -2460,11 +2460,11 @@ QUnit.test('pipeline dynamically configures itself based on input', function() {
   })));
   transmuxer.push(packetize(timedMetadataPes([0x03])));
   transmuxer.flush();
-  QUnit.equal(transmuxer.currentPipeline_, 'ts', 'detected TS file data');
+  QUnit.equal(transmuxer.transmuxPipeline_.type, 'ts', 'detected TS file data');
 
   transmuxer.push(new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01))));
   transmuxer.flush();
-  QUnit.equal(transmuxer.currentPipeline_, 'aac', 'detected AAC file data');
+  QUnit.equal(transmuxer.transmuxPipeline_.type, 'aac', 'detected AAC file data');
 });
 
 QUnit.test('reuses audio track object when the pipeline reconfigures itself', function() {
