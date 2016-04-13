@@ -9,8 +9,8 @@ var mp2t = require('../lib/m2ts'),
     mp4 = require('../lib/mp4'),
     QUnit = require('qunit'),
     testSegment = require('./utils/test-segment'),
-    mp4AudioProperties = require('../lib/mp4/transmuxer').audioProperties,
-    mp4VideoProperties = require('../lib/mp4/transmuxer').videoProperties;
+    mp4AudioProperties = require('../lib/mp4/transmuxer').AUDIO_PROPERTIES,
+    mp4VideoProperties = require('../lib/mp4/transmuxer').VIDEO_PROPERTIES;
 var
 
   TransportPacketStream = mp2t.TransportPacketStream,
