@@ -932,6 +932,40 @@ QUnit.test('properly parses seq_parameter_set_rbsp nal units', function() {
   QUnit.deepEqual(data.config, expectedConfig, 'parsed the sps');
 });
 
+QUnit.test('Properly parses seq_parameter_set VUI nal unit', function() {
+  var
+    data,
+    expectedConfig = {
+      profileIdc: 66,
+      levelIdc: 30,
+      profileCompatibility: 192,
+      width: 64,
+      height: 16
+    };
+
+  h264Stream.on('data', function(event) {
+    data = event;
+  });
+
+  h264Stream.push({
+    type: 'video',
+    data: new Uint8Array([
+      0x00, 0x00, 0x00, 0x01,
+      0x67, 0x42, 0xc0, 0x1e,
+      0xd9, 0xff, 0xff, 0xff,
+      0xff, 0xe1, 0x00, 0x00,
+      0x03, 0x00, 0x01, 0x00,
+      0x00, 0x03, 0x00, 0x3c,
+      0x0f, 0x16, 0x2e, 0x48,
+      0xff, 0x00, 0x00, 0x01
+    ])
+  });
+
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified an sequence parameter set');
+  QUnit.deepEqual(data.config, expectedConfig, 'parsed the sps');
+});
+
 QUnit.test('unpacks nal units from simple byte stream framing', function() {
   var data;
   h264Stream.on('data', function(event) {
