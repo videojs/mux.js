@@ -8,8 +8,9 @@ var mp2t = require('../lib/m2ts'),
     id3Generator = require('./utils/id3-generator'),
     mp4 = require('../lib/mp4'),
     QUnit = require('qunit'),
-    testSegment = require('./utils/test-segment');
-
+    testSegment = require('./utils/test-segment'),
+    mp4AudioProperties = require('../lib/mp4/transmuxer').AUDIO_PROPERTIES,
+    mp4VideoProperties = require('../lib/mp4/transmuxer').VIDEO_PROPERTIES;
 var
 
   TransportPacketStream = mp2t.TransportPacketStream,
@@ -2361,6 +2362,12 @@ QUnit.test('generates a video init segment', function() {
   QUnit.equal(segments.length, 1, 'generated a segment');
   QUnit.ok(segments[0].data, 'wrote data in the init segment');
   QUnit.equal(segments[0].type, 'video', 'video is the segment type');
+  QUnit.ok(segments[0].info, 'video info is alongside video segments/bytes');
+
+  mp4VideoProperties.forEach(function(prop) {
+    QUnit.ok(segments[0].info[prop], 'video info has ' + prop);
+  });
+
 
   boxes = mp4.tools.inspect(segments[0].data);
   QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
@@ -2384,6 +2391,10 @@ QUnit.test('generates an audio init segment', function() {
   QUnit.equal(segments.length, 1, 'generated a segment');
   QUnit.ok(segments[0].data, 'wrote data in the init segment');
   QUnit.equal(segments[0].type, 'audio', 'audio is the segment type');
+  QUnit.ok(segments[0].info, 'audio info is alongside audio segments/bytes');
+  mp4AudioProperties.forEach(function(prop) {
+    QUnit.ok(segments[0].info[prop], 'audio info has ' + prop);
+  });
 
   boxes = mp4.tools.inspect(segments[0].data);
   QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
