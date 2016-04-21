@@ -295,45 +295,45 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
             i, j,
             resetTransmuxer = $('#reset-transmuxer').checked;
         if (resetTransmuxer || !window.transmuxer){
-        if (combined) {
+          if (combined) {
             transmuxer = new muxjs.mp4.Transmuxer();
-        } else {
+          } else {
             transmuxer = new muxjs.mp4.Transmuxer({remux: false});
+          }
+
+          transmuxer.on('data', function(event) {
+            if (combined || event.type === outputType) {
+              remuxedSegments.push(event);
+              remuxedBytesLength += event.data.byteLength;
+            }
+          });
+
+          transmuxer.on('done', function () {
+            bytes = new Uint8Array(remuxedBytesLength);
+
+            for (j = 0, i = 0; j < remuxedSegments.length; j++) {
+              bytes.set(remuxedSegments[j].data, i);
+              i += remuxedSegments[j].byteLength;
+            }
+            remuxedSegments = [];
+            remuxedBytesLength = 0;
+
+            vjsBytes = bytes;
+            vjsParsed = muxjs.mp4.tools.inspect(bytes);
+            console.log('transmuxed', vjsParsed);
+            diffParsed();
+
+            // clear old box info
+            vjsBoxes.innerHTML = muxjs.mp4.tools.textify(vjsParsed, null, ' ');
+
+            if ($('#original-active').checked) {
+              prepareSourceBuffer(combined, outputType, function () {
+                window.vjsBuffer.appendBuffer(bytes);
+                video.play();
+              });
+            }
+          });
         }
-
-        transmuxer.on('data', function(event) {
-          if (combined || event.type === outputType) {
-            remuxedSegments.push(event);
-            remuxedBytesLength += event.data.byteLength;
-          }
-        });
-
-        transmuxer.on('done', function () {
-          bytes = new Uint8Array(remuxedBytesLength);
-
-          for (j = 0, i = 0; j < remuxedSegments.length; j++) {
-            bytes.set(remuxedSegments[j].data, i);
-            i += remuxedSegments[j].byteLength;
-          }
-          remuxedSegments = [];
-          remuxedBytesLength = 0;
-
-          vjsBytes = bytes;
-          vjsParsed = muxjs.mp4.tools.inspect(bytes);
-          console.log('transmuxed', vjsParsed);
-          diffParsed();
-
-          // clear old box info
-          vjsBoxes.innerHTML = muxjs.mp4.tools.textify(vjsParsed, null, ' ');
-
-          if ($('#original-active').checked) {
-            prepareSourceBuffer(combined, outputType, function () {
-              window.vjsBuffer.appendBuffer(bytes);
-              video.play();
-            });
-          }
-        });
-      }
         transmuxer.push(segment);
         transmuxer.flush();
       });
