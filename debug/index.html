@@ -78,7 +78,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
                 </label>
               </div>
               <div>
-                <label><input id="reset-tranmsuxer" type=checkbox name=reset checked value="reset">&nbsp;Recreate the Transmuxer &amp; MediaSource for each file open?
+                <label><input id="reset-transmuxer" type=checkbox name=reset checked value="reset">&nbsp;Recreate the Transmuxer &amp; MediaSource for each file open?
                 </label>
               </div>
             </fieldset>
@@ -222,7 +222,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         buffer,
         codecs,
         codecsArray,
-        resetTransmuxer = $('#reset-tranmsuxer').checked;
+        resetTransmuxer = $('#reset-transmuxer').checked;
 
       if (typeof combined === 'function') {
         callback = combined;
@@ -292,7 +292,9 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
             remuxedSegments = [],
             remuxedBytesLength = 0,
             bytes,
-            i, j;
+            i, j,
+            resetTransmuxer = $('#reset-transmuxer').checked;
+        if (resetTransmuxer || !window.transmuxer){
         if (combined) {
             transmuxer = new muxjs.mp4.Transmuxer();
         } else {
@@ -300,7 +302,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         }
 
         transmuxer.on('data', function(event) {
-          if (event.type === outputType) {
+          if (combined || event.type === outputType) {
             remuxedSegments.push(event);
             remuxedBytesLength += event.data.byteLength;
           }
@@ -326,13 +328,12 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
 
           if ($('#original-active').checked) {
             prepareSourceBuffer(combined, outputType, function () {
-              console.log('appending...');
               window.vjsBuffer.appendBuffer(bytes);
               video.play();
             });
           }
         });
-
+      }
         transmuxer.push(segment);
         transmuxer.flush();
       });
