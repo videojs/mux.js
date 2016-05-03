@@ -2830,11 +2830,11 @@ QUnit.test('does not emit empty nal units', function() {
     dataTriggerCount++;
   });
 
+  // An empty nal unit is just two start codes:
   nalByteStream.push({
     data: new Uint8Array([
-      0x00, 0x00, 0x01, // start code
-      0x00, 0x00, // payload
-      0x00, 0x00, 0x00
+      0x00, 0x00, 0x00, 0x01, // start code
+      0x00, 0x00, 0x00, 0x01  // start code
     ])
   });
   QUnit.equal(dataTriggerCount, 0, 'emmited no nal units');
