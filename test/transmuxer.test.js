@@ -2824,6 +2824,22 @@ QUnit.test('parses nal units with 3-byte start code', function(){
   QUnit.deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
 });
 
+QUnit.test('does not emit empty nal units', function() {
+  var dataTriggerCount = 0;
+  nalByteStream.on('data', function(data) {
+    dataTriggerCount++;
+  });
+
+  // An empty nal unit is just two start codes:
+  nalByteStream.push({
+    data: new Uint8Array([
+      0x00, 0x00, 0x00, 0x01, // start code
+      0x00, 0x00, 0x00, 0x01  // start code
+    ])
+  });
+  QUnit.equal(dataTriggerCount, 0, 'emmited no nal units');
+});
+
 QUnit.test('parses multiple nal units', function(){
   var nalUnits = [];
   nalByteStream.on('data', function (data) {
