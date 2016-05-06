@@ -439,7 +439,7 @@ QUnit.test('roll-up display mode', function() {
     { pts: 5 * 1000, ccData: 0x142d, type:0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 3, 'detected another caption');
+  QUnit.equal(captions.length, 2, 'detected another caption');
   QUnit.deepEqual(captions[0], {
     startPts: 3 * 1000,
     endPts: 4 * 1000,
@@ -448,13 +448,8 @@ QUnit.test('roll-up display mode', function() {
   QUnit.deepEqual(captions[1], {
     startPts: 4 * 1000,
     endPts: 5 * 1000,
-    text: '01'
-  }, 'kept the caption up after the new caption');
-  QUnit.deepEqual(captions[2], {
-    startPts: 4 * 1000,
-    endPts: 5 * 1000,
-    text: '23'
-  }, 'parsed the new caption');
+    text: '01\n23'
+  }, 'parsed the new caption and kept the caption up after the new caption');
 });
 
 QUnit.test('roll-up displays multiple rows simultaneously', function() {
@@ -493,7 +488,7 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
     { pts: 3 * 1000, ccData: 0x142d, type:0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 3, 'detected three captions');
+  QUnit.equal(captions.length, 2, 'detected another caption');
   QUnit.deepEqual(captions[0], {
     startPts: 1 * 1000,
     endPts: 2 * 1000,
@@ -502,13 +497,8 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
   QUnit.deepEqual(captions[1], {
     startPts: 2 * 1000,
     endPts: 3 * 1000,
-    text: '01'
-  }, 'created the top row after the shift up');
-  QUnit.deepEqual(captions[2], {
-    startPts: 2 * 1000,
-    endPts: 3 * 1000,
-    text: '23'
-  }, 'created the bottom row for the second period');
+    text: '01\n23'
+  }, 'created the top and bottom rows after the shift up');
   captions = [];
 
   [ // '45'
@@ -521,7 +511,7 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
     { pts: 5 * 1000, ccData: 0x142d, type:0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 3, 'detected three captions');
+  QUnit.equal(captions.length, 2, 'detected two captions');
   QUnit.deepEqual(captions[0], {
     startPts: 3 * 1000,
     endPts: 4 * 1000,
@@ -530,13 +520,8 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
   QUnit.deepEqual(captions[1], {
     startPts: 4 * 1000,
     endPts: 5 * 1000,
-    text: '23'
-  }, 'created the top row after the shift up');
-  QUnit.deepEqual(captions[2], {
-    startPts: 4 * 1000,
-    endPts: 5 * 1000,
-    text: '45'
-  }, 'created the bottom row for the third period');
+    text: '23\n45'
+  }, 'created the top and bottom rows after the shift up');
 });
 
 QUnit.test('the roll-up count can be changed on-the-fly', function() {
