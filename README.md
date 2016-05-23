@@ -4,6 +4,9 @@ Lightweight utilities for inspecting and manipulating video container formats.
 
 [![Build Status](https://travis-ci.org/videojs/mux.js.svg?branch=master)](https://travis-ci.org/videojs/mux.js)
 
+## Diagram
+![mux.js diagram](/docs/diagram.png)
+
 ## MPEG2-TS to fMP4 Transmuxer
 Feed in `Uint8Array`s of an MPEG-2 transport stream, get out a fragmented MP4:
 
