@@ -11,6 +11,9 @@ var mp2t = require('../lib/m2ts'),
     testSegment = require('./utils/test-segment'),
     mp4AudioProperties = require('../lib/mp4/transmuxer').AUDIO_PROPERTIES,
     mp4VideoProperties = require('../lib/mp4/transmuxer').VIDEO_PROPERTIES;
+
+    mp4.tools = require('../lib/tools/mp4-inspector');
+
 var
 
   TransportPacketStream = mp2t.TransportPacketStream,
@@ -3134,4 +3137,3 @@ QUnit.test('continues parsing after corrupted stream', function() {
   QUnit.equal(adtsCount,1);
   QUnit.equal(id3Count,1);
 });
-
