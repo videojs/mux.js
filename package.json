@@ -20,12 +20,10 @@
     "build:flv": "browserify -s muxjs lib/flv/index.js -o dist/mux-flv.js",
     "build:js": "browserify -s muxjs lib/index.js -o dist/mux.js",
     "build:test": "browserify test/*.test.js -o dist-test/mux.js",
-    "lint": "npm-run-all -p lint:*",
-    "lint:js": "jshint lib/**/*.js",
-    "lint:test": "jshint test/*.test.js",
+    "lint": "# eslint \"lib/**\" \"test/**\"",
     "uglify": "npm-run-all -p uglify:*",
-    "uglify:mp4": "uglifyjs -o dist/mux-mp4.min.js dist/mux-mp4.js",
-    "uglify:flv": "uglifyjs -o dist/mux-flv.min.js dist/mux-flv.js",
+    "uglify:mp4": "uglifyjs --mangle --compress -o dist/mux-mp4.min.js dist/mux-mp4.js",
+    "uglify:flv": "uglifyjs --mangle --compress -o dist/mux-flv.min.js dist/mux-flv.js",
     "clean": "rm -rf dist dist-test"
   },
   "browser": "./lib/index.js",
@@ -51,12 +49,21 @@
   },
   "author": "Brightcove",
   "license": "Apache-2.0",
+  "eslintConfig": {
+    "ignore": [
+      "dist",
+      "dist-test",
+      "docs",
+      "scripts"
+    ]
+  },
   "files": [
     "lib/",
     "dist/"
   ],
   "devDependencies": {
     "browserify": "^12.0.1",
+    "eslint": "^2.10.2",
     "express": "^4.13.3",
     "jshint": "^2.9.1-rc2",
     "karma": "^0.13.9",
