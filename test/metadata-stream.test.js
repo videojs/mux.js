@@ -486,8 +486,7 @@ QUnit.test('can parse PRIV frames in web worker', function(assert) {
 });
 
 QUnit.test('can parse TXXX frames in web worker', function(assert) {
-  var payload = stringToInts('arbitrary'),
-      worker = webworkify(metadataStreamTestWorker),
+  var worker = webworkify(metadataStreamTestWorker),
       done = assert.async();
 
   worker.addEventListener('message', function(e) {
@@ -514,7 +513,6 @@ QUnit.test('can parse TXXX frames in web worker', function(assert) {
 QUnit.test('triggers special event after parsing a timestamp ID3 tag', function() {
   var array = new Uint8Array(73),
     streamTimestamp = "com.apple.streaming.transportStreamTimestamp",
-    id3 = 'ID3',
     priv = 'PRIV',
     count = 0,
     metadataStream,
