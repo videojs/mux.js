@@ -24,8 +24,8 @@
     "lint:js": "jshint lib/**/*.js",
     "lint:test": "jshint test/*.test.js",
     "uglify": "npm-run-all -p uglify:*",
-    "uglify:mp4": "uglifyjs -o dist/mux-mp4.min.js dist/mux-mp4.js",
-    "uglify:flv": "uglifyjs -o dist/mux-flv.min.js dist/mux-flv.js",
+    "uglify:mp4": "uglifyjs --mangle --compress -o dist/mux-mp4.min.js dist/mux-mp4.js",
+    "uglify:flv": "uglifyjs --mangle --compress -o dist/mux-flv.min.js dist/mux-flv.js",
     "clean": "rm -rf dist dist-test"
   },
   "browser": "./lib/index.js",
