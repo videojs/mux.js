@@ -98,7 +98,7 @@
     "no-mixed-spaces-and-tabs": [2, false],
     "no-multi-spaces": 1,
     "no-multi-str": 2,
-    "no-multiple-empty-lines": [2, {"max": 1}],
+    "no-multiple-empty-lines": [2, {"max": 2}],
     "no-native-reassign": 2,
     "no-negated-in-lhs": 2,
     "no-nested-ternary": 1,
@@ -162,7 +162,7 @@
     "use-isnan": 2,
     "valid-jsdoc": 0,
     "valid-typeof": 2,
-    "vars-on-top": 2,
+    "vars-on-top": 1,
     "wrap-iife": [2, "outside"],
     "wrap-regex": 2,
     "yoda": [2, "never"]
