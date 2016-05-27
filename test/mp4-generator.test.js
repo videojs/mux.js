@@ -255,7 +255,7 @@ validateAudioSample = function(sample) {
           length: 2,
           samplingFrequencyIndex: 3,
           tag: 5
-        },
+        }
       }
     }
   }, 'generated an audio sample');

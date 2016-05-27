@@ -66,7 +66,7 @@ QUnit.test('parses simple ID3 metadata out of PES packets', function() {
     // extended header
     0x00, 0x00, 0x00, 0x06, // extended header size. no CRC
     0x00, 0x00,             // extended flags
-    0x00, 0x00, 0x00, 0x02, // size of padding
+    0x00, 0x00, 0x00, 0x02  // size of padding
 
     // frame 0
     // http://id3.org/id3v2.3.0#User_defined_text_information_frame

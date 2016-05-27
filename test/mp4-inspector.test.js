@@ -424,7 +424,7 @@ QUnit.test('can parse a moov', function() {
                 size: 12,
                 version: 0,
                 flags: new Uint8Array([0, 0, 1])
-              }],
+              }]
             }]
           }, {
             type: 'stbl',
@@ -434,7 +434,7 @@ QUnit.test('can parse a moov', function() {
               size: 16,
               version: 1,
               flags: new Uint8Array([0, 0, 0]),
-              sampleDescriptions: [],
+              sampleDescriptions: []
             }, {
               type: 'stts',
               size: 24,
@@ -965,7 +965,7 @@ QUnit.test('can parse a series of boxes', function() {
     0x69, 0x73, 0x6f, 0x6d, // major brand
     0x00, 0x00, 0x00, 0x02, // minor version
     98, 101, 101, 112, // compatible brands
-    98, 111, 111, 112, // compatible brands
+    98, 111, 111, 112  // compatible brands
   ]);
 
   QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(ftyp.concat(ftyp))),
