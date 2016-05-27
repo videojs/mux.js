@@ -2,7 +2,6 @@
 
 var mp2t = require('../lib/m2ts'),
     codecs = require('../lib/codecs'),
-    fs = require('fs'),
     aac = require('../lib/aac'),
     flv = require('../lib/flv'),
     id3Generator = require('./utils/id3-generator'),
@@ -10,55 +9,50 @@ var mp2t = require('../lib/m2ts'),
     QUnit = require('qunit'),
     testSegment = require('./utils/test-segment'),
     mp4AudioProperties = require('../lib/mp4/transmuxer').AUDIO_PROPERTIES,
-    mp4VideoProperties = require('../lib/mp4/transmuxer').VIDEO_PROPERTIES;
+    mp4VideoProperties = require('../lib/mp4/transmuxer').VIDEO_PROPERTIES,
+    TransportPacketStream = mp2t.TransportPacketStream,
+    transportPacketStream,
+    TransportParseStream = mp2t.TransportParseStream,
+    transportParseStream,
+    ElementaryStream = mp2t.ElementaryStream,
+    elementaryStream,
+    AacStream = aac,
+    H264Stream = codecs.h264.H264Stream,
+    h264Stream,
 
-    mp4.tools = require('../lib/tools/mp4-inspector');
+    VideoSegmentStream = mp4.VideoSegmentStream,
+    videoSegmentStream,
+    AudioSegmentStream = mp4.AudioSegmentStream,
+    audioSegmentStream,
 
-var
+    AdtsStream = codecs.adts,
+    adtsStream,
+    Transmuxer = mp4.Transmuxer,
+    FlvTransmuxer = flv.Transmuxer,
+    transmuxer,
+    NalByteStream = codecs.h264.NalByteStream,
+    nalByteStream,
 
-  TransportPacketStream = mp2t.TransportPacketStream,
-  transportPacketStream,
-  TransportParseStream = mp2t.TransportParseStream,
-  transportParseStream,
-  ElementaryStream = mp2t.ElementaryStream,
-  elementaryStream,
-  AacStream = aac,
-  aacStream,
-  H264Stream = codecs.h264.H264Stream,
-  h264Stream,
+    MP2T_PACKET_LENGTH = mp2t.MP2T_PACKET_LENGTH,
+    H264_STREAM_TYPE = mp2t.H264_STREAM_TYPE,
+    ADTS_STREAM_TYPE = mp2t.ADTS_STREAM_TYPE,
+    METADATA_STREAM_TYPE = mp2t.METADATA_STREAM_TYPE,
+    packetize,
 
-  VideoSegmentStream = mp4.VideoSegmentStream,
-  videoSegmentStream,
-  AudioSegmentStream = mp4.AudioSegmentStream,
-  audioSegmentStream,
+    PAT,
+    generatePMT,
+    PMT,
+    validateTrack,
+    validateTrackFragment,
 
-  AdtsStream = codecs.adts,
-  adtsStream,
-  Transmuxer = mp4.Transmuxer,
-  FlvTransmuxer = flv.Transmuxer,
-  transmuxer,
-  NalByteStream = codecs.h264.NalByteStream,
-  nalByteStream,
+    pesHeader,
+    transportPacket,
+    videoPes,
+    adtsFrame,
+    audioPes,
+    timedMetadataPes;
 
-  MP2T_PACKET_LENGTH = mp2t.MP2T_PACKET_LENGTH,
-  H264_STREAM_TYPE = mp2t.H264_STREAM_TYPE,
-  ADTS_STREAM_TYPE = mp2t.ADTS_STREAM_TYPE,
-  METADATA_STREAM_TYPE = mp2t.METADATA_STREAM_TYPE,
-  packetize,
-
-  PAT,
-  generatePMT,
-  PMT,
-  standalonePes,
-  validateTrack,
-  validateTrackFragment,
-
-  pesHeader,
-  transportPacket,
-  videoPes,
-  adtsFrame,
-  audioPes,
-  timedMetadataPes;
+mp4.tools = require('../lib/tools/mp4-inspector');
 
 QUnit.module('MP2T Packet Stream', {
   setup: function() {
@@ -93,7 +87,7 @@ QUnit.test('buffers partial packets', function() {
   var
     datas = [],
     partialPacket1 = new Uint8Array(187),
-    partialPacket2 =  new Uint8Array(189);
+  partialPacket2 = new Uint8Array(189);
 
   partialPacket1[0] = 0x47; // Sync-byte
   partialPacket2[1] = 0x47; // Sync-byte
@@ -365,7 +359,7 @@ generatePMT = function(options) {
         // st:0001 0111 r:000 epid:0 0000 0001 0011
         0x15, 0x00, 0x13,
         // r:0000 esil:0000 0000 0000
-        0x00, 0x00,
+        0x00, 0x00
       ]);
     }
 
@@ -427,7 +421,7 @@ QUnit.test('parse the elementary streams from a program map table', function() {
   QUnit.deepEqual(transportParseStream.programMapTable, packet.programMapTable, 'recorded the PMT');
 });
 
-pesHeader = function (first, pts) {
+pesHeader = function(first, pts) {
   // PES_packet(), Rec. ITU-T H.222.0, Table 2-21
   var result = [
     // pscp:0000 0000 0000 0000 0000 0001
@@ -508,13 +502,12 @@ videoPes = function(data, first, pts) {
     0x00, 0x00, 0x01
   ].concat(data), first, pts);
 };
-standalonePes = videoPes([0xaf, 0x01], true);
 
 /**
  * Helper function to create audio ADTS frame header
  * @param dataLength {number} - the payload byte count
  */
-adtsFrame = function (dataLength) {
+adtsFrame = function(dataLength) {
   var frameLength = dataLength + 7;
   return [
     0xff, 0xf1,                            // no CRC
@@ -1454,7 +1447,8 @@ QUnit.test('holds onto the last GOP and prepends the subsequent push operation w
     nalUnitType: 'pic_parameter_set_rbsp',
     dts: 1,
     pts: 1
-  });  videoSegmentStream.push({
+  });
+  videoSegmentStream.push({
     data: new Uint8Array([0x11, 0x11]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
     dts: 6,
@@ -1624,7 +1618,8 @@ QUnit.test('doesn\'t prepend the last GOP if the next segment has different PPS 
     nalUnitType: 'pic_parameter_set_rbsp',
     dts: 1,
     pts: 1
-  });  videoSegmentStream.push({
+  });
+  videoSegmentStream.push({
     data: new Uint8Array([0x11, 0x11]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
     dts: 6,
@@ -1716,11 +1711,11 @@ QUnit.test('track values from seq_parameter_set_rbsp should be cleared by a flus
   });
   videoSegmentStream.push({
     data: new Uint8Array([0xFF]),
-    nalUnitType: 'access_unit_delimiter_rbsp',
+    nalUnitType: 'access_unit_delimiter_rbsp'
   });
   videoSegmentStream.push({
     data: new Uint8Array([0xFF]),
-    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr'
   });
   videoSegmentStream.push({
     data: new Uint8Array([0xFF]),
@@ -1785,11 +1780,11 @@ QUnit.test('track pps from pic_parameter_set_rbsp should be cleared by a flush',
   });
   videoSegmentStream.push({
     data: new Uint8Array([0xFF]),
-    nalUnitType: 'access_unit_delimiter_rbsp',
+    nalUnitType: 'access_unit_delimiter_rbsp'
   });
   videoSegmentStream.push({
     data: new Uint8Array([0xFF]),
-    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr'
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x01]),
@@ -2217,7 +2212,7 @@ QUnit.test('ensures baseMediaDecodeTime for audio is not negative', function() {
 });
 
 QUnit.test('audio track metadata takes on the value of the last metadata seen', function() {
-  var events = [], boxes;
+  var events = [];
 
   audioSegmentStream.on('data', function(event) {
     events.push(event);
@@ -2280,7 +2275,7 @@ QUnit.test('no options creates combined output', function() {
     0xef, 0x7c, 0x04
   ], false)));
   transmuxer.push(packetize(videoPes([
-      0x05, 0x01 //slice_layer_without_partitioning_rbsp_idr
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
   ], true)));
   transmuxer.flush();
 
@@ -2337,7 +2332,7 @@ QUnit.test('can specify that we want to generate separate audio and video segmen
     0xef, 0x7c, 0x04
   ], false)));
   transmuxer.push(packetize(videoPes([
-      0x05, 0x01 //slice_layer_without_partitioning_rbsp_idr
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
   ], true)));
   transmuxer.flush();
 
@@ -2392,7 +2387,7 @@ QUnit.test('generates a video init segment', function() {
     0xef, 0x7c, 0x04
   ], false)));
   transmuxer.push(packetize(videoPes([
-      0x05, 0x01 //slice_layer_without_partitioning_rbsp_idr
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
   ], true)));
   transmuxer.flush();
 
@@ -2404,7 +2399,6 @@ QUnit.test('generates a video init segment', function() {
   mp4VideoProperties.forEach(function(prop) {
     QUnit.ok(segments[0].info[prop], 'video info has ' + prop);
   });
-
 
   boxes = mp4.tools.inspect(segments[0].data);
   QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
@@ -2518,9 +2512,9 @@ QUnit.test('pipeline dynamically configures itself based on input', function() {
 QUnit.test('reuses audio track object when the pipeline reconfigures itself', function() {
   var boxes, segments = [],
     id3Tag = new Uint8Array(73),
-    streamTimestamp = "com.apple.streaming.transportStreamTimestamp",
+    streamTimestamp = 'com.apple.streaming.transportStreamTimestamp',
     priv = 'PRIV',
-    i;
+    i, adtsPayload;
 
   id3Tag[0] = 73;
   id3Tag[1] = 68;
@@ -2533,7 +2527,7 @@ QUnit.test('reuses audio track object when the pipeline reconfigures itself', fu
   id3Tag[72] = 160;
 
   for (i = 0; i < priv.length; i++) {
-    id3Tag[i+10] = priv.charCodeAt(i);
+    id3Tag[i + 10] = priv.charCodeAt(i);
   }
   for (i = 0; i < streamTimestamp.length; i++) {
     id3Tag[i + 20] = streamTimestamp.charCodeAt(i);
@@ -2556,7 +2550,7 @@ QUnit.test('reuses audio track object when the pipeline reconfigures itself', fu
     0,
     'first segment starts at 0 pts');
 
-  var adtsPayload = new Uint8Array(adtsFrame(2).concat([0x19, 0x47]));
+  adtsPayload = new Uint8Array(adtsFrame(2).concat([0x19, 0x47]));
 
   transmuxer.push(id3Tag);
   transmuxer.push(adtsPayload);
@@ -2574,7 +2568,7 @@ QUnit.test('reuses audio track object when the pipeline reconfigures itself', fu
 });
 
 validateTrack = function(track, metadata) {
-  var mdia, handlerType;
+  var mdia;
   QUnit.equal(track.type, 'trak', 'wrote the track type');
   QUnit.equal(track.boxes.length, 2, 'wrote track children');
   QUnit.equal(track.boxes[0].type, 'tkhd', 'wrote the track header');
@@ -2599,7 +2593,6 @@ validateTrack = function(track, metadata) {
   QUnit.equal(mdia.boxes[0].duration, 0xffffffff, 'the duration is at maximum');
 
   QUnit.equal(mdia.boxes[1].type, 'hdlr', 'wrote the media handler');
-  handlerType = mdia.boxes[1].handlerType;
 
   QUnit.equal(mdia.boxes[2].type, 'minf', 'wrote the media info');
 };
@@ -2736,10 +2729,7 @@ QUnit.test('parses an example mp2t file and generates combined media segments', 
 });
 
 QUnit.test('can be reused for multiple TS segments', function() {
-  var
-    segments = [],
-    sequenceNumber = window.Infinity,
-    i, boxes, mfhd;
+  var segments = [];
 
   transmuxer.on('data', function(segment) {
     if (segment.type === 'combined') {
@@ -2791,9 +2781,9 @@ QUnit.module('NalByteStream', {
   }
 });
 
-QUnit.test('parses nal units with 4-byte start code', function(){
+QUnit.test('parses nal units with 4-byte start code', function() {
   var nalUnits = [];
-  nalByteStream.on('data', function (data) {
+  nalByteStream.on('data', function(data) {
     nalUnits.push(data);
   });
 
@@ -2809,9 +2799,9 @@ QUnit.test('parses nal units with 4-byte start code', function(){
   QUnit.deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF]), 'has the proper payload');
 });
 
-QUnit.test('parses nal units with 3-byte start code', function(){
+QUnit.test('parses nal units with 3-byte start code', function() {
   var nalUnits = [];
-  nalByteStream.on('data', function (data) {
+  nalByteStream.on('data', function(data) {
     nalUnits.push(data);
   });
 
@@ -2843,9 +2833,9 @@ QUnit.test('does not emit empty nal units', function() {
   QUnit.equal(dataTriggerCount, 0, 'emmited no nal units');
 });
 
-QUnit.test('parses multiple nal units', function(){
+QUnit.test('parses multiple nal units', function() {
   var nalUnits = [];
-  nalByteStream.on('data', function (data) {
+  nalByteStream.on('data', function(data) {
     nalUnits.push(data);
   });
 
@@ -2865,9 +2855,9 @@ QUnit.test('parses multiple nal units', function(){
   QUnit.deepEqual(nalUnits[1], new Uint8Array([0x12, 0xDD]), 'has the proper payload');
 });
 
-QUnit.test('parses nal units surrounded by an unreasonable amount of zero-bytes', function(){
+QUnit.test('parses nal units surrounded by an unreasonable amount of zero-bytes', function() {
   var nalUnits = [];
-  nalByteStream.on('data', function (data) {
+  nalByteStream.on('data', function(data) {
     nalUnits.push(data);
   });
 
@@ -2908,9 +2898,9 @@ QUnit.test('parses nal units surrounded by an unreasonable amount of zero-bytes'
   QUnit.deepEqual(nalUnits[1], new Uint8Array([0x12, 0xDD]), 'has the proper payload');
 });
 
-QUnit.test('parses nal units split across multiple packets', function(){
+QUnit.test('parses nal units split across multiple packets', function() {
   var nalUnits = [];
-  nalByteStream.on('data', function (data) {
+  nalByteStream.on('data', function(data) {
     nalUnits.push(data);
   });
 
@@ -2938,7 +2928,7 @@ QUnit.module('FLV - Transmuxer', {
 });
 
 QUnit.test('generates video tags', function() {
-  var segments = [], boxes;
+  var segments = [];
   transmuxer.on('data', function(segment) {
     segments.push(segment);
   });
@@ -2961,7 +2951,7 @@ QUnit.test('generates video tags', function() {
 });
 
 QUnit.test('drops nalUnits at the start of a segment not preceeded by an access_unit_delimiter_rbsp', function() {
-  var segments = [], boxes;
+  var segments = [];
   transmuxer.on('data', function(segment) {
     segments.push(segment);
   });
@@ -2992,7 +2982,7 @@ QUnit.test('drops nalUnits at the start of a segment not preceeded by an access_
 });
 
 QUnit.test('generates an audio tags', function() {
-  var segments = [], boxes;
+  var segments = [];
   transmuxer.on('data', function(segment) {
     segments.push(segment);
   });
@@ -3011,7 +3001,7 @@ QUnit.test('generates an audio tags', function() {
 });
 
 QUnit.test('buffers video samples until flushed', function() {
-  var segments = [], offset, boxes;
+  var segments = [];
   transmuxer.on('data', function(data) {
     segments.push(data);
   });
@@ -3043,7 +3033,7 @@ QUnit.test('parses correct ID3 tag size', function() {
     parser = aacStream.parseId3TagSize;
 
   packetStream[9] = 63;
-  QUnit.equal(parser(packetStream, 0),73, 'ParseID3 correctly parsed a header without a footer');
+  QUnit.equal(parser(packetStream, 0), 73, 'ParseID3 correctly parsed a header without a footer');
 });
 
 QUnit.test('parses correct ADTS Frame size', function() {
@@ -3053,7 +3043,7 @@ QUnit.test('parses correct ADTS Frame size', function() {
   packetStream[3] = 128;
   packetStream[4] = 29;
   packetStream[5] = 255;
-  QUnit.equal(parser(packetStream, 0),239, 'ParseADTS correctly parsed framesize');
+  QUnit.equal(parser(packetStream, 0), 239, 'ParseADTS correctly parsed framesize');
 });
 
 QUnit.test('emits data after receiving push', function() {
@@ -3084,7 +3074,7 @@ QUnit.test('emits data after receiving push', function() {
     }
   });
   aacStream.push(array);
-  QUnit.equal(count,1);
+  QUnit.equal(count, 1);
 });
 
 QUnit.test('continues parsing after corrupted stream', function() {
@@ -3094,7 +3084,7 @@ QUnit.test('continues parsing after corrupted stream', function() {
     adtsCount = 0,
     id3Count = 0;
   aacStream = new AacStream();
-  //an ID3 frame
+  // an ID3 frame
   array[0] = 73;
   array[1] = 68;
   array[2] = 51;
@@ -3110,7 +3100,7 @@ QUnit.test('continues parsing after corrupted stream', function() {
   array[12] = 73;
   array[13] = 86;
 
-  //an atds frame
+  // an atds frame
   array[1020] = 255;
   array[1021] = 241;
   array[1022] = 92;
@@ -3134,6 +3124,6 @@ QUnit.test('continues parsing after corrupted stream', function() {
     }
   });
   aacStream.push(array);
-  QUnit.equal(adtsCount,1);
-  QUnit.equal(id3Count,1);
+  QUnit.equal(adtsCount, 1);
+  QUnit.equal(id3Count, 1);
 });
