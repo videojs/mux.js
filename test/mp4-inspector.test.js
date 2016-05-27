@@ -22,7 +22,6 @@
 var
   mp4 = require('../lib/mp4'),
   QUnit = require('qunit'),
-  //Uint8Array = window.Uint8Array,
   typeBytes = function(type) {
     return [
       type.charCodeAt(0),
@@ -802,7 +801,7 @@ QUnit.test('can parse a trun', function() {
                   hasRedundancy: 1,
                   paddingValue: 7,
                   isNonSyncSample: 1,
-                  degradationPriority: 0xfedc,
+                  degradationPriority: 0xfedc
                 },
                 compositionTimeOffset: 0
               }, {
@@ -877,25 +876,25 @@ QUnit.test('can parse an sdtp', function() {
   }]);
 });
 
-QUnit.test('can parse a sidx', function(){
+QUnit.test('can parse a sidx', function() {
   var data = box('sidx',
-                0x00, // version
-                0x00, 0x00, 0x00, // flags
-                0x00, 0x00, 0x00, 0x02, // reference_ID
-                0x00, 0x00, 0x00, 0x01, // timescale
-                0x01, 0x02, 0x03, 0x04, // earliest_presentation_time
-                0x00, 0x00, 0x00, 0x00, // first_offset
-                0x00, 0x00,             // reserved
-                0x00, 0x02,             // reference_count
-                // first reference
-                0x80, 0x00, 0x00, 0x07, // reference_type(1) + referenced_size(31)
-                0x00, 0x00, 0x00, 0x08, // subsegment_duration
-                0x80, 0x00, 0x00, 0x09, // starts_with_SAP(1) + SAP_type(3) + SAP_delta_time(28)
-                // second reference
-                0x00, 0x00, 0x00, 0x03, // reference_type(1) + referenced_size(31)
-                0x00, 0x00, 0x00, 0x04, // subsegment_duration
-                0x10, 0x00, 0x00, 0x05 // starts_with_SAP(1) + SAP_type(3) + SAP_delta_time(28)
-      );
+                 0x00, // version
+                 0x00, 0x00, 0x00, // flags
+                 0x00, 0x00, 0x00, 0x02, // reference_ID
+                 0x00, 0x00, 0x00, 0x01, // timescale
+                 0x01, 0x02, 0x03, 0x04, // earliest_presentation_time
+                 0x00, 0x00, 0x00, 0x00, // first_offset
+                 0x00, 0x00,             // reserved
+                 0x00, 0x02,             // reference_count
+                 // first reference
+                 0x80, 0x00, 0x00, 0x07, // reference_type(1) + referenced_size(31)
+                 0x00, 0x00, 0x00, 0x08, // subsegment_duration
+                 0x80, 0x00, 0x00, 0x09, // starts_with_SAP(1) + SAP_type(3) + SAP_delta_time(28)
+                 // second reference
+                 0x00, 0x00, 0x00, 0x03, // reference_type(1) + referenced_size(31)
+                 0x00, 0x00, 0x00, 0x04, // subsegment_duration
+                 0x10, 0x00, 0x00, 0x05  // starts_with_SAP(1) + SAP_type(3) + SAP_delta_time(28)
+                );
   QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
               type: 'sidx',
@@ -913,7 +912,7 @@ QUnit.test('can parse a sidx', function(){
                 startsWithSap: true,
                 sapType: 0,
                 sapDeltaTime: 9
-                },{
+                }, {
                 referenceType: 0,
                 referencedSize: 3,
                 subsegmentDuration: 4,
@@ -975,7 +974,7 @@ QUnit.test('can parse a series of boxes', function() {
               majorBrand: 'isom',
               minorVersion: 2,
               compatibleBrands: ['beep', 'boop']
-            },{
+            }, {
               type: 'ftyp',
               size: 4 * 6,
               majorBrand: 'isom',

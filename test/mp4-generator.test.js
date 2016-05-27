@@ -352,7 +352,7 @@ QUnit.test('generates an audio moov', function() {
 QUnit.test('generates a sound hdlr', function() {
   var boxes, hdlr,
     data = mp4.generator.moov([{
-      duration:100,
+      duration: 100,
       type: 'audio'
     }]);
 

@@ -20,7 +20,7 @@
     "build:flv": "browserify -s muxjs lib/flv/index.js -o dist/mux-flv.js",
     "build:js": "browserify -s muxjs lib/index.js -o dist/mux.js",
     "build:test": "browserify test/*.test.js -o dist-test/mux.js",
-    "lint": "# eslint \"lib/**\" \"test/**\"",
+    "lint": "eslint \"lib/**/*.js\" \"test/**/*.js\"",
     "uglify": "npm-run-all -p uglify:*",
     "uglify:mp4": "uglifyjs --mangle --compress -o dist/mux-mp4.min.js dist/mux-mp4.js",
     "uglify:flv": "uglifyjs --mangle --compress -o dist/mux-flv.min.js dist/mux-flv.js",

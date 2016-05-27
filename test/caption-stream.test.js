@@ -30,7 +30,7 @@ QUnit.test('parses SEIs messages larger than 255 bytes', function() {
   data[7] = 0x41;
   data[8] = 0x39;
   data[9] = 0x34; // user_identifier, "GA94"
-  data[10] = 0x03; //user_data_type_code, 0x03 is cc_data
+  data[10] = 0x03; // user_data_type_code, 0x03 is cc_data
   data[11] = 0xc1; // process_cc_data, cc_count
   data[12] = 0xff; // reserved
   data[13] = 0xfc; // cc_valid, cc_type (608, field 1)
@@ -65,7 +65,7 @@ QUnit.test('parses SEIs containing multiple messages', function() {
   data[12] = 0x41;
   data[13] = 0x39;
   data[14] = 0x34; // user_identifier, "GA94"
-  data[15] = 0x03; //user_data_type_code, 0x03 is cc_data
+  data[15] = 0x03; // user_data_type_code, 0x03 is cc_data
   data[16] = 0xc1; // process_cc_data, cc_count
   data[17] = 0xff; // reserved
   data[18] = 0xfc; // cc_valid, cc_type (608, field 1)
@@ -111,7 +111,7 @@ QUnit.test('parses a minimal example of caption data', function() {
       181, // itu_t_t35_country_code
       0x00, 0x31, // itu_t_t35_provider_code
       0x47, 0x41, 0x39, 0x34, // user_identifier, "GA94"
-      0x03, //user_data_type_code, 0x03 is cc_data
+      0x03, // user_data_type_code, 0x03 is cc_data
 
       // 110 00001
       0xc1, // process_cc_data, cc_count
@@ -259,7 +259,7 @@ QUnit.test('recognizes the Erase Displayed Memory command', function() {
     // EOC, End of Caption. Display '34'
     { pts: 3 * 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
-    { ccData: 0x1420 , type: 0},
+    { ccData: 0x1420, type: 0},
     // EOC, End of Caption
     { pts: 4 * 1000, ccData: 0x142f, type: 0 }
   ];
@@ -408,7 +408,7 @@ QUnit.test('roll-up display mode', function() {
   });
 
   [ // RU2, roll-up captions 2 rows
-    { ccData: 0x1425 , type: 0},
+    { ccData: 0x1425, type: 0},
     // '01'
     {
       pts: 1 * 1000,

@@ -536,7 +536,7 @@ QUnit.test('triggers special event after parsing a timestamp ID3 tag', function(
   array[72] = 160;
 
   for (i = 0; i < priv.length; i++) {
-    array[i+10] = priv.charCodeAt(i);
+    array[i + 10] = priv.charCodeAt(i);
   }
   for (i = 0; i < streamTimestamp.length; i++) {
     array[i + 20] = streamTimestamp.charCodeAt(i);
