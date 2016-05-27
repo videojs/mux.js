@@ -512,7 +512,7 @@ QUnit.test('can parse TXXX frames in web worker', function(assert) {
 
 QUnit.test('triggers special event after parsing a timestamp ID3 tag', function() {
   var array = new Uint8Array(73),
-    streamTimestamp = "com.apple.streaming.transportStreamTimestamp",
+    streamTimestamp = 'com.apple.streaming.transportStreamTimestamp',
     priv = 'PRIV',
     count = 0,
     metadataStream,
