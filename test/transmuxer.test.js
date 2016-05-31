@@ -87,7 +87,7 @@ QUnit.test('buffers partial packets', function() {
   var
     datas = [],
     partialPacket1 = new Uint8Array(187),
-  partialPacket2 = new Uint8Array(189);
+    partialPacket2 = new Uint8Array(189);
 
   partialPacket1[0] = 0x47; // Sync-byte
   partialPacket2[1] = 0x47; // Sync-byte
@@ -2514,7 +2514,8 @@ QUnit.test('reuses audio track object when the pipeline reconfigures itself', fu
     id3Tag = new Uint8Array(73),
     streamTimestamp = 'com.apple.streaming.transportStreamTimestamp',
     priv = 'PRIV',
-    i, adtsPayload;
+    i,
+    adtsPayload;
 
   id3Tag[0] = 73;
   id3Tag[1] = 68;
