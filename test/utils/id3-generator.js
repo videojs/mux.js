@@ -66,7 +66,7 @@ id3Frame = function(type) {
   return result;
 };
 
-module.exports =  {
+module.exports = {
   stringToInts: stringToInts,
   stringToCString: stringToCString,
   id3Tag: id3Tag,

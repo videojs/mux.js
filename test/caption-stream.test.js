@@ -30,7 +30,7 @@ QUnit.test('parses SEIs messages larger than 255 bytes', function() {
   data[7] = 0x41;
   data[8] = 0x39;
   data[9] = 0x34; // user_identifier, "GA94"
-  data[10] = 0x03; //user_data_type_code, 0x03 is cc_data
+  data[10] = 0x03; // user_data_type_code, 0x03 is cc_data
   data[11] = 0xc1; // process_cc_data, cc_count
   data[12] = 0xff; // reserved
   data[13] = 0xfc; // cc_valid, cc_type (608, field 1)
@@ -65,7 +65,7 @@ QUnit.test('parses SEIs containing multiple messages', function() {
   data[12] = 0x41;
   data[13] = 0x39;
   data[14] = 0x34; // user_identifier, "GA94"
-  data[15] = 0x03; //user_data_type_code, 0x03 is cc_data
+  data[15] = 0x03; // user_data_type_code, 0x03 is cc_data
   data[16] = 0xc1; // process_cc_data, cc_count
   data[17] = 0xff; // reserved
   data[18] = 0xfc; // cc_valid, cc_type (608, field 1)
@@ -111,7 +111,7 @@ QUnit.test('parses a minimal example of caption data', function() {
       181, // itu_t_t35_country_code
       0x00, 0x31, // itu_t_t35_provider_code
       0x47, 0x41, 0x39, 0x34, // user_identifier, "GA94"
-      0x03, //user_data_type_code, 0x03 is cc_data
+      0x03, // user_data_type_code, 0x03 is cc_data
 
       // 110 00001
       0xc1, // process_cc_data, cc_count
@@ -183,19 +183,19 @@ QUnit.test('converts non-standard character codes to ASCII', function() {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // ASCII exceptions
-    { ccData: 0x2a5c, type:0 },
-    { ccData: 0x5e5f, type:0 },
-    { ccData: 0x607b, type:0 },
-    { ccData: 0x7c7d, type:0 },
-    { ccData: 0x7e7f, type:0 },
+    { ccData: 0x2a5c, type: 0 },
+    { ccData: 0x5e5f, type: 0 },
+    { ccData: 0x607b, type: 0 },
+    { ccData: 0x7c7d, type: 0 },
+    { ccData: 0x7e7f, type: 0 },
     // EOC, End of Caption
-    { pts: 1000, ccData: 0x142f, type:0 },
+    { pts: 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // EOC, End of Caption, clear the display
-    { pts: 10 * 1000, ccData: 0x142f, type:0 }
+    { pts: 10 * 1000, ccData: 0x142f, type: 0 }
   ];
   captions = [];
   cea608Stream.on('data', function(caption) {
@@ -213,15 +213,15 @@ QUnit.test('pop-on mode', function() {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // 'hi'
-    { ccData: characters('hi'), type:0 },
+    { ccData: characters('hi'), type: 0 },
     // EOC, End of Caption. Finished transmitting, begin display
-    { pts: 1000, ccData: 0x142f, type:0 },
+    { pts: 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // EOC, End of Caption. End display
-    { pts: 10 * 1000, ccData: 0x142f, type:0 }
+    { pts: 10 * 1000, ccData: 0x142f, type: 0 }
   ];
   captions = [];
 
@@ -243,25 +243,25 @@ QUnit.test('recognizes the Erase Displayed Memory command', function() {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // '01'
-    { ccData: characters('01'), type:0 },
+    { ccData: characters('01'), type: 0 },
     // EOC, End of Caption. Finished transmitting, display '01'
-    { pts: 1 * 1000, ccData: 0x142f, type:0 },
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
     // EDM, Erase Displayed Memory
-    { pts: 1.5 * 1000, ccData: 0x142c, type:0 },
+    { pts: 1.5 * 1000, ccData: 0x142c, type: 0 },
     // '23'
-    { ccData: characters('23'), type:0 },
+    { ccData: characters('23'), type: 0 },
     // EOC, End of Caption. Display '23'
-    { pts: 2 * 1000, ccData: 0x142f, type:0 },
+    { pts: 2 * 1000, ccData: 0x142f, type: 0 },
     // '34'
-    { ccData: characters('34'), type:0 },
+    { ccData: characters('34'), type: 0 },
     // EOC, End of Caption. Display '34'
-    { pts: 3 * 1000, ccData: 0x142f, type:0 },
+    { pts: 3 * 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
-    { ccData: 0x1420 , type:0},
+    { ccData: 0x1420, type: 0},
     // EOC, End of Caption
-    { pts: 4 * 1000, ccData: 0x142f, type:0 }
+    { pts: 4 * 1000, ccData: 0x142f, type: 0 }
   ];
   captions = [];
 
@@ -297,18 +297,18 @@ QUnit.test('backspaces are applied to non-displayed memory', function() {
 
   packets = [
     // RCL, resume caption loading
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // '01'
-    { ccData: characters('01'), type:0 },
+    { ccData: characters('01'), type: 0 },
     // backspace
-    { ccData: 0x1421, type:0 },
-    { ccData: characters('23'), type:0 },
+    { ccData: 0x1421, type: 0 },
+    { ccData: characters('23'), type: 0 },
     // EOC, End of Caption
-    { pts: 1 * 1000, ccData: 0x142f, type:0 },
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // EOC, End of Caption
-    { pts: 3 * 1000, ccData: 0x142f, type:0 }
+    { pts: 3 * 1000, ccData: 0x142f, type: 0 }
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
@@ -340,18 +340,18 @@ QUnit.test('recognizes the Erase Non-Displayed Memory command', function() {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // '01'
-    { ccData: characters('01'), type:0 },
+    { ccData: characters('01'), type: 0 },
     // ENM, Erase Non-Displayed Memory
-    { ccData: 0x142e, type:0 },
-    { ccData: characters('23'), type:0 },
+    { ccData: 0x142e, type: 0 },
+    { ccData: characters('23'), type: 0 },
     // EOC, End of Caption. Finished transmitting, display '23'
-    { pts: 1 * 1000, ccData: 0x142f, type:0 },
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // EOC, End of Caption
-    { pts: 2 * 1000, ccData: 0x142f, type:0 }
+    { pts: 2 * 1000, ccData: 0x142f, type: 0 }
   ];
   captions = [];
 
@@ -375,17 +375,17 @@ QUnit.test('ignores unrecognized commands', function() {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // a row-9 indent 28 underline, which is not supported
-    { ccData: 0x1f7f, type:0 },
+    { ccData: 0x1f7f, type: 0 },
     // '01'
-    { ccData: characters('01'), type:0 },
+    { ccData: characters('01'), type: 0 },
     // EOC, End of Caption
-    { pts: 1 * 1000, ccData: 0x142f, type:0 },
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
-    { ccData: 0x1420, type:0 },
+    { ccData: 0x1420, type: 0 },
     // EOC, End of Caption
-    { pts: 2 * 1000, ccData: 0x142f, type:0 }
+    { pts: 2 * 1000, ccData: 0x142f, type: 0 }
   ];
   captions = [];
   cea608Stream.on('data', function(caption) {
@@ -408,15 +408,15 @@ QUnit.test('roll-up display mode', function() {
   });
 
   [ // RU2, roll-up captions 2 rows
-    { ccData: 0x1425 , type:0},
+    { ccData: 0x1425, type: 0},
     // '01'
     {
       pts: 1 * 1000,
       ccData: characters('01'),
-      type:0
+      type: 0
     },
     // CR, carriage return
-    { pts: 3 * 1000, ccData: 0x142d, type:0 }
+    { pts: 3 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'detected one caption');
@@ -428,15 +428,15 @@ QUnit.test('roll-up display mode', function() {
   captions = [];
 
   [ // RU4, roll-up captions 4 rows
-    { ccdata: 0x1427, type:0 },
+    { ccdata: 0x1427, type: 0 },
     // '23'
     {
       pts: 4 * 1000,
       ccData: characters('23'),
-      type:0
+      type: 0
     },
     // CR
-    { pts: 5 * 1000, ccData: 0x142d, type:0 }
+    { pts: 5 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 2, 'detected another caption');
@@ -459,15 +459,15 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
   });
 
   [ // RU2, roll-up captions 2 rows
-    { ccData: 0x1425, type:0 },
+    { ccData: 0x1425, type: 0 },
     // '01'
     {
       pts: 0 * 1000,
       ccData: characters('01'),
-      type:0
+      type: 0
     },
     // CR, carriage return
-    { pts: 1 * 1000, ccData: 0x142d, type:0 }
+    { pts: 1 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'detected a caption');
@@ -482,10 +482,10 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
     {
       pts: 2 * 1000,
       ccData: characters('23'),
-      type:0
+      type: 0
     },
     // CR, carriage return
-    { pts: 3 * 1000, ccData: 0x142d, type:0 }
+    { pts: 3 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 2, 'detected another caption');
@@ -505,10 +505,10 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
     {
       pts: 4 * 1000,
       ccData: characters('45'),
-      type:0
+      type: 0
     },
     // CR, carriage return
-    { pts: 5 * 1000, ccData: 0x142d, type:0 }
+    { pts: 5 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 2, 'detected two captions');
@@ -531,39 +531,39 @@ QUnit.test('the roll-up count can be changed on-the-fly', function() {
   });
 
   [ // RU2, roll-up captions 2 rows
-    { ccData: 0x1425, type:0 },
+    { ccData: 0x1425, type: 0 },
     // '01'
     {
       pts: 0 * 1000,
       ccData: characters('01'),
-      type:0
+      type: 0
     },
     // CR, carriage return
-    { pts: 1 * 1000, ccData: 0x142d, type:0 }
+    { pts: 1 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   captions = [];
 
   [ // RU3, roll-up captions 3 rows
-    { ccData: 0x1426, type:0 },
+    { ccData: 0x1426, type: 0 },
     // CR, carriage return
-    { pts: 2 * 1000, ccData: 0x142d, type:0 }
+    { pts: 2 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'still displaying a caption');
   captions = [];
 
   [ // RU4, roll-up captions 4 rows
-    { ccData: 0x1427, type:0 },
+    { ccData: 0x1427, type: 0 },
     // CR, carriage return
-    { pts: 3 * 1000, ccData: 0x142d, type:0 }
+    { pts: 3 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'still displaying a caption');
   captions = [];
 
   // RU3, roll-up captions 3 rows
-  cea608Stream.push({ ccdata: 0x1426, type:0 });
+  cea608Stream.push({ ccdata: 0x1426, type: 0 });
   QUnit.equal(captions.length, 0, 'cleared the caption');
 });
 
@@ -574,22 +574,22 @@ QUnit.test('backspaces are reflected in the generated captions', function() {
   });
 
   [ // RU2, roll-up captions 2 rows
-    { ccData: 0x1425, type:0 },
+    { ccData: 0x1425, type: 0 },
     // '01'
     {
       pts: 0 * 1000,
       ccData: characters('01'),
-      type:0
+      type: 0
     },
     // backspace
-    { ccData: 0x1421, type:0 },
+    { ccData: 0x1421, type: 0 },
     {
       pts: 1 * 1000,
       ccData: characters('23'),
-      type:0
+      type: 0
     },
     // CR, carriage return
-    { pts: 1 * 1000, ccData: 0x142d, type:0 }
+    { pts: 1 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'detected a caption');
@@ -603,22 +603,22 @@ QUnit.test('backspaces can remove a caption entirely', function() {
   });
 
   [ // RU2, roll-up captions 2 rows
-    { ccData: 0x1425, type:0 },
+    { ccData: 0x1425, type: 0 },
     // '01'
     {
       pts: 0 * 1000,
       ccData: characters('01'),
-      type:0
+      type: 0
     },
     // backspace
-    { ccData: 0x1421, type:0 },
+    { ccData: 0x1421, type: 0 },
     // Send another command so that the backspace isn't
     // ignored as a duplicate command
-    { ccData: 0x1425, type:0 },
+    { ccData: 0x1425, type: 0 },
     // backspace
-    { ccData: 0x1421, type:0 },
+    { ccData: 0x1421, type: 0 },
     // CR, carriage return
-    { pts: 1 * 1000, ccData: 0x142d, type:0 }
+    { pts: 1 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 0, 'no caption emitted');
@@ -631,27 +631,27 @@ QUnit.test('a second identical control code immediately following the first is i
   });
 
   [ // RU2, roll-up captions 2 rows
-    { ccData: 0x1425, type:0 },
+    { ccData: 0x1425, type: 0 },
     // '01'
     {
       pts: 0 * 1000,
       ccData: characters('01'),
-      type:0
+      type: 0
     },
     // '02'
     {
       pts: 1 * 1000,
       ccData: characters('02'),
-      type:0
+      type: 0
     },
     // backspace
-    { ccData: 0x1421, type:0 },
+    { ccData: 0x1421, type: 0 },
     // backspace
-    { ccData: 0x1421, type:0 }, // duplicate is ignored
+    { ccData: 0x1421, type: 0 }, // duplicate is ignored
     // backspace
-    { ccData: 0x1421, type:0 },
+    { ccData: 0x1421, type: 0 },
     // CR, carriage return
-    { pts: 2 * 1000, ccData: 0x142d, type:0 }
+    { pts: 2 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'caption emitted');
@@ -665,23 +665,23 @@ QUnit.test('preamble address codes are converted into spaces', function() {
   });
 
   [ // RU2, roll-up captions 2 rows
-    { ccData: 0x1425, type:0 },
+    { ccData: 0x1425, type: 0 },
     // '01'
     {
       pts: 0 * 1000,
       ccData: characters('01'),
-      type:0
+      type: 0
     },
     // PAC: row 15, indent 0
-    { ccData: 0x1470, type:0 },
+    { ccData: 0x1470, type: 0 },
     // '02'
     {
       pts: 1 * 1000,
       ccData: characters('02'),
-      type:0
+      type: 0
     },
     // CR, carriage return
-    { pts: 2 * 1000, ccData: 0x142d, type:0 }
+    { pts: 2 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'caption emitted');
@@ -695,27 +695,27 @@ QUnit.test('backspaces stop at the beginning of the line', function() {
   });
 
   [ // RU2, roll-up captions 2 rows
-    { ccData: 0x1425, type:0 },
+    { ccData: 0x1425, type: 0 },
     // '01'
     {
       pts: 0 * 1000,
       ccData: characters('01'),
-      type:0
+      type: 0
     },
     // backspace
-    { ccData: 0x1421, type:0 },
+    { ccData: 0x1421, type: 0 },
     // Send another command so that the backspace isn't
     // ignored as a duplicate command
-    { ccData: 0x1425, type:0 },
+    { ccData: 0x1425, type: 0 },
     // backspace
-    { ccData: 0x1421, type:0 },
+    { ccData: 0x1421, type: 0 },
     // Send another command so that the backspace isn't
     // ignored as a duplicate command
-    { ccData: 0x1425, type:0 },
+    { ccData: 0x1425, type: 0 },
     // backspace
-    { ccData: 0x1421, type:0 },
+    { ccData: 0x1421, type: 0 },
     // CR, carriage return
-    { pts: 1 * 1000, ccData: 0x142d, type:0 }
+    { pts: 1 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 0, 'no caption emitted');
@@ -739,4 +739,3 @@ QUnit.test('segment with multiple caption channels, we only parse 0', function()
   QUnit.equal(captions[1].text, 'IT\'S NOT A THREAT TO ANYBODY.' + String.fromCharCode(0x00), 'parsed second caption correctly');
   QUnit.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN IF WE DON\'T HAVE TO.', 'parsed second caption correctly');
 });
-

@@ -66,7 +66,7 @@ QUnit.test('parses simple ID3 metadata out of PES packets', function() {
     // extended header
     0x00, 0x00, 0x00, 0x06, // extended header size. no CRC
     0x00, 0x00,             // extended flags
-    0x00, 0x00, 0x00, 0x02, // size of padding
+    0x00, 0x00, 0x00, 0x02  // size of padding
 
     // frame 0
     // http://id3.org/id3v2.3.0#User_defined_text_information_frame
@@ -486,8 +486,7 @@ QUnit.test('can parse PRIV frames in web worker', function(assert) {
 });
 
 QUnit.test('can parse TXXX frames in web worker', function(assert) {
-  var payload = stringToInts('arbitrary'),
-      worker = webworkify(metadataStreamTestWorker),
+  var worker = webworkify(metadataStreamTestWorker),
       done = assert.async();
 
   worker.addEventListener('message', function(e) {
@@ -513,8 +512,7 @@ QUnit.test('can parse TXXX frames in web worker', function(assert) {
 
 QUnit.test('triggers special event after parsing a timestamp ID3 tag', function() {
   var array = new Uint8Array(73),
-    streamTimestamp = "com.apple.streaming.transportStreamTimestamp",
-    id3 = 'ID3',
+    streamTimestamp = 'com.apple.streaming.transportStreamTimestamp',
     priv = 'PRIV',
     count = 0,
     metadataStream,
@@ -538,7 +536,7 @@ QUnit.test('triggers special event after parsing a timestamp ID3 tag', function(
   array[72] = 160;
 
   for (i = 0; i < priv.length; i++) {
-    array[i+10] = priv.charCodeAt(i);
+    array[i + 10] = priv.charCodeAt(i);
   }
   for (i = 0; i < streamTimestamp.length; i++) {
     array[i + 20] = streamTimestamp.charCodeAt(i);
