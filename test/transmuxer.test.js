@@ -2200,7 +2200,7 @@ QUnit.test('generates video properties', function() {
   QUnit.equal(segments[0].type, 'video', 'video is the segment type');
   QUnit.ok(segments[0].info, 'video info is alongside video segments/bytes');
 
-  QUnit.ok(segments[0].serializedTracks, 'contains serialized tracks');
+  QUnit.ok(segments[0].tracks, 'contains tracks');
 
   mp4VideoProperties.forEach(function(prop) {
     QUnit.ok(segments[0].info[prop], 'video info has ' + prop);
@@ -2229,7 +2229,7 @@ QUnit.test('generates audio properties', function() {
   QUnit.ok(segments[0].data, 'wrote data in the init segment');
   QUnit.equal(segments[0].type, 'audio', 'audio is the segment type');
   QUnit.ok(segments[0].info, 'audio info is alongside audio segments/bytes');
-  QUnit.ok(segments[0].serializedTracks, 'contains serialized tracks');
+  QUnit.ok(segments[0].tracks, 'contains tracks');
   mp4AudioProperties.forEach(function(prop) {
     QUnit.ok(segments[0].info[prop], 'audio info has ' + prop);
   });
