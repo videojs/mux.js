@@ -436,29 +436,18 @@ pesHeader = function(first, pts) {
     (first ? 0x01 : 0x00) + (pts ? 0x05 : 0x00)
   ];
 
-  // Only store 15 bits of the PTS for QUnit.testing purposes
   if (pts) {
-    // result.push(0x21);
-    // result.push(0x00);
-    // result.push(0x01);
-    // result.push((pts & 0x7F80) >>> 7);
-    // result.push(((pts & 0x7F) << 1) | 1);
+    var pts32 = Math.floor(pts / 2), // right shift by 1
+      leftMostBit = ((pts32 & 0x80000000) >>> 31) & 0x01,
+      firstThree;
 
-    var pts32 = Math.floor(pts / 2); // right shift by 1
-    var leftMostBit = ((pts32 & 0x80000000) >>> 31) & 0x01;
     pts = pts & 0xffffffff;        // remove left most bit
-
-    var firstly = (leftMostBit << 3) | (((pts & 0xc0000000) >>> 29) & 0x06) | 0x01;
-    var last =  ((pts << 1) | 0x01) & 0xff;     // bottom 7 bits, last push
-    var secondLast = (pts >>> 7) & 0xff;    // bottom 15, second last push
-    var thirdLast = ((pts >>> 14) | 0x01) & 0xff;
-    var fourthLast = (pts >>> 22) & 0xff;
-
-    result.push((0x2 << 4) | firstly);
-    result.push(fourthLast);
-    result.push(thirdLast);
-    result.push(secondLast);
-    result.push(last);
+    firstThree = (leftMostBit << 3) | (((pts & 0xc0000000) >>> 29) & 0x06) | 0x01;
+    result.push((0x2 << 4) | firstThree);
+    result.push((pts >>> 22) & 0xff);
+    result.push(((pts >>> 14) | 0x01) & 0xff);
+    result.push((pts >>> 7) & 0xff);
+    result.push(((pts << 1) | 0x01) & 0xff);
   }
 
   if (first) {
