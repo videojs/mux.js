@@ -438,11 +438,27 @@ pesHeader = function(first, pts) {
 
   // Only store 15 bits of the PTS for QUnit.testing purposes
   if (pts) {
-    result.push(0x21);
-    result.push(0x00);
-    result.push(0x01);
-    result.push((pts & 0x7F80) >>> 7);
-    result.push(((pts & 0x7F) << 1) | 1);
+    // result.push(0x21);
+    // result.push(0x00);
+    // result.push(0x01);
+    // result.push((pts & 0x7F80) >>> 7);
+    // result.push(((pts & 0x7F) << 1) | 1);
+
+    var pts32 = Math.floor(pts / 2); // right shift by 1
+    var leftMostBit = ((pts32 & 0x80000000) >>> 31) & 0x01;
+    pts = pts & 0xffffffff;        // remove left most bit
+
+    var firstly = (leftMostBit << 3) | (((pts & 0xc0000000) >>> 29) & 0x06) | 0x01;
+    var last =  ((pts << 1) | 0x01) & 0xff;     // bottom 7 bits, last push
+    var secondLast = (pts >>> 7) & 0xff;    // bottom 15, second last push
+    var thirdLast = ((pts >>> 14) | 0x01) & 0xff;
+    var fourthLast = (pts >>> 22) & 0xff;
+
+    result.push((0x2 << 4) | firstly);
+    result.push(fourthLast);
+    result.push(thirdLast);
+    result.push(secondLast);
+    result.push(last);
   }
 
   if (first) {
@@ -613,6 +629,53 @@ QUnit.test('parses standalone program stream packets', function() {
   QUnit.equal(packets[0].type, 'audio', 'identified audio data');
   QUnit.equal(packets[0].data.byteLength, packetData.length, 'parsed the correct payload size');
   QUnit.equal(packets[0].pts, 7, 'correctly parsed the pts value');
+});
+
+QUnit.test('Correctly rollsover PTS', function() {
+  var
+    packets = [],
+    packetData = [0x01, 0x02],
+    pesHeadOne = pesHeader(false, Math.pow(2, 33) - 400),
+    pesHeadTwo = pesHeader(false, Math.pow(2, 33) - 100),
+    pesHeadThree = pesHeader(false, Math.pow(2, 33)),
+    pesHeadFour = pesHeader(false, 50);
+
+  elementaryStream.on('data', function(packet) {
+    packets.push(packet);
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadOne.concat(packetData))
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadTwo.concat(packetData))
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadThree.concat(packetData))
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadFour.concat(packetData))
+  });
+  elementaryStream.flush();
+
+  QUnit.equal(packets.length, 4, 'built four packets');
+  QUnit.equal(packets[0].type, 'audio', 'identified audio data');
+  QUnit.equal(packets[0].data.byteLength, packetData.length, 'parsed the correct payload size');
+  QUnit.equal(packets[0].pts, Math.pow(2, 33) - 400, 'correctly parsed the pts value');
+  QUnit.equal(packets[1].pts, Math.pow(2, 33) - 100, 'correctly parsed the pts value');
+  QUnit.equal(packets[2].pts, Math.pow(2, 33), 'correctly parsed the pts value');
+  QUnit.equal(packets[3].pts, Math.pow(2, 33) + 50, 'correctly parsed the rollover pts value');
 });
 
 QUnit.test('aggregates program stream packets from the transport stream', function() {
