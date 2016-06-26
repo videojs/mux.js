@@ -620,7 +620,7 @@ QUnit.test('parses standalone program stream packets', function() {
   QUnit.equal(packets[0].pts, 7, 'correctly parsed the pts value');
 });
 
-QUnit.test('Correctly rollsover PTS', function() {
+QUnit.test('Correctly parses rollover PTS', function() {
   var
     packets = [],
     packetData = [0x01, 0x02],
@@ -662,9 +662,52 @@ QUnit.test('Correctly rollsover PTS', function() {
   QUnit.equal(packets[0].type, 'audio', 'identified audio data');
   QUnit.equal(packets[0].data.byteLength, packetData.length, 'parsed the correct payload size');
   QUnit.equal(packets[0].pts, Math.pow(2, 33) - 400, 'correctly parsed the pts value');
-  QUnit.equal(packets[1].pts, Math.pow(2, 33) - 100, 'correctly parsed the pts value');
-  QUnit.equal(packets[2].pts, Math.pow(2, 33), 'correctly parsed the pts value');
+  QUnit.equal(packets[1].pts, Math.pow(2, 33) - 100, 'Does not rollover on minor change');
+  QUnit.equal(packets[2].pts, Math.pow(2, 33), 'correctly parses the max pts value');
   QUnit.equal(packets[3].pts, Math.pow(2, 33) + 50, 'correctly parsed the rollover pts value');
+});
+
+QUnit.test('Correctly parses multiple PTS rollovers', function() {
+  var
+    packets = [],
+    packetData = [0x01, 0x02],
+    pesArray = [pesHeader(false, 1),
+                pesHeader(false, Math.floor(Math.pow(2, 33) * (1 / 3))),
+                pesHeader(false, Math.floor(Math.pow(2, 33) * (2 / 3))),
+                pesHeader(false, 1),
+                pesHeader(false, Math.floor(Math.pow(2, 33) * (1 / 3))),
+                pesHeader(false, Math.floor(Math.pow(2, 33) * (2 / 3))),
+                pesHeader(false, 1),
+                pesHeader(false, Math.floor(Math.pow(2, 33) * (1 / 3))),
+                pesHeader(false, Math.floor(Math.pow(2, 33) * (2 / 3))),
+                pesHeader(false, 1)];
+
+  elementaryStream.on('data', function(packet) {
+    packets.push(packet);
+  });
+
+  while (pesArray.length > 0) {
+    elementaryStream.push({
+      type: 'pes',
+      streamType: ADTS_STREAM_TYPE,
+      payloadUnitStartIndicator: true,
+      data: new Uint8Array(pesArray.shift().concat(packetData))
+    });
+  }
+
+  elementaryStream.flush();
+
+  QUnit.equal(packets.length, 10, 'built ten packets');
+  QUnit.equal(packets[0].pts, 1, 'correctly parsed the pts value');
+  QUnit.equal(packets[1].pts, Math.floor(Math.pow(2, 33) * (1 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[2].pts, Math.floor(Math.pow(2, 33) * (2 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[3].pts, Math.pow(2, 33) + 1, 'correctly parsed the pts value');
+  QUnit.equal(packets[4].pts, Math.pow(2, 33) + Math.floor(Math.pow(2, 33) * (1 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[5].pts, Math.pow(2, 33) + Math.floor(Math.pow(2, 33) * (2 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[6].pts, (2 * Math.pow(2, 33)) + 1, 'correctly parsed the pts value');
+  QUnit.equal(packets[7].pts, (2 * Math.pow(2, 33)) + Math.floor(Math.pow(2, 33) * (1 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[8].pts, (2 * Math.pow(2, 33)) + Math.floor(Math.pow(2, 33) * (2 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[9].pts, (3 * Math.pow(2, 33)) + 1, 'correctly parsed the pts value');
 });
 
 QUnit.test('aggregates program stream packets from the transport stream', function() {
