@@ -667,6 +667,60 @@ QUnit.test('Correctly parses rollover PTS', function() {
   QUnit.equal(packets[3].pts, Math.pow(2, 33) + 50, 'correctly parsed the rollover pts value');
 });
 
+QUnit.test('Resets rollover PTS on discontinuity', function() {
+  var
+    packets = [],
+    packetData = [0x01, 0x02],
+    pesHeadOne = pesHeader(false, Math.pow(2, 33) - 400),
+    pesHeadTwo = pesHeader(false, Math.pow(2, 33) - 100),
+    pesHeadThree = pesHeader(false, Math.pow(2, 33)),
+    pesHeadFour = pesHeader(false, 50),
+    pesHeadFive = pesHeader(false, 50);
+
+  elementaryStream.on('data', function(packet) {
+    packets.push(packet);
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadOne.concat(packetData))
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadTwo.concat(packetData))
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadThree.concat(packetData))
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadFour.concat(packetData))
+  });
+  elementaryStream.flush();
+  elementaryStream.trigger('discontinuity');
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadFive.concat(packetData))
+  });
+  elementaryStream.flush();
+
+  QUnit.equal(packets[0].pts, Math.pow(2, 33) - 400, 'correctly parsed the pts value');
+  QUnit.equal(packets[1].pts, Math.pow(2, 33) - 100, 'Does not rollover on minor change');
+  QUnit.equal(packets[2].pts, Math.pow(2, 33), 'correctly parses the max pts value');
+  QUnit.equal(packets[3].pts, Math.pow(2, 33) + 50, 'correctly parsed the rollover pts value');
+  QUnit.equal(packets[4].pts, 50, 'Reset rollover on discontinuity');
+});
+
 QUnit.test('Correctly parses multiple PTS rollovers', function() {
   var
     packets = [],
