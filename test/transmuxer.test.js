@@ -440,11 +440,11 @@ pesHeader = function(first, pts) {
 
   // Only store 15 bits of the PTS for QUnit.testing purposes
   if (pts) {
-    var 
+    var
       pts32 = Math.floor(pts / 2), // right shift by 1
       leftMostBit = ((pts32 & 0x80000000) >>> 31) & 0x01,
       firstThree;
- 
+
     pts = pts & 0xffffffff;        // remove left most bit
     firstThree = (leftMostBit << 3) | (((pts & 0xc0000000) >>> 29) & 0x06) | 0x01;
     result.push((0x2 << 4) | firstThree);
@@ -888,7 +888,7 @@ QUnit.test('drops packets with unknown stream types', function() {
 
 QUnit.module('MP2T TSCorrectionStream', {
   setup: function() {
-    tsCorrectionStream = new TSCorrectionStream();
+    tsCorrectionStream = new TSCorrectionStream('audio');
     elementaryStream = new ElementaryStream();
     elementaryStream.pipe(tsCorrectionStream);
   }
@@ -896,11 +896,12 @@ QUnit.module('MP2T TSCorrectionStream', {
 
 QUnit.test('Correctly parses rollover PTS', function() {
   var
+    max_ts = 8589934592,
     packets = [],
     packetData = [0x01, 0x02],
-    pesHeadOne = pesHeader(false, Math.pow(2, 33) - 400),
-    pesHeadTwo = pesHeader(false, Math.pow(2, 33) - 100),
-    pesHeadThree = pesHeader(false, Math.pow(2, 33)),
+    pesHeadOne = pesHeader(false, max_ts - 400),
+    pesHeadTwo = pesHeader(false, max_ts - 100),
+    pesHeadThree = pesHeader(false, max_ts),
     pesHeadFour = pesHeader(false, 50);
 
   tsCorrectionStream.on('data', function(packet) {
@@ -935,25 +936,26 @@ QUnit.test('Correctly parses rollover PTS', function() {
   QUnit.equal(packets.length, 4, 'built four packets');
   QUnit.equal(packets[0].type, 'audio', 'identified audio data');
   QUnit.equal(packets[0].data.byteLength, packetData.length, 'parsed the correct payload size');
-  QUnit.equal(packets[0].pts, Math.pow(2, 33) - 400, 'correctly parsed the pts value');
-  QUnit.equal(packets[1].pts, Math.pow(2, 33) - 100, 'Does not rollover on minor change');
-  QUnit.equal(packets[2].pts, Math.pow(2, 33), 'correctly parses the max pts value');
-  QUnit.equal(packets[3].pts, Math.pow(2, 33) + 50, 'correctly parsed the rollover pts value');
+  QUnit.equal(packets[0].pts, max_ts - 400, 'correctly parsed the pts value');
+  QUnit.equal(packets[1].pts, max_ts - 100, 'Does not rollover on minor change');
+  QUnit.equal(packets[2].pts, max_ts, 'correctly parses the max pts value');
+  QUnit.equal(packets[3].pts, max_ts + 50, 'correctly parsed the rollover pts value');
 });
 
 QUnit.test('Correctly parses multiple PTS rollovers', function() {
   var
+    max_ts = 8589934592,
     packets = [],
     packetData = [0x01, 0x02],
     pesArray = [pesHeader(false, 1),
-                pesHeader(false, Math.floor(Math.pow(2, 33) * (1 / 3))),
-                pesHeader(false, Math.floor(Math.pow(2, 33) * (2 / 3))),
+                pesHeader(false, Math.floor(max_ts * (1 / 3))),
+                pesHeader(false, Math.floor(max_ts * (2 / 3))),
                 pesHeader(false, 1),
-                pesHeader(false, Math.floor(Math.pow(2, 33) * (1 / 3))),
-                pesHeader(false, Math.floor(Math.pow(2, 33) * (2 / 3))),
+                pesHeader(false, Math.floor(max_ts * (1 / 3))),
+                pesHeader(false, Math.floor(max_ts * (2 / 3))),
                 pesHeader(false, 1),
-                pesHeader(false, Math.floor(Math.pow(2, 33) * (1 / 3))),
-                pesHeader(false, Math.floor(Math.pow(2, 33) * (2 / 3))),
+                pesHeader(false, Math.floor(max_ts * (1 / 3))),
+                pesHeader(false, Math.floor(max_ts * (2 / 3))),
                 pesHeader(false, 1)];
 
   tsCorrectionStream.on('data', function(packet) {
@@ -973,15 +975,15 @@ QUnit.test('Correctly parses multiple PTS rollovers', function() {
 
   QUnit.equal(packets.length, 10, 'built ten packets');
   QUnit.equal(packets[0].pts, 1, 'correctly parsed the pts value');
-  QUnit.equal(packets[1].pts, Math.floor(Math.pow(2, 33) * (1 / 3)), 'correctly parsed the pts value');
-  QUnit.equal(packets[2].pts, Math.floor(Math.pow(2, 33) * (2 / 3)), 'correctly parsed the pts value');
-  QUnit.equal(packets[3].pts, Math.pow(2, 33) + 1, 'correctly parsed the pts value');
-  QUnit.equal(packets[4].pts, Math.pow(2, 33) + Math.floor(Math.pow(2, 33) * (1 / 3)), 'correctly parsed the pts value');
-  QUnit.equal(packets[5].pts, Math.pow(2, 33) + Math.floor(Math.pow(2, 33) * (2 / 3)), 'correctly parsed the pts value');
-  QUnit.equal(packets[6].pts, (2 * Math.pow(2, 33)) + 1, 'correctly parsed the pts value');
-  QUnit.equal(packets[7].pts, (2 * Math.pow(2, 33)) + Math.floor(Math.pow(2, 33) * (1 / 3)), 'correctly parsed the pts value');
-  QUnit.equal(packets[8].pts, (2 * Math.pow(2, 33)) + Math.floor(Math.pow(2, 33) * (2 / 3)), 'correctly parsed the pts value');
-  QUnit.equal(packets[9].pts, (3 * Math.pow(2, 33)) + 1, 'correctly parsed the pts value');
+  QUnit.equal(packets[1].pts, Math.floor(max_ts * (1 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[2].pts, Math.floor(max_ts * (2 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[3].pts, max_ts + 1, 'correctly parsed the pts value');
+  QUnit.equal(packets[4].pts, max_ts + Math.floor(max_ts * (1 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[5].pts, max_ts + Math.floor(max_ts * (2 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[6].pts, (2 * max_ts) + 1, 'correctly parsed the pts value');
+  QUnit.equal(packets[7].pts, (2 * max_ts) + Math.floor(max_ts * (1 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[8].pts, (2 * max_ts) + Math.floor(max_ts * (2 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[9].pts, (3 * max_ts) + 1, 'correctly parsed the pts value');
 });
 
 QUnit.module('H264 Stream', {
