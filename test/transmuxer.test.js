@@ -16,8 +16,8 @@ var mp2t = require('../lib/m2ts'),
     transportParseStream,
     ElementaryStream = mp2t.ElementaryStream,
     elementaryStream,
-    TSCorrectionStream = mp2t.TSCorrectionStream,
-    tsCorrectionStream,
+    TimestampRolloverStream = mp2t.TimestampRolloverStream,
+    timestampRolloverStream,
     AacStream = aac,
     H264Stream = codecs.h264.H264Stream,
     h264Stream,
@@ -886,11 +886,11 @@ QUnit.test('drops packets with unknown stream types', function() {
   QUnit.equal(packets.length, 0, 'ignored unknown packets');
 });
 
-QUnit.module('MP2T TSCorrectionStream', {
+QUnit.module('MP2T TimestampRolloverStream', {
   setup: function() {
-    tsCorrectionStream = new TSCorrectionStream('audio');
+    timestampRolloverStream = new TimestampRolloverStream('audio');
     elementaryStream = new ElementaryStream();
-    elementaryStream.pipe(tsCorrectionStream);
+    elementaryStream.pipe(timestampRolloverStream);
   }
 });
 
@@ -904,7 +904,7 @@ QUnit.test('Correctly parses rollover PTS', function() {
     pesHeadThree = pesHeader(false, maxTS),
     pesHeadFour = pesHeader(false, 50);
 
-  tsCorrectionStream.on('data', function(packet) {
+  timestampRolloverStream.on('data', function(packet) {
     packets.push(packet);
   });
   elementaryStream.push({
@@ -958,7 +958,7 @@ QUnit.test('Correctly parses multiple PTS rollovers', function() {
                 pesHeader(false, Math.floor(maxTS * (2 / 3))),
                 pesHeader(false, 1)];
 
-  tsCorrectionStream.on('data', function(packet) {
+  timestampRolloverStream.on('data', function(packet) {
     packets.push(packet);
   });
 
