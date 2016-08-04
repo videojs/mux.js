@@ -16,6 +16,8 @@ var mp2t = require('../lib/m2ts'),
     transportParseStream,
     ElementaryStream = mp2t.ElementaryStream,
     elementaryStream,
+    TimestampRolloverStream = mp2t.TimestampRolloverStream,
+    timestampRolloverStream,
     AacStream = aac,
     H264Stream = codecs.h264.H264Stream,
     h264Stream,
@@ -438,11 +440,18 @@ pesHeader = function(first, pts) {
 
   // Only store 15 bits of the PTS for QUnit.testing purposes
   if (pts) {
-    result.push(0x21);
-    result.push(0x00);
-    result.push(0x01);
-    result.push((pts & 0x7F80) >>> 7);
-    result.push(((pts & 0x7F) << 1) | 1);
+    var
+      pts32 = Math.floor(pts / 2), // right shift by 1
+      leftMostBit = ((pts32 & 0x80000000) >>> 31) & 0x01,
+      firstThree;
+
+    pts = pts & 0xffffffff;        // remove left most bit
+    firstThree = (leftMostBit << 3) | (((pts & 0xc0000000) >>> 29) & 0x06) | 0x01;
+    result.push((0x2 << 4) | firstThree);
+    result.push((pts >>> 22) & 0xff);
+    result.push(((pts >>> 14) | 0x01) & 0xff);
+    result.push((pts >>> 7) & 0xff);
+    result.push(((pts << 1) | 0x01) & 0xff);
   }
 
   if (first) {
@@ -875,6 +884,106 @@ QUnit.test('drops packets with unknown stream types', function() {
   });
 
   QUnit.equal(packets.length, 0, 'ignored unknown packets');
+});
+
+QUnit.module('MP2T TimestampRolloverStream', {
+  setup: function() {
+    timestampRolloverStream = new TimestampRolloverStream('audio');
+    elementaryStream = new ElementaryStream();
+    elementaryStream.pipe(timestampRolloverStream);
+  }
+});
+
+QUnit.test('Correctly parses rollover PTS', function() {
+  var
+    maxTS = 8589934592,
+    packets = [],
+    packetData = [0x01, 0x02],
+    pesHeadOne = pesHeader(false, maxTS - 400),
+    pesHeadTwo = pesHeader(false, maxTS - 100),
+    pesHeadThree = pesHeader(false, maxTS),
+    pesHeadFour = pesHeader(false, 50);
+
+  timestampRolloverStream.on('data', function(packet) {
+    packets.push(packet);
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadOne.concat(packetData))
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadTwo.concat(packetData))
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadThree.concat(packetData))
+  });
+  elementaryStream.push({
+    type: 'pes',
+    streamType: ADTS_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array(pesHeadFour.concat(packetData))
+  });
+  elementaryStream.flush();
+
+  QUnit.equal(packets.length, 4, 'built four packets');
+  QUnit.equal(packets[0].type, 'audio', 'identified audio data');
+  QUnit.equal(packets[0].data.byteLength, packetData.length, 'parsed the correct payload size');
+  QUnit.equal(packets[0].pts, maxTS - 400, 'correctly parsed the pts value');
+  QUnit.equal(packets[1].pts, maxTS - 100, 'Does not rollover on minor change');
+  QUnit.equal(packets[2].pts, maxTS, 'correctly parses the max pts value');
+  QUnit.equal(packets[3].pts, maxTS + 50, 'correctly parsed the rollover pts value');
+});
+
+QUnit.test('Correctly parses multiple PTS rollovers', function() {
+  var
+    maxTS = 8589934592,
+    packets = [],
+    packetData = [0x01, 0x02],
+    pesArray = [pesHeader(false, 1),
+                pesHeader(false, Math.floor(maxTS * (1 / 3))),
+                pesHeader(false, Math.floor(maxTS * (2 / 3))),
+                pesHeader(false, 1),
+                pesHeader(false, Math.floor(maxTS * (1 / 3))),
+                pesHeader(false, Math.floor(maxTS * (2 / 3))),
+                pesHeader(false, 1),
+                pesHeader(false, Math.floor(maxTS * (1 / 3))),
+                pesHeader(false, Math.floor(maxTS * (2 / 3))),
+                pesHeader(false, 1)];
+
+  timestampRolloverStream.on('data', function(packet) {
+    packets.push(packet);
+  });
+
+  while (pesArray.length > 0) {
+    elementaryStream.push({
+      type: 'pes',
+      streamType: ADTS_STREAM_TYPE,
+      payloadUnitStartIndicator: true,
+      data: new Uint8Array(pesArray.shift().concat(packetData))
+    });
+    elementaryStream.flush();
+  }
+
+
+  QUnit.equal(packets.length, 10, 'built ten packets');
+  QUnit.equal(packets[0].pts, 1, 'correctly parsed the pts value');
+  QUnit.equal(packets[1].pts, Math.floor(maxTS * (1 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[2].pts, Math.floor(maxTS * (2 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[3].pts, maxTS + 1, 'correctly parsed the pts value');
+  QUnit.equal(packets[4].pts, maxTS + Math.floor(maxTS * (1 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[5].pts, maxTS + Math.floor(maxTS * (2 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[6].pts, (2 * maxTS) + 1, 'correctly parsed the pts value');
+  QUnit.equal(packets[7].pts, (2 * maxTS) + Math.floor(maxTS * (1 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[8].pts, (2 * maxTS) + Math.floor(maxTS * (2 / 3)), 'correctly parsed the pts value');
+  QUnit.equal(packets[9].pts, (3 * maxTS) + 1, 'correctly parsed the pts value');
 });
 
 QUnit.module('H264 Stream', {
