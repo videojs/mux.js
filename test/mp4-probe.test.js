@@ -14,7 +14,8 @@ var
   moovWithoutMdhd,
   moovWithoutTkhd,
   moofWithTfdt,
-  multiMoof;
+  multiMoof,
+  v1boxes;
 
 QUnit.module('MP4 Probe');
 
@@ -37,14 +38,26 @@ test('returns null if the mdhd is missing', function() {
 test('reads the base decode time from a tfdt', function() {
   equal(probe.startTime({
     4: 2
-  }, new Uint8Array(moofWithTfdt)), 0x02040608, 'calculated base decode time');
+  }, new Uint8Array(moofWithTfdt)),
+        0x01020304 / 2,
+        'calculated base decode time');
 });
 
 test('returns the earliest base decode time', function() {
   equal(probe.startTime({
     4: 2,
     6: 1
-  }, new Uint8Array(multiMoof)), 0x01020304, 'returned the earlier time');
+  }, new Uint8Array(multiMoof)),
+        0x01020304 / 2,
+        'returned the earlier time');
+});
+
+test('parses 64-bit base decode times', function() {
+  equal(probe.startTime({
+    4: 3
+  }, new Uint8Array(v1boxes)),
+        0x0101020304 / 3,
+        'parsed a long value');
 });
 
 // ---------
@@ -56,11 +69,9 @@ moovWithoutTkhd =
       box('trak',
           box('mdia',
               box('mdhd',
-                  0x01, // version 1
+                  0x00, // version 0
                   0x00, 0x00, 0x00, // flags
-                  0x00, 0x00, 0x00, 0x00,
                   0x00, 0x00, 0x00, 0x02, // creation_time
-                  0x00, 0x00, 0x00, 0x00,
                   0x00, 0x00, 0x00, 0x03, // modification_time
                   0x00, 0x00, 0x03, 0xe8, // timescale = 1000
                   0x00, 0x00, 0x00, 0x00,
@@ -68,7 +79,7 @@ moovWithoutTkhd =
                   0x15, 0xc7, // 'eng' language
                   0x00, 0x00),
               box('hdlr',
-                  0x01, // version 1
+                  0x00, // version 1
                   0x00, 0x00, 0x00, // flags
                   0x00, 0x00, 0x00, 0x00, // pre_defined
                   mp4Helpers.typeBytes('vide'), // handler_type
@@ -153,4 +164,26 @@ multiMoof = moofWithTfdt
                   box('tfdt',
                       0x00, // version
                       0x00, 0x00, 0x00, // flags
-                      0x01, 0x02, 0x03, 0x04))));
+                      0x01, 0x02, 0x03, 0x04)))); // baseMediaDecodeTime
+v1boxes =
+  box('moof',
+      box('mfhd',
+          0x01, // version
+          0x00, 0x00, 0x00, // flags
+          0x00, 0x00, 0x00, 0x04), // sequence_number
+      box('traf',
+          box('tfhd',
+              0x01, // version
+              0x00, 0x00, 0x3b, // flags
+              0x00, 0x00, 0x00, 0x04, // track_ID = 4
+              0x00, 0x00, 0x00, 0x00,
+              0x00, 0x00, 0x00, 0x01, // base_data_offset
+              0x00, 0x00, 0x00, 0x02, // sample_description_index
+              0x00, 0x00, 0x00, 0x03, // default_sample_duration,
+              0x00, 0x00, 0x00, 0x04, // default_sample_size
+              0x00, 0x00, 0x00, 0x05),
+          box('tfdt',
+              0x01, // version
+              0x00, 0x00, 0x00, // flags
+              0x00, 0x00, 0x00, 0x01,
+              0x01, 0x02, 0x03, 0x04))); // baseMediaDecodeTime
