@@ -1,8 +1,11 @@
-# mux.js
+# mux.js [![Build Status](https://travis-ci.org/videojs/mux.js.svg?branch=master)](https://travis-ci.org/videojs/mux.js)
+
 
 Lightweight utilities for inspecting and manipulating video container formats.
 
-[![Build Status](https://travis-ci.org/videojs/mux.js.svg?branch=master)](https://travis-ci.org/videojs/mux.js)
+Lead Maintainer: Jon-Carlos Rivera [@imbcmdth](https://github.com/imbcmdth)
+
+Maintenance Status: Stable
 
 ## Diagram
 ![mux.js diagram](/docs/diagram.png)
