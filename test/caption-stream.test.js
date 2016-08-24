@@ -8,6 +8,45 @@ var
   sintelCaptions = require('./utils/sintel-captions'),
   multichannelCaptions = require('./utils/multi-channel-captions');
 
+// Create SEI nal-units from Caption packets
+var makeSeiFromCaptionPacket = function(caption) {
+  return {
+    pts: caption.pts,
+    dts: caption.dts || caption.pts,
+    nalUnitType: 'sei_rbsp',
+    escapedRBSP: new Uint8Array([
+      0x04, // payload_type === user_data_registered_itu_t_t35
+
+      0x0e, // payload_size
+
+      181, // itu_t_t35_country_code
+      0x00, 0x31, // itu_t_t35_provider_code
+      0x47, 0x41, 0x39, 0x34, // user_identifier, "GA94"
+      0x03, // user_data_type_code, 0x03 is cc_data
+
+      // 110 00001
+      0xc1, // process_cc_data, cc_count
+      0xff, // reserved
+      // 1111 1100
+      0xfc, // cc_valid, cc_type (608, field 1)
+      (caption.ccData & 0xff00) >> 8, // cc_data_1
+      caption.ccData & 0xff, // cc_data_2 without parity bit set
+
+      0xff // marker_bits
+    ])
+  };
+};
+
+// Returns a ccData byte-pair for a two character string. That is,
+// it converts a string like 'hi' into the two-byte number that
+// would be parsed back as 'hi' when provided as ccData.
+var characters = function(text) {
+  if (text.length !== 2) {
+    throw new Error('ccdata must be specified two characters at a time');
+  }
+  return (text.charCodeAt(0) << 8) | text.charCodeAt(1);
+};
+
 QUnit.module('Caption Stream', {
   beforeEach: function() {
     captionStream = new m2ts.CaptionStream();
@@ -153,17 +192,57 @@ QUnit.test('can be parsed from a segment', function() {
   QUnit.equal(captions[0].endTime, 4, 'parsed the end time');
 });
 
-var cea608Stream;
+QUnit.test('sorting is fun', function() {
+  var packets, captions, seiNals;
+  packets = [
+    // Send another command so that the second EOC isn't ignored
+    { pts: 10 * 1000, ccData: 0x1420, type: 0 },
+    // 'test string #1'
+    { pts: 1000, ccData: characters('te'), type: 0 },
+    { pts: 1000, ccData: characters('st'), type: 0 },
+    { pts: 1000, ccData: characters(' s'), type: 0 },
+    // 'test string #2'
+    { pts: 10 * 1000, ccData: characters('te'), type: 0 },
+    { pts: 10 * 1000, ccData: characters('st'), type: 0 },
+    { pts: 10 * 1000, ccData: characters(' s'), type: 0 },
+    // RCL, resume caption loading
+    { pts: 1000, ccData: 0x1420, type: 0 },
+    // 'test string #1' continued
+    { pts: 1000, ccData: characters('tr'), type: 0 },
+    { pts: 1000, ccData: characters('in'), type: 0 },
+    { pts: 1000, ccData: characters('g '), type: 0 },
+    { pts: 1000, ccData: characters('#1'), type: 0 },
+    // 'test string #2' continued
+    { pts: 10 * 1000, ccData: characters('tr'), type: 0 },
+    { pts: 10 * 1000, ccData: characters('in'), type: 0 },
+    { pts: 10 * 1000, ccData: characters('g '), type: 0 },
+    { pts: 10 * 1000, ccData: characters('#2'), type: 0 },
+    // EOC, End of Caption. End display
+    { pts: 10 * 1000, ccData: 0x142f, type: 0 },
+    // EOC, End of Caption. Finished transmitting, begin display
+    { pts: 1000, ccData: 0x142f, type: 0 },
+    // Send another command so that the second EOC isn't ignored
+    { pts: 20 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, End of Caption. End display
+    { pts: 20 * 1000, ccData: 0x142f, type: 0 }
+  ];
+  captions = [];
 
-// Returns a ccData byte-pair for a two character string. That is,
-// it converts a string like 'hi' into the two-byte number that
-// would be parsed back as 'hi' when provided as ccData.
-var characters = function(text) {
-  if (text.length !== 2) {
-    throw new Error('ccdata must be specified two characters at a time');
-  }
-  return (text.charCodeAt(0) << 8) | text.charCodeAt(1);
-};
+  seiNals = packets.map(makeSeiFromCaptionPacket);
+
+  captionStream.on('data', function(caption) {
+     captions.push(caption);
+  });
+
+  seiNals.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.equal(captions.length, 2, 'detected two captions');
+  QUnit.equal(captions[0].text, 'test string #1', 'parsed caption 1');
+  QUnit.equal(captions[1].text, 'test string #2', 'parsed caption 2');
+});
+
+var cea608Stream;
 
 QUnit.module('CEA 608 Stream', {
   beforeEach: function() {
