@@ -511,20 +511,26 @@ QUnit.test('can parse TXXX frames in web worker', function(assert) {
 });
 
 QUnit.test('triggers special event after parsing a timestamp ID3 tag', function() {
-  var array = new Uint8Array(73),
+  var
+    array = new Uint8Array(73),
     streamTimestamp = 'com.apple.streaming.transportStreamTimestamp',
     priv = 'PRIV',
     count = 0,
+    frame,
+    tag,
     metadataStream,
     chunk,
     i;
 
   metadataStream = new mp2t.MetadataStream();
-
-  metadataStream.on('timestamp', function(frame) {
-    QUnit.equal(frame.timeStamp, 900000, 'Initial timestamp fired and calculated correctly');
+  metadataStream.on('timestamp', function(f) {
+    frame = f;
     count += 1;
   });
+  metadataStream.on('data', function(t) {
+    tag = t;
+  });
+
   array[0] = 73;
   array[1] = 68;
   array[2] = 51;
@@ -534,14 +540,12 @@ QUnit.test('triggers special event after parsing a timestamp ID3 tag', function(
   array[70] = 13;
   array[71] = 187;
   array[72] = 160;
-
   for (i = 0; i < priv.length; i++) {
     array[i + 10] = priv.charCodeAt(i);
   }
   for (i = 0; i < streamTimestamp.length; i++) {
     array[i + 20] = streamTimestamp.charCodeAt(i);
   }
-
   chunk = {
     type: 'timed-metadata',
     data: array
@@ -549,4 +553,7 @@ QUnit.test('triggers special event after parsing a timestamp ID3 tag', function(
 
   metadataStream.push(chunk);
   QUnit.equal(count, 1, 'timestamp event triggered once');
+  QUnit.equal(frame.timeStamp, 900000, 'Initial timestamp fired and calculated correctly');
+  QUnit.equal(tag.pts, 10 * 90e3, 'set tag PTS');
+  QUnit.equal(tag.dts, 10 * 90e3, 'set tag DTS');
 });
