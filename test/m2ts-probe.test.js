@@ -11,8 +11,8 @@ var
 var patPacket = testSegment.subarray(188, 376);
 var pmtPid = 4095;
 var programMapTable = {
-  '256': 0x1B,
-  '257': 0x0F
+  256: 0x1B,
+  257: 0x0F
 };
 var pmtPacket = testSegment.subarray(376, 564);
 var pesPacket = testSegment.subarray(564, 752);
