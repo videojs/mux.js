@@ -800,7 +800,7 @@ QUnit.test('can parse an smhd', function() {
             'parsed an smhd');
 });
 
-QUnit.test('can parse a tfdt', function() {
+QUnit.test('can parse a version 0 tfdt', function() {
   var data = box('tfdt',
                  0x00, // version
                  0x00, 0x00, 0x00, // flags
@@ -812,6 +812,22 @@ QUnit.test('can parse a tfdt', function() {
               size: 16,
               flags: new Uint8Array([0, 0, 0]),
               baseMediaDecodeTime: 0x01020304
+            }]);
+});
+
+QUnit.test('can parse a version 1 tfdt', function() {
+  var data = box('tfdt',
+                 0x01, // version
+                 0x00, 0x00, 0x00, // flags
+                 0x01, 0x02, 0x03, 0x04,
+                 0x05, 0x06, 0x07, 0x08); // baseMediaDecodeTime
+  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+            [{
+              type: 'tfdt',
+              version: 1,
+              size: 20,
+              flags: new Uint8Array([0, 0, 0]),
+              baseMediaDecodeTime: 0x0102030405060708
             }]);
 });
 

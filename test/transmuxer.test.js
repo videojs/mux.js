@@ -1995,11 +1995,14 @@ QUnit.test('calculates baseMediaDecodeTime values from the first DTS ever seen a
 });
 
 QUnit.test('calculates baseMediaDecodeTime values relative to a customizable baseMediaDecodeTime', function() {
-  var segment, boxes, tfdt;
+  var segment, boxes, tfdt, bMDTValue;
+
+  bMDTValue = Math.pow(2, 32) + 100;
+
   videoSegmentStream.track.timelineStartInfo = {
     dts: 10,
     pts: 10,
-    baseMediaDecodeTime: 1234
+    baseMediaDecodeTime: bMDTValue
   };
   videoSegmentStream.on('data', function(data) {
     segment = data.boxes;
@@ -2033,7 +2036,7 @@ QUnit.test('calculates baseMediaDecodeTime values relative to a customizable bas
 
   boxes = mp4.tools.inspect(segment);
   tfdt = boxes[0].boxes[1].boxes[1];
-  QUnit.equal(tfdt.baseMediaDecodeTime, 1324, 'calculated baseMediaDecodeTime');
+  QUnit.equal(tfdt.baseMediaDecodeTime, bMDTValue + 90, 'calculated baseMediaDecodeTime');
 });
 
 QUnit.test('subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime', function() {
