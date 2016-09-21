@@ -2852,36 +2852,37 @@ QUnit.test('can be reused for multiple TS segments', function() {
   transmuxer.flush();
 
   QUnit.equal(segments.length, 2, 'generated two combined segments');
-  QUnit.deepEqual(segments[0][0],
-            segments[1][0],
-            'generated identical ftyps');
-  QUnit.deepEqual(segments[0][1],
-            segments[1][1],
-            'generated identical moovs');
+
+  QUnit.equal(segments[0][0].type, 'ftyp', 'generated ftyp for first segment');
+  QUnit.equal(segments[0][1].type, 'moov', 'generated moov for first segment');
+
+  QUnit.notEqual(segments[1][0].type, 'ftyp', 'did not generate ftyp for first segment');
+  QUnit.notEqual(segments[1][1].type, 'moov', 'did not generate moov for first segment');
+
   QUnit.deepEqual(segments[0][2].boxes[1],
-            segments[1][2].boxes[1],
+            segments[1][0].boxes[1],
             'generated identical video trafs');
   QUnit.equal(segments[0][2].boxes[0].sequenceNumber,
         0,
         'set the correct video sequence number');
-  QUnit.equal(segments[1][2].boxes[0].sequenceNumber,
+  QUnit.equal(segments[1][0].boxes[0].sequenceNumber,
         1,
         'set the correct video sequence number');
   QUnit.deepEqual(segments[0][3],
-            segments[1][3],
+            segments[1][1],
             'generated identical video mdats');
 
   QUnit.deepEqual(segments[0][4].boxes[3],
-            segments[1][4].boxes[3],
+            segments[1][2].boxes[3],
             'generated identical audio trafs');
   QUnit.equal(segments[0][4].boxes[0].sequenceNumber,
         0,
-        'set the correct video sequence number');
-  QUnit.equal(segments[1][4].boxes[0].sequenceNumber,
+        'set the correct audio sequence number');
+  QUnit.equal(segments[1][2].boxes[0].sequenceNumber,
         1,
-        'set the correct video sequence number');
+        'set the correct audio sequence number');
   QUnit.deepEqual(segments[0][5],
-            segments[1][5],
+            segments[1][3],
             'generated identical audio mdats');
 });
 
