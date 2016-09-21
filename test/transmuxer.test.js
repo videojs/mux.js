@@ -2884,6 +2884,35 @@ QUnit.test('can be reused for multiple TS segments', function() {
   QUnit.deepEqual(segments[0][5],
             segments[1][3],
             'generated identical audio mdats');
+
+  transmuxer.setBaseMediaDecodeTime(0);
+  transmuxer.push(testSegment);
+  transmuxer.flush();
+
+  QUnit.equal(segments.length, 3, 'generated third segment');
+
+  QUnit.deepEqual(segments[0][0], segments[2][0], 'generated identical ftyp');
+  QUnit.deepEqual(segments[0][1], segments[2][1], 'generated identical moov');
+
+  QUnit.deepEqual(segments[0][2].boxes[1],
+            segments[2][2].boxes[1],
+            'generated identical video trafs');
+  QUnit.equal(segments[2][2].boxes[0].sequenceNumber,
+        2,
+        'set the correct video sequence number');
+  QUnit.deepEqual(segments[0][3],
+            segments[2][3],
+            'generated identical video mdats');
+
+  QUnit.deepEqual(segments[0][4].boxes[3],
+            segments[2][4].boxes[3],
+            'generated identical audio trafs');
+  QUnit.equal(segments[2][4].boxes[0].sequenceNumber,
+        2,
+        'set the correct audio sequence number');
+  QUnit.deepEqual(segments[0][5],
+            segments[2][5],
+            'generated identical audio mdats');
 });
 
 QUnit.module('NalByteStream', {
