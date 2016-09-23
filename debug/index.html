@@ -302,11 +302,14 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
             outputType = document.querySelector('input[name="output"]:checked').value,
             resetTransmuxer = $('#reset-tranmsuxer').checked,
             remuxedSegments = [],
+            remuxedInitSegment = null,
             remuxedBytesLength = 0,
+            createInitSegment = false,
             bytes,
             i, j;
 
         if (resetTransmuxer || !transmuxer) {
+          createInitSegment = true;
           if (combined) {
               outputType = 'combined';
               transmuxer = new muxjs.mp4.Transmuxer();
@@ -318,13 +321,22 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
             if (event.type === outputType) {
               remuxedSegments.push(event);
               remuxedBytesLength += event.data.byteLength;
+              remuxedInitSegment = event.initSegment;
             }
           });
 
           transmuxer.on('done', function () {
-            bytes = new Uint8Array(remuxedBytesLength);
+            var offset = 0;
+            if (createInitSegment) {
+              bytes = new Uint8Array(remuxedInitSegment.byteLength + remuxedBytesLength)
+              bytes.set(remuxedInitSegment, offset);
+              offset += remuxedInitSegment.byteLength;
+              createInitSegment = false;
+            } else {
+              bytes = new Uint8Array(remuxedBytesLength);
+            }
 
-            for (j = 0, i = 0; j < remuxedSegments.length; j++) {
+            for (j = 0, i = offset; j < remuxedSegments.length; j++) {
               bytes.set(remuxedSegments[j].data, i);
               i += remuxedSegments[j].byteLength;
             }
