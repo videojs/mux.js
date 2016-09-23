@@ -2355,6 +2355,7 @@ QUnit.test('no options creates combined output', function() {
   var
     segments = [],
     boxes,
+    initSegment,
     transmuxer = new Transmuxer();
 
   transmuxer.on('data', function(segment) {
@@ -2392,13 +2393,15 @@ QUnit.test('no options creates combined output', function() {
   QUnit.equal(segments[0].type, 'combined', 'combined is the segment type');
 
   boxes = mp4.tools.inspect(segments[0].data);
-  QUnit.equal(boxes.length, 6, 'generated 6 top-level boxes');
-  QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
-  QUnit.equal('moov', boxes[1].type, 'generated a single moov box');
-  QUnit.equal('moof', boxes[2].type, 'generated a first moof box');
-  QUnit.equal('mdat', boxes[3].type, 'generated a first mdat box');
-  QUnit.equal('moof', boxes[4].type, 'generated a second moof box');
-  QUnit.equal('mdat', boxes[5].type, 'generated a second mdat box');
+  initSegment = mp4.tools.inspect(segments[0].initSegment);
+  QUnit.equal(initSegment.length, 2, 'generated 2 init segment boxes');
+  QUnit.equal('ftyp', initSegment[0].type, 'generated an ftyp box');
+  QUnit.equal('moov', initSegment[1].type, 'generated a single moov box');
+  QUnit.equal(boxes.length, 4, 'generated 4 top-level boxes');
+  QUnit.equal('moof', boxes[0].type, 'generated a first moof box');
+  QUnit.equal('mdat', boxes[1].type, 'generated a first mdat box');
+  QUnit.equal('moof', boxes[2].type, 'generated a second moof box');
+  QUnit.equal('mdat', boxes[3].type, 'generated a second mdat box');
 });
 
 QUnit.test('can specify that we want to generate separate audio and video segments', function() {
@@ -2406,6 +2409,7 @@ QUnit.test('can specify that we want to generate separate audio and video segmen
     segments = [],
     segmentLengthOnDone,
     boxes,
+    initSegment,
     transmuxer = new Transmuxer({remux: false});
 
   transmuxer.on('data', function(segment) {
@@ -2451,18 +2455,22 @@ QUnit.test('can specify that we want to generate separate audio and video segmen
   QUnit.ok(segments[0].type === 'audio' || segments[1].type === 'audio', 'one segment is audio');
 
   boxes = mp4.tools.inspect(segments[0].data);
-  QUnit.equal(boxes.length, 4, 'generated 4 top-level boxes');
-  QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
-  QUnit.equal('moov', boxes[1].type, 'generated a moov box');
-  QUnit.equal('moof', boxes[2].type, 'generated a moof box');
-  QUnit.equal('mdat', boxes[3].type, 'generated a mdat box');
+  initSegment = mp4.tools.inspect(segments[0].initSegment);
+  QUnit.equal(initSegment.length, 2, 'generated 2 top-level initSegment boxes');
+  QUnit.equal(boxes.length, 2, 'generated 2 top-level boxes');
+  QUnit.equal('ftyp', initSegment[0].type, 'generated an ftyp box');
+  QUnit.equal('moov', initSegment[1].type, 'generated a moov box');
+  QUnit.equal('moof', boxes[0].type, 'generated a moof box');
+  QUnit.equal('mdat', boxes[1].type, 'generated a mdat box');
 
   boxes = mp4.tools.inspect(segments[1].data);
-  QUnit.equal(boxes.length, 4, 'generated 4 top-level boxes');
-  QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
-  QUnit.equal('moov', boxes[1].type, 'generated a moov box');
-  QUnit.equal('moof', boxes[2].type, 'generated a moof box');
-  QUnit.equal('mdat', boxes[3].type, 'generated a mdat box');
+  initSegment = mp4.tools.inspect(segments[1].initSegment);
+  QUnit.equal(initSegment.length, 2, 'generated 2 top-level initSegment boxes');
+  QUnit.equal(boxes.length, 2, 'generated 2 top-level boxes');
+  QUnit.equal('ftyp', initSegment[0].type, 'generated an ftyp box');
+  QUnit.equal('moov', initSegment[1].type, 'generated a moov box');
+  QUnit.equal('moof', boxes[0].type, 'generated a moof box');
+  QUnit.equal('mdat', boxes[1].type, 'generated a mdat box');
 });
 
 QUnit.module('MP4 - Transmuxer', {
@@ -2509,7 +2517,7 @@ QUnit.test('generates a video init segment', function() {
     QUnit.ok(segments[0].info[prop], 'video info has ' + prop);
   });
 
-  boxes = mp4.tools.inspect(segments[0].data);
+  boxes = mp4.tools.inspect(segments[0].initSegment);
   QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
   QUnit.equal('moov', boxes[1].type, 'generated a moov box');
 });
@@ -2536,13 +2544,13 @@ QUnit.test('generates an audio init segment', function() {
     QUnit.ok(segments[0].info[prop], 'audio info has ' + prop);
   });
 
-  boxes = mp4.tools.inspect(segments[0].data);
+  boxes = mp4.tools.inspect(segments[0].initSegment);
   QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
   QUnit.equal('moov', boxes[1].type, 'generated a moov box');
 });
 
 QUnit.test('buffers video samples until flushed', function() {
-  var samples = [], offset, boxes;
+  var samples = [], offset, boxes, initSegment;
   transmuxer.on('data', function(data) {
     samples.push(data);
   });
@@ -2564,11 +2572,13 @@ QUnit.test('buffers video samples until flushed', function() {
   transmuxer.flush();
   QUnit.equal(samples.length, 1, 'emitted one event');
   boxes = mp4.tools.inspect(samples[0].data);
-  QUnit.equal(boxes.length, 4, 'generated four boxes');
-  QUnit.equal(boxes[2].type, 'moof', 'the third box is a moof');
-  QUnit.equal(boxes[3].type, 'mdat', 'the fourth box is a mdat');
+  initSegment = mp4.tools.inspect(samples[0].initSegment);
+  QUnit.equal(boxes.length, 2, 'generated two boxes');
+  QUnit.equal(initSegment.length, 2, 'generated two init segment boxes');
+  QUnit.equal(boxes[0].type, 'moof', 'the first box is a moof');
+  QUnit.equal(boxes[1].type, 'mdat', 'the second box is a mdat');
 
-  offset = boxes[0].size + boxes[1].size + boxes[2].size + 8;
+  offset = boxes[0].size + 8;
   QUnit.deepEqual(new Uint8Array(samples[0].data.subarray(offset)),
             new Uint8Array([
               0, 0, 0, 2,
@@ -2656,7 +2666,7 @@ QUnit.test('reuses audio track object when the pipeline reconfigures itself', fu
 
   boxes = mp4.tools.inspect(segments[0].data);
 
-  QUnit.equal(boxes[2].boxes[1].boxes[1].baseMediaDecodeTime,
+  QUnit.equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime,
     0,
     'first segment starts at 0 pts');
 
@@ -2668,7 +2678,7 @@ QUnit.test('reuses audio track object when the pipeline reconfigures itself', fu
 
   boxes = mp4.tools.inspect(segments[1].data);
 
-  QUnit.equal(boxes[2].boxes[1].boxes[1].baseMediaDecodeTime,
+  QUnit.equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime,
     // The first segment had a PTS of 10,000 and the second segment 900,000
     // Audio PTS is specified in a clock equal to samplerate (44.1khz)
     // So you have to take the different between the PTSs (890,000)
@@ -2785,7 +2795,7 @@ validateTrackFragment = function(track, segment, metadata, type) {
 QUnit.test('parses an example mp2t file and generates combined media segments', function() {
   var
     segments = [],
-    i, j, boxes, mfhd, trackType = 'video', trackId = 256, baseOffset = 0;
+    i, j, boxes, mfhd, trackType = 'video', trackId = 256, baseOffset = 0, initSegment;
 
   transmuxer.on('data', function(segment) {
     if (segment.type === 'combined') {
@@ -2798,18 +2808,20 @@ QUnit.test('parses an example mp2t file and generates combined media segments', 
   QUnit.equal(segments.length, 1, 'generated one combined segment');
 
   boxes = mp4.tools.inspect(segments[0].data);
-  QUnit.equal(boxes.length, 6, 'combined segments are composed of six boxes');
-  QUnit.equal(boxes[0].type, 'ftyp', 'the first box is an ftyp');
-  QUnit.equal(boxes[1].type, 'moov', 'the second box is a moov');
-  QUnit.equal(boxes[1].boxes[0].type, 'mvhd', 'generated an mvhd');
-  validateTrack(boxes[1].boxes[1], {
+  initSegment = mp4.tools.inspect(segments[0].initSegment);
+  QUnit.equal(boxes.length, 4, 'combined segments are composed of 4 boxes');
+  QUnit.equal(initSegment.length, 2, 'init segment is composed of 2 boxes');
+  QUnit.equal(initSegment[0].type, 'ftyp', 'the first box is an ftyp');
+  QUnit.equal(initSegment[1].type, 'moov', 'the second box is a moov');
+  QUnit.equal(initSegment[1].boxes[0].type, 'mvhd', 'generated an mvhd');
+  validateTrack(initSegment[1].boxes[1], {
     trackId: 256
   });
-  validateTrack(boxes[1].boxes[2], {
+  validateTrack(initSegment[1].boxes[2], {
     trackId: 257
   });
 
-  for (i = 2; i < boxes.length; i += 2) {
+  for (i = 0; i < boxes.length; i += 2) {
     QUnit.equal(boxes[i].type, 'moof', 'first box is a moof');
     QUnit.equal(boxes[i].boxes.length, 2, 'the moof has two children');
 
@@ -2839,11 +2851,14 @@ QUnit.test('parses an example mp2t file and generates combined media segments', 
 });
 
 QUnit.test('can be reused for multiple TS segments', function() {
-  var segments = [];
+  var
+    boxes = [],
+    initSegments = [];
 
   transmuxer.on('data', function(segment) {
     if (segment.type === 'combined') {
-      segments.push(mp4.tools.inspect(segment.data));
+      boxes.push(mp4.tools.inspect(segment.data));
+      initSegments.push(mp4.tools.inspect(segment.initSegment));
     }
   });
   transmuxer.push(testSegment);
@@ -2851,67 +2866,36 @@ QUnit.test('can be reused for multiple TS segments', function() {
   transmuxer.push(testSegment);
   transmuxer.flush();
 
-  QUnit.equal(segments.length, 2, 'generated two combined segments');
+  QUnit.equal(boxes.length, 2, 'generated two combined segments');
+  QUnit.equal(initSegments.length, 2, 'generated two combined init segments');
 
-  QUnit.equal(segments[0][0].type, 'ftyp', 'generated ftyp for first segment');
-  QUnit.equal(segments[0][1].type, 'moov', 'generated moov for first segment');
+  QUnit.deepEqual(initSegments[0][0], initSegments[1][0], 'generated identical ftyps');
+  QUnit.deepEqual(initSegments[0][1], initSegments[1][1], 'generated identical moovs');
 
-  QUnit.notEqual(segments[1][0].type, 'ftyp', 'did not generate ftyp for first segment');
-  QUnit.notEqual(segments[1][1].type, 'moov', 'did not generate moov for first segment');
-
-  QUnit.deepEqual(segments[0][2].boxes[1],
-            segments[1][0].boxes[1],
+  QUnit.deepEqual(boxes[0][0].boxes[1],
+            boxes[1][0].boxes[1],
             'generated identical video trafs');
-  QUnit.equal(segments[0][2].boxes[0].sequenceNumber,
+  QUnit.equal(boxes[0][0].boxes[0].sequenceNumber,
         0,
         'set the correct video sequence number');
-  QUnit.equal(segments[1][0].boxes[0].sequenceNumber,
+  QUnit.equal(boxes[1][0].boxes[0].sequenceNumber,
         1,
         'set the correct video sequence number');
-  QUnit.deepEqual(segments[0][3],
-            segments[1][1],
+  QUnit.deepEqual(boxes[0][1],
+            boxes[1][1],
             'generated identical video mdats');
 
-  QUnit.deepEqual(segments[0][4].boxes[3],
-            segments[1][2].boxes[3],
+  QUnit.deepEqual(boxes[0][2].boxes[3],
+            boxes[1][2].boxes[3],
             'generated identical audio trafs');
-  QUnit.equal(segments[0][4].boxes[0].sequenceNumber,
+  QUnit.equal(boxes[0][2].boxes[0].sequenceNumber,
         0,
         'set the correct audio sequence number');
-  QUnit.equal(segments[1][2].boxes[0].sequenceNumber,
+  QUnit.equal(boxes[1][2].boxes[0].sequenceNumber,
         1,
         'set the correct audio sequence number');
-  QUnit.deepEqual(segments[0][5],
-            segments[1][3],
-            'generated identical audio mdats');
-
-  transmuxer.setBaseMediaDecodeTime(0);
-  transmuxer.push(testSegment);
-  transmuxer.flush();
-
-  QUnit.equal(segments.length, 3, 'generated third segment');
-
-  QUnit.deepEqual(segments[0][0], segments[2][0], 'generated identical ftyp');
-  QUnit.deepEqual(segments[0][1], segments[2][1], 'generated identical moov');
-
-  QUnit.deepEqual(segments[0][2].boxes[1],
-            segments[2][2].boxes[1],
-            'generated identical video trafs');
-  QUnit.equal(segments[2][2].boxes[0].sequenceNumber,
-        2,
-        'set the correct video sequence number');
-  QUnit.deepEqual(segments[0][3],
-            segments[2][3],
-            'generated identical video mdats');
-
-  QUnit.deepEqual(segments[0][4].boxes[3],
-            segments[2][4].boxes[3],
-            'generated identical audio trafs');
-  QUnit.equal(segments[2][4].boxes[0].sequenceNumber,
-        2,
-        'set the correct audio sequence number');
-  QUnit.deepEqual(segments[0][5],
-            segments[2][5],
+  QUnit.deepEqual(boxes[0][3],
+            boxes[1][3],
             'generated identical audio mdats');
 });
 
