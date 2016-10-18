@@ -3158,6 +3158,54 @@ QUnit.test('buffers video samples until flushed', function() {
   QUnit.equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
 });
 
+QUnit.test('does not buffer a duplicate video sample on subsequent flushes', function() {
+  var segments = [];
+  transmuxer.on('data', function(data) {
+    segments.push(data);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true
+  })));
+
+  // buffer a NAL
+  transmuxer.push(packetize(videoPes([0x09, 0x01], true)));
+  transmuxer.push(packetize(videoPes([0x00, 0x02])));
+
+  // add an access_unit_delimiter_rbsp
+  transmuxer.push(packetize(videoPes([0x09, 0x03])));
+  transmuxer.push(packetize(videoPes([0x00, 0x04])));
+  transmuxer.push(packetize(videoPes([0x00, 0x05])));
+
+  // flush everything
+  transmuxer.flush();
+
+  QUnit.equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
+  QUnit.equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
+
+  segments = [];
+
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true
+  })));
+
+  // buffer a NAL
+  transmuxer.push(packetize(videoPes([0x09, 0x01], true)));
+  transmuxer.push(packetize(videoPes([0x00, 0x02])));
+
+  // add an access_unit_delimiter_rbsp
+  transmuxer.push(packetize(videoPes([0x09, 0x03])));
+  transmuxer.push(packetize(videoPes([0x00, 0x04])));
+  transmuxer.push(packetize(videoPes([0x00, 0x05])));
+
+  // flush everything
+  transmuxer.flush();
+
+  QUnit.equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
+  QUnit.equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
+});
+
 QUnit.module('AAC Stream');
 QUnit.test('parses correct ID3 tag size', function() {
   var packetStream = new Uint8Array(10),
