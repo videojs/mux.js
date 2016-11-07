@@ -68,6 +68,7 @@
   ],
   "devDependencies": {
     "browserify": "^12.0.1",
+    "browserify-shim": "^3.8.12",
     "bundle-collapser": "^1.2.1",
     "eslint": "^2.10.2",
     "express": "^4.13.3",
@@ -84,8 +85,5 @@
     "uglify-js": "^2.6.2",
     "watchify": "^3.6.1",
     "webworkify": "^1.0.2"
-  },
-  "dependencies": {
-    "browserify-shim": "^3.8.12"
   }
 }
