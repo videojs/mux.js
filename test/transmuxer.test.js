@@ -2044,7 +2044,7 @@ QUnit.test('calculates baseMediaDecodeTime values relative to a customizable bas
   QUnit.equal(tfdt.baseMediaDecodeTime, baseMediaDecodeTimeValue + 90, 'calculated baseMediaDecodeTime');
 });
 
-QUnit.test('subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime', function() {
+QUnit.test('do not subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime', function() {
   var segment, boxes, tfdt;
   videoSegmentStream.track.timelineStartInfo = {
     dts: 10,
@@ -2086,9 +2086,7 @@ QUnit.test('subtract the first frame\'s compositionTimeOffset from baseMediaDeco
 
   // The timelineStartInfo's bMDT is 100 and that corresponds to a dts/pts of 10
   // The first frame has a dts 50 so the bMDT is calculated as: (50 - 10) + 100 = 140
-  // The first frame has a compositionTimeOffset of: 60 - 50 = 10
-  // The final track's bMDT is therefore: 140 - 10 = 130
-  QUnit.equal(tfdt.baseMediaDecodeTime, 130, 'calculated baseMediaDecodeTime');
+  QUnit.equal(tfdt.baseMediaDecodeTime, 140, 'calculated baseMediaDecodeTime');
 });
 
 QUnit.module('ADTS Stream', {
