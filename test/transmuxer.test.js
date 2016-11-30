@@ -2296,6 +2296,73 @@ QUnit.module('AudioSegmentStream', {
   }
 });
 
+QUnit.test('fills audio gaps of under a half second', function() {
+  var
+    events = [],
+    boxes,
+    numSilentFrames,
+    expectedFillLength;
+
+  audioSegmentStream.on('data', function(event) {
+    events.push(event);
+  });
+
+  audioSegmentStream.setAudioAppendStart(10 * 90e3);
+
+  audioSegmentStream.push({
+    channelcount: 2,
+    samplerate: 90e3,
+    pts: 10.49 * 90e3,
+    dts: 10.49 * 90e3,
+    data: new Uint8Array([1])
+  });
+
+  audioSegmentStream.flush();
+
+  numSilentFrames = Math.floor(0.49 * 90e3 / 1024);
+  expectedFillLength = numSilentFrames * 1024;
+
+  QUnit.equal(events.length, 1, 'a data event fired');
+  QUnit.equal(events[0].track.samples.length, 1 + numSilentFrames, 'generated samples');
+  QUnit.equal(events[0].track.samples[0].size, 9, 'silent sample');
+  QUnit.equal(events[0].track.samples[42].size, 9, 'silent sample');
+  QUnit.equal(events[0].track.samples[43].size, 1, 'normal sample');
+  boxes = mp4.tools.inspect(events[0].boxes);
+  QUnit.equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime,
+              10.49 * 90e3 - expectedFillLength - 111,
+              'filled the gap to the nearest frame');
+});
+
+QUnit.test('does not fill audio gaps greater than a half second', function() {
+  var
+    events = [],
+    boxes;
+
+  audioSegmentStream.on('data', function(event) {
+    events.push(event);
+  });
+
+  audioSegmentStream.setAudioAppendStart(10 * 90e3);
+
+  audioSegmentStream.push({
+    channelcount: 2,
+    samplerate: 90e3,
+    pts: 10.51 * 90e3,
+    dts: 10.51 * 90e3,
+    data: new Uint8Array([1])
+  });
+
+  audioSegmentStream.flush();
+
+  QUnit.equal(events.length, 1, 'a data event fired');
+  QUnit.equal(events[0].track.samples.length, 1, 'did not generate silent samples');
+  QUnit.equal(events[0].track.samples[0].size, 1, 'normal sample');
+  boxes = mp4.tools.inspect(events[0].boxes);
+  QUnit.equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime,
+              10.51 * 90e3 - 111,
+              'did not adjust since no gap filling');
+});
+
 QUnit.test('ensures baseMediaDecodeTime for audio is not negative', function() {
   var events = [], boxes;
 
