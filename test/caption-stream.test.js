@@ -318,6 +318,40 @@ QUnit.test('pop-on mode', function() {
   }, 'parsed the caption');
 });
 
+QUnit.test('ignores null characters', function() {
+  var packets, captions;
+  packets = [
+    // RCL, resume caption loading
+    { ccData: 0x1420, type: 0 },
+    // 'mu'
+    { ccData: characters('mu'), type: 0 },
+    // null characters
+    { ccData: 0x0000, type: 0 },
+    // ' x'
+    { ccData: characters(' x'), type: 0 },
+    // EOC, End of Caption. Finished transmitting, begin display
+    { pts: 1000, ccData: 0x142f, type: 0 },
+    // Send another command so that the second EOC isn't ignored
+    { ccData: 0x1420, type: 0 },
+    // EOC, End of Caption. End display
+    { pts: 10 * 1000, ccData: 0x142f, type: 0 }
+  ];
+  captions = [];
+
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  packets.forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 1, 'detected a caption');
+  QUnit.deepEqual(captions[0], {
+    startPts: 1000,
+    endPts: 10 * 1000,
+    text: 'mu x'
+  }, 'ignored null characters');
+});
+
 QUnit.test('recognizes the Erase Displayed Memory command', function() {
   var packets, captions;
   packets = [
@@ -814,7 +848,7 @@ QUnit.test('segment with multiple caption channels, we only parse 0', function()
 
   QUnit.equal(captions.length, 3, 'parsed three captions');
   QUnit.equal(captions[0].text, 'BUT IT\'S NOT SUFFERING RIGHW.', 'parsed first caption correctly');
-  // there is also bad data in the captions, so we end up with a null ascii character here
-  QUnit.equal(captions[1].text, 'IT\'S NOT A THREAT TO ANYBODY.' + String.fromCharCode(0x00), 'parsed second caption correctly');
+  // there is also bad data in the captions, but the null ascii character is removed
+  QUnit.equal(captions[1].text, 'IT\'S NOT A THREAT TO ANYBODY.', 'parsed second caption correctly');
   QUnit.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN IF WE DON\'T HAVE TO.', 'parsed second caption correctly');
 });
