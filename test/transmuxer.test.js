@@ -2044,7 +2044,7 @@ QUnit.test('calculates baseMediaDecodeTime values relative to a customizable bas
   QUnit.equal(tfdt.baseMediaDecodeTime, baseMediaDecodeTimeValue + 90, 'calculated baseMediaDecodeTime');
 });
 
-QUnit.test('subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime', function() {
+QUnit.test('do not subtract the first frame\'s compositionTimeOffset from baseMediaDecodeTime', function() {
   var segment, boxes, tfdt;
   videoSegmentStream.track.timelineStartInfo = {
     dts: 10,
@@ -2086,9 +2086,7 @@ QUnit.test('subtract the first frame\'s compositionTimeOffset from baseMediaDeco
 
   // The timelineStartInfo's bMDT is 100 and that corresponds to a dts/pts of 10
   // The first frame has a dts 50 so the bMDT is calculated as: (50 - 10) + 100 = 140
-  // The first frame has a compositionTimeOffset of: 60 - 50 = 10
-  // The final track's bMDT is therefore: 140 - 10 = 130
-  QUnit.equal(tfdt.baseMediaDecodeTime, 130, 'calculated baseMediaDecodeTime');
+  QUnit.equal(tfdt.baseMediaDecodeTime, 140, 'calculated baseMediaDecodeTime');
 });
 
 QUnit.module('ADTS Stream', {
@@ -3204,6 +3202,39 @@ QUnit.test('does not buffer a duplicate video sample on subsequent flushes', fun
 
   QUnit.equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
   QUnit.equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
+});
+
+QUnit.test('emits done event when no audio data is present', function() {
+  var segments = [];
+  var done = false;
+
+  transmuxer.on('data', function(data) {
+    segments.push(data);
+  });
+  transmuxer.on('done', function() {
+    done = true;
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true,
+    hasAudio: true
+  })));
+
+  // buffer a NAL
+  transmuxer.push(packetize(videoPes([0x09, 0x01], true)));
+  transmuxer.push(packetize(videoPes([0x00, 0x02])));
+
+  // add an access_unit_delimiter_rbsp
+  transmuxer.push(packetize(videoPes([0x09, 0x03])));
+  transmuxer.push(packetize(videoPes([0x00, 0x04])));
+  transmuxer.push(packetize(videoPes([0x00, 0x05])));
+
+  // flush everything
+  transmuxer.flush();
+
+  QUnit.equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
+  QUnit.equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
+  QUnit.ok(done, 'emitted done event even though no audio data was given');
 });
 
 QUnit.module('AAC Stream');
