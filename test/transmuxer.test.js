@@ -10,6 +10,7 @@ var mp2t = require('../lib/m2ts'),
     testSegment = require('./utils/test-segment'),
     mp4AudioProperties = require('../lib/mp4/transmuxer').AUDIO_PROPERTIES,
     mp4VideoProperties = require('../lib/mp4/transmuxer').VIDEO_PROPERTIES,
+    clock = require('../lib/utils/clock'),
     TransportPacketStream = mp2t.TransportPacketStream,
     transportPacketStream,
     TransportParseStream = mp2t.TransportParseStream,
@@ -2296,81 +2297,33 @@ QUnit.module('AudioSegmentStream', {
   }
 });
 
-QUnit.test('fills audio gaps from video start if video is later than audio', function() {
-  var
-    events = [],
-    boxes,
-    numSilentFrames,
-    expectedFillLength,
-    videoGap = 0.29,
-    audioGap = 0.49,
-    videoBaseMediaDecodeTime = (10 + videoGap) * 90e3,
-    expectedFillSeconds = audioGap - videoGap;
-
-  audioSegmentStream.on('data', function(event) {
-    events.push(event);
-  });
-
-  audioSegmentStream.setAudioAppendStart(10 * 90e3);
-  audioSegmentStream.setVideoBaseMediaDecodeTime(videoBaseMediaDecodeTime);
-
-  audioSegmentStream.push({
-    channelcount: 2,
-    samplerate: 90e3,
-    pts: (10 + audioGap) * 90e3,
-    dts: (10 + audioGap) * 90e3,
-    data: new Uint8Array([1])
-  });
-
-  audioSegmentStream.flush();
-
-  numSilentFrames = Math.floor(expectedFillSeconds * 90e3 / 1024);
-  expectedFillLength = numSilentFrames * 1024;
-
-  QUnit.equal(events.length, 1, 'a data event fired');
-  QUnit.equal(events[0].track.samples.length, 1 + numSilentFrames, 'generated samples');
-  QUnit.equal(events[0].track.samples[0].size, 9, 'silent sample');
-  QUnit.equal(events[0].track.samples[16].size, 9, 'silent sample');
-  QUnit.equal(events[0].track.samples[17].size, 1, 'normal sample');
-  boxes = mp4.tools.inspect(events[0].boxes);
-  QUnit.equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime,
-              (10 + audioGap) * 90e3 - expectedFillLength - 111,
-              'filled the gap to the nearest frame');
-  QUnit.equal(
-    Math.floor(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime - videoBaseMediaDecodeTime),
-    Math.floor(((expectedFillSeconds * 90e3) % 1024) - 111),
-    'filled all but frame remainder between video start and audio start');
-});
-
 QUnit.test('fills audio gaps taking into account audio sample rate', function() {
   var
     events = [],
     boxes,
     numSilentFrames,
-    expectedFillLength,
     videoGap = 0.29,
     audioGap = 0.49,
-    videoBaseMediaDecodeTime = (10 + videoGap) * 90e3,
     expectedFillSeconds = audioGap - videoGap,
     sampleRate = 44100,
     frameDuration = Math.ceil(90e3 / (sampleRate / 1024)),
-    frameSeconds = frameDuration / 90e3,
-    scale = sampleRate / 90e3,
+    frameSeconds = clock.videoTsToSeconds(frameDuration),
     audioBMDT,
-    startingAudioBMDT = (10 + audioGap) * sampleRate - (111 * scale);
+    offsetSeconds = clock.videoTsToSeconds(111),
+    startingAudioBMDT = clock.secondsToAudioTs(10 + audioGap - offsetSeconds, sampleRate);
 
   audioSegmentStream.on('data', function(event) {
     events.push(event);
   });
 
-  audioSegmentStream.setAudioAppendStart(10 * 90e3);
-  audioSegmentStream.setVideoBaseMediaDecodeTime(videoBaseMediaDecodeTime);
+  audioSegmentStream.setAudioAppendStart(clock.secondsToVideoTs(10));
+  audioSegmentStream.setVideoBaseMediaDecodeTime(clock.secondsToVideoTs(10 + videoGap));
 
   audioSegmentStream.push({
     channelcount: 2,
     samplerate: sampleRate,
-    pts: (10 + audioGap) * 90e3,
-    dts: (10 + audioGap) * 90e3,
+    pts: clock.secondsToVideoTs(10 + audioGap),
+    dts: clock.secondsToVideoTs(10 + audioGap),
     data: new Uint8Array([1])
   });
 
@@ -2380,22 +2333,25 @@ QUnit.test('fills audio gaps taking into account audio sample rate', function() 
 
   QUnit.equal(events.length, 1, 'a data event fired');
   QUnit.equal(events[0].track.samples.length, 1 + numSilentFrames, 'generated samples');
-  QUnit.equal(events[0].track.samples[0].size, 9, 'silent sample');
-  QUnit.equal(events[0].track.samples[7].size, 9, 'silent sample');
+  QUnit.equal(events[0].track.samples[0].size, 364, 'silent sample');
+  QUnit.equal(events[0].track.samples[7].size, 364, 'silent sample');
   QUnit.equal(events[0].track.samples[8].size, 1, 'normal sample');
   boxes = mp4.tools.inspect(events[0].boxes);
 
   audioBMDT = boxes[0].boxes[1].boxes[1].baseMediaDecodeTime;
-  expectedFillLength = (numSilentFrames * frameSeconds) * sampleRate;
-  QUnit.equal(audioBMDT,
-              // should always be rounded up so as not to overfill
-              Math.ceil(startingAudioBMDT - expectedFillLength),
-              'filled the gap to the nearest frame');
+
   QUnit.equal(
-    // difference in video clock
-    Math.floor(audioBMDT / scale - videoBaseMediaDecodeTime),
-    Math.floor((expectedFillSeconds * 90e3) % frameDuration) - 111,
-    'filled all but frame remainder between video start and audio start');
+    audioBMDT,
+    // should always be rounded up so as not to overfill
+    Math.ceil(startingAudioBMDT -
+              clock.secondsToAudioTs(numSilentFrames * frameSeconds, sampleRate)),
+    'filled the gap to the nearest frame');
+  QUnit.equal(
+    Math.floor(clock.audioTsToVideoTs(audioBMDT, sampleRate) -
+               clock.secondsToVideoTs(10 + videoGap)),
+    Math.floor(clock.secondsToVideoTs(expectedFillSeconds) % frameDuration -
+               clock.secondsToVideoTs(offsetSeconds)),
+               'filled all but frame remainder between video start and audio start');
 });
 
 QUnit.test('does not fill audio gaps if no audio append start time', function() {
