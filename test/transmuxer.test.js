@@ -2411,6 +2411,55 @@ QUnit.test('fills audio gaps with existing frame if odd sample rate', function()
                'filled all but frame remainder between video start and audio start');
 });
 
+QUnit.test('fills audio gaps with smaller of audio gap and audio-video gap', function() {
+  var
+    events = [],
+    boxes,
+    offsetSeconds = clock.videoTsToSeconds(111),
+    videoGap = 0.29,
+    sampleRate = 44100,
+    frameDuration = Math.ceil(90e3 / (sampleRate / 1024)),
+    frameSeconds = clock.videoTsToSeconds(frameDuration),
+    // audio gap smaller, should be used as fill
+    numSilentFrames = 1,
+    // buffer for imprecise numbers
+    audioGap = frameSeconds + offsetSeconds + 0.001,
+    oldAudioEnd = 10.5,
+    audioBMDT;
+
+  audioSegmentStream.on('data', function(event) {
+    events.push(event);
+  });
+
+  audioSegmentStream.setAudioAppendStart(clock.secondsToVideoTs(oldAudioEnd));
+  audioSegmentStream.setVideoBaseMediaDecodeTime(clock.secondsToVideoTs(10 + videoGap));
+
+  audioSegmentStream.push({
+    channelcount: 2,
+    samplerate: sampleRate,
+    pts: clock.secondsToVideoTs(oldAudioEnd + audioGap),
+    dts: clock.secondsToVideoTs(oldAudioEnd + audioGap),
+    data: new Uint8Array([1])
+  });
+
+  audioSegmentStream.flush();
+
+  QUnit.equal(events.length, 1, 'a data event fired');
+  QUnit.equal(events[0].track.samples.length, 1 + numSilentFrames, 'generated samples');
+  QUnit.equal(events[0].track.samples[0].size, 364, 'silent sample');
+  QUnit.equal(events[0].track.samples[1].size, 1, 'normal sample');
+  boxes = mp4.tools.inspect(events[0].boxes);
+
+  audioBMDT = boxes[0].boxes[1].boxes[1].baseMediaDecodeTime;
+
+  QUnit.equal(
+    Math.floor(clock.secondsToVideoTs(oldAudioEnd + audioGap) -
+               clock.audioTsToVideoTs(audioBMDT, sampleRate) -
+               clock.secondsToVideoTs(offsetSeconds)),
+    Math.floor(frameDuration + 0.001),
+    'filled length of audio gap only');
+});
+
 QUnit.test('does not fill audio gaps if no audio append start time', function() {
   var
     events = [],
@@ -2474,7 +2523,6 @@ QUnit.test('does not fill audio gap if no video base media decode time', functio
               'did not fill the gap');
 });
 
-
 QUnit.test('does not fill audio gaps greater than a half second', function() {
   var
     events = [],
@@ -2505,6 +2553,45 @@ QUnit.test('does not fill audio gaps greater than a half second', function() {
   boxes = mp4.tools.inspect(events[0].boxes);
   QUnit.equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime,
               (10 + audioGap) * 90e3 - 111,
+              'did not fill gap');
+});
+
+QUnit.test('does not fill audio gaps smaller than a frame duration', function() {
+  var
+    events = [],
+    boxes,
+    offsetSeconds = clock.videoTsToSeconds(111),
+    // audio gap small enough that it shouldn't be filled
+    audioGap = 0.001,
+    newVideoStart = 10,
+    oldAudioEnd = 10.3,
+    newAudioStart = oldAudioEnd + audioGap + offsetSeconds;
+
+  audioSegmentStream.on('data', function(event) {
+    events.push(event);
+  });
+
+  // the real audio gap is tiny, but the gap between the new video and audio segments
+  // would be large enough to fill
+  audioSegmentStream.setAudioAppendStart(clock.secondsToVideoTs(oldAudioEnd));
+  audioSegmentStream.setVideoBaseMediaDecodeTime(clock.secondsToVideoTs(newVideoStart));
+
+  audioSegmentStream.push({
+    channelcount: 2,
+    samplerate: 90e3,
+    pts: clock.secondsToVideoTs(newAudioStart),
+    dts: clock.secondsToVideoTs(newAudioStart),
+    data: new Uint8Array([1])
+  });
+
+  audioSegmentStream.flush();
+
+  QUnit.equal(events.length, 1, 'a data event fired');
+  QUnit.equal(events[0].track.samples.length, 1, 'generated samples');
+  QUnit.equal(events[0].track.samples[0].size, 1, 'normal sample');
+  boxes = mp4.tools.inspect(events[0].boxes);
+  QUnit.equal(boxes[0].boxes[1].boxes[1].baseMediaDecodeTime,
+              clock.secondsToVideoTs(newAudioStart - offsetSeconds),
               'did not fill gap');
 });
 
