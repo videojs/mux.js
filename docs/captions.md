@@ -21,3 +21,5 @@ In-band HLS captions follow the CEA-708 standard.
   user_data_registered_itu_t_t35 payload.
 - CEA-708-E: describes the framing and interpretation of caption data
   reassembled out of the picture user data blobs.
+- CEA-608-E: specifies the hex to character mapping for extended language
+  characters.
