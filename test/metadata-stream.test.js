@@ -155,7 +155,7 @@ QUnit.test('parses TXXX frames check remove null', function() {
     // header
     data: new Uint8Array(id3Tag(id3Frame('TXXX',
                                           0x03, // utf-8
-                                          stringToInts("12\0"),
+                                          stringToInts('12\0'),
                                           stringToCString('{ "key": "value" }')),
                                         [0x00, 0x00]))
   });
