@@ -19,7 +19,7 @@
     "build:mp4": "browserify -s muxjs lib/mp4/index.js -o dist/mux-mp4.js",
     "build:flv": "browserify -s muxjs lib/flv/index.js -o dist/mux-flv.js",
     "build:js": "browserify -s muxjs lib/index.js -o dist/mux.js",
-    "build:test": "browserify test/*.test.js -o dist-test/mux.js",
+    "build:test": "browserify test/*.test.js -g browserify-shim -o dist-test/mux.js",
     "lint": "eslint \"lib/**/*.js\" \"test/**/*.js\"",
     "collapse": "npm-run-all -p collapse:*",
     "collapse:mp4": "bundle-collapser dist/mux-mp4.js -o dist/mux-mp4.min.js",
@@ -44,11 +44,6 @@
     "aac",
     "h264"
   ],
-  "browserify": {
-    "transform": [
-      "browserify-shim"
-    ]
-  },
   "browserify-shim": {
     "qunit": "global:QUnit"
   },
