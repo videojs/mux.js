@@ -140,7 +140,32 @@ QUnit.test('skips non-ID3 metadata events', function() {
 // frame groups
 // too large/small tag size values
 // too large/small frame size values
+QUnit.test('parses TXXX frames check remove null', function() {
+  var events = [];
+  metadataStream.on('data', function(event) {
+    events.push(event);
+  });
 
+  metadataStream.push({
+    type: 'timed-metadata',
+    trackId: 7,
+    pts: 1000,
+    dts: 900,
+
+    // header
+    data: new Uint8Array(id3Tag(id3Frame('TXXX',
+                                          0x03, // utf-8
+                                          stringToInts('12\0'),
+                                          stringToCString('{ "key": "value" }')),
+                                        [0x00, 0x00]))
+  });
+
+  QUnit.equal(events.length, 1, 'parsed one tag');
+  QUnit.equal(events[0].frames.length, 1, 'parsed one frame');
+  QUnit.equal(events[0].frames[0].key, 'TXXX', 'parsed the frame key');
+  QUnit.equal(events[0].frames[0].description, '12', 'parsed the description');
+  QUnit.deepEqual(JSON.parse(events[0].frames[0].data), { key: 'value' }, 'parsed the data');
+});
 QUnit.test('parses TXXX frames', function() {
   var events = [];
   metadataStream.on('data', function(event) {
@@ -158,7 +183,7 @@ QUnit.test('parses TXXX frames', function() {
                                           0x03, // utf-8
                                           stringToCString('get done'),
                                           stringToCString('{ "key": "value" }')),
-                                [0x00, 0x00]))
+                                        [0x00, 0x00]))
   });
 
   QUnit.equal(events.length, 1, 'parsed one tag');
