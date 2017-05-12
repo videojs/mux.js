@@ -3,7 +3,8 @@
 var
   QUnit = require('qunit'),
   probe = require('../lib/m2ts/probe.js'),
-  testSegment = require('./utils/test-segment.js');
+  testSegment = require('./utils/test-segment.js'),
+  stuffedPesPacket = require('./utils/test-stuffed-pes.js');
 
 /**
  * All subarray indices verified with the use of thumbcoil.
@@ -59,6 +60,10 @@ QUnit.test('correctly parses dts and pts values of pes packet', function() {
   var videoPes = probe.parsePesTime(videoPacket);
   QUnit.equal(videoPes.dts, 126000, 'correct dts value');
   QUnit.equal(videoPes.pts, 126000, 'correct pts value');
+
+  videoPes = probe.parsePesTime(stuffedPesPacket);
+  QUnit.equal(videoPes, null,
+    'correctly returned null when there is no packet data, only stuffing');
 });
 
 QUnit.test('correctly determines if video pes packet contains a key frame', function() {
