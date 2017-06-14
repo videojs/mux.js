@@ -63,8 +63,8 @@ var
               0x00, 0x00, // non-audio track volume
               0x00, 0x00, // reserved
               unityMatrix,
-              0x01, 0x2c, 0x00, 0x00, // 300 in 16.16 fixed point
-              0x00, 0x96, 0x00, 0x00), // 150 in 16.16 fixed point
+              0x01, 0x2c, 0x80, 0x00, // 300.5 in 16.16 fixed point
+              0x00, 0x96, 0x80, 0x00), // 150.5 in 16.16 fixed point
   mdhd0 = box('mdhd',
               0x00, // version 0
               0x00, 0x00, 0x00, // flags
@@ -189,8 +189,8 @@ QUnit.test('can parse a version 0 tkhd', function() {
     alternateGroup: 0,
     volume: 0,
     matrix: new Uint32Array(unityMatrix),
-    width: 300,
-    height: 150
+    width: 300.5,
+    height: 150.5
   }]);
 });
 
