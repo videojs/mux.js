@@ -13,7 +13,7 @@ var
 var makeSeiFromCaptionPacket = function(caption) {
   return {
     pts: caption.pts,
-    dts: caption.dts || caption.pts,
+    dts: caption.dts,
     nalUnitType: 'sei_rbsp',
     escapedRBSP: new Uint8Array([
       0x04, // payload_type === user_data_registered_itu_t_t35
@@ -35,6 +35,41 @@ var makeSeiFromCaptionPacket = function(caption) {
 
       0xff // marker_bits
     ])
+  };
+};
+
+// Create SEI nal-units from Caption packets
+var makeSeiFromMultipleCaptionPackets = function(captionHash) {
+  var pts = captionHash.pts,
+    dts = captionHash.dts,
+    captions = captionHash.captions;
+
+  var data = [];
+  captions.forEach(function(caption) {
+    data.push(0xfc | caption.type);
+    data.push((caption.ccData & 0xff00) >> 8);
+    data.push(caption.ccData & 0xff);
+  });
+
+  return {
+    pts: pts,
+    dts: dts,
+    nalUnitType: 'sei_rbsp',
+    escapedRBSP: new Uint8Array([
+      0x04, // payload_type === user_data_registered_itu_t_t35
+
+      (0x0b + (captions.length * 3)), // payload_size
+
+      181, // itu_t_t35_country_code
+      0x00, 0x31, // itu_t_t35_provider_code
+      0x47, 0x41, 0x39, 0x34, // user_identifier, "GA94"
+      0x03, // user_data_type_code, 0x03 is cc_data
+
+      // 110 00001
+      (0x6 << 5) | captions.length, // process_cc_data, cc_count
+      0xff // reserved
+    ].concat(data).concat([0xff /* marker bits */])
+    )
   };
 };
 
@@ -274,6 +309,234 @@ QUnit.test('sorting is fun', function() {
   QUnit.equal(captions[1].text, 'test string #2', 'parsed caption 2');
 });
 
+QUnit.test('drops duplicate segments', function() {
+  var packets, captions, seiNals;
+  packets = [
+    {
+      pts: 1000, dts: 1000, captions: [
+        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 },
+        {ccData: characters('te'), type: 0 },
+        {ccData: characters('st'), type: 0 }
+      ]
+    },
+    {
+      pts: 2000, dts: 2000, captions: [
+        {ccData: characters(' s'), type: 0 },
+        {ccData: characters('tr'), type: 0 },
+        {ccData: characters('in'), type: 0 }
+      ]
+    },
+    {
+      pts: 3000, dts: 3000, captions: [
+        {ccData: characters('g '), type: 0 },
+        {ccData: characters('da'), type: 0 },
+        {ccData: characters('ta'), type: 0 }
+      ]
+    },
+    {
+      pts: 2000, dts: 2000, captions: [
+        {ccData: characters(' s'), type: 0 },
+        {ccData: characters('tr'), type: 0 },
+        {ccData: characters('in'), type: 0 }
+      ]
+    },
+    {
+      pts: 3000, dts: 3000, captions: [
+        {ccData: characters('g '), type: 0 },
+        {ccData: characters('da'), type: 0 },
+        {ccData: characters('ta'), type: 0 }
+      ]
+    },
+    {
+      pts: 4000, dts: 4000, captions: [
+        {ccData: 0x142f, type: 0 },
+        {ccData: 0x142f, type: 0 },
+        {ccData: 0x1420, type: 0 },
+        {ccData: 0x142f, type: 0 }
+      ]
+    }
+  ];
+  captions = [];
+
+  seiNals = packets.map(makeSeiFromMultipleCaptionPackets);
+
+  captionStream.on('data', function(caption) {
+     captions.push(caption);
+  });
+
+  seiNals.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.equal(captions.length, 1, 'detected one caption');
+  QUnit.equal(captions[0].text, 'test string data', 'parsed caption properly');
+});
+
+QUnit.test('drops duplicate segments with multi-segment DTS values', function() {
+  var packets, captions, seiNals;
+  packets = [
+    {
+      pts: 1000, dts: 1000, captions: [
+        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 },
+        {ccData: characters('te'), type: 0 }
+      ]
+    },
+    {
+      pts: 2000, dts: 2000, captions: [
+        {ccData: characters('st'), type: 0 },
+        {ccData: characters(' s'), type: 0 }
+      ]
+    },
+    {
+      pts: 2000, dts: 2000, captions: [
+        {ccData: characters('tr'), type: 0 },
+        {ccData: characters('in'), type: 0 }
+      ]
+    },
+    {
+      pts: 3000, dts: 3000, captions: [
+        {ccData: characters('g '), type: 0 },
+        {ccData: characters('da'), type: 0 },
+        {ccData: characters('ta'), type: 0 }
+      ]
+    },
+    {
+      pts: 2000, dts: 2000, captions: [
+        {ccData: characters(' s'), type: 0 },
+        {ccData: characters('tr'), type: 0 },
+        {ccData: characters('in'), type: 0 }
+      ]
+    },
+    {
+      pts: 3000, dts: 3000, captions: [
+        {ccData: characters('g '), type: 0 },
+        {ccData: characters('da'), type: 0 },
+        {ccData: characters('ta'), type: 0 }
+      ]
+    },
+    {
+      pts: 3000, dts: 3000, captions: [
+        {ccData: characters(' s'), type: 0 },
+        {ccData: characters('tu'), type: 0 },
+        {ccData: characters('ff'), type: 0 }
+      ]
+    },
+    {
+      pts: 4000, dts: 4000, captions: [
+        {ccData: 0x142f, type: 0 },
+        {ccData: 0x142f, type: 0 },
+        {ccData: 0x1420, type: 0 },
+        {ccData: 0x142f, type: 0 }
+      ]
+    }
+  ];
+  captions = [];
+
+  seiNals = packets.map(makeSeiFromMultipleCaptionPackets);
+
+  captionStream.on('data', function(caption) {
+     captions.push(caption);
+  });
+
+  seiNals.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.equal(captions.length, 1, 'detected one caption');
+  QUnit.equal(captions[0].text, 'test string data stuff', 'parsed caption properly');
+});
+
+QUnit.test("doesn't ignore older segments if reset", function() {
+  var firstPackets, secondPackets, captions, seiNals1, seiNals2;
+  firstPackets = [
+    {
+      pts: 11000, dts: 11000, captions: [
+        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 },
+        {ccData: characters('te'), type: 0 }
+      ]
+    },
+    {
+      pts: 12000, dts: 12000, captions: [
+        {ccData: characters('st'), type: 0 },
+        {ccData: characters(' s'), type: 0 }
+      ]
+    },
+    {
+      pts: 12000, dts: 12000, captions: [
+        {ccData: characters('tr'), type: 0 },
+        {ccData: characters('in'), type: 0 }
+      ]
+    },
+    {
+      pts: 13000, dts: 13000, captions: [
+        {ccData: characters('g '), type: 0 },
+        {ccData: characters('da'), type: 0 },
+        {ccData: characters('ta'), type: 0 }
+      ]
+    }
+  ];
+  secondPackets = [
+    {
+      pts: 1000, dts: 1000, captions: [
+        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 },
+        {ccData: characters('af'), type: 0 }
+      ]
+    },
+    {
+      pts: 2000, dts: 2000, captions: [
+        {ccData: characters('te'), type: 0 },
+        {ccData: characters('r '), type: 0 },
+        {ccData: characters('re'), type: 0 }
+      ]
+    },
+    {
+      pts: 3000, dts: 3000, captions: [
+        {ccData: characters('se'), type: 0 },
+        {ccData: characters('t '), type: 0 },
+        {ccData: characters('da'), type: 0 }
+      ]
+    },
+    {
+      pts: 3000, dts: 3000, captions: [
+        {ccData: characters('ta'), type: 0 },
+        {ccData: characters('!!'), type: 0 }
+      ]
+    },
+    {
+      pts: 4000, dts: 4000, captions: [
+        {ccData: 0x142f, type: 0 },
+        {ccData: 0x142f, type: 0 },
+        {ccData: 0x1420, type: 0 },
+        {ccData: 0x142f, type: 0 }
+      ]
+    }
+  ];
+  captions = [];
+
+  seiNals1 = firstPackets.map(makeSeiFromMultipleCaptionPackets);
+  seiNals2 = secondPackets.map(makeSeiFromMultipleCaptionPackets);
+
+  captionStream.on('data', function(caption) {
+     captions.push(caption);
+  });
+
+  seiNals1.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+  QUnit.equal(captionStream.latestDts_, 13000, 'DTS is tracked correctly');
+
+  captionStream.reset();
+  QUnit.equal(captionStream.latestDts_, null, 'DTS tracking was reset');
+
+  seiNals2.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+  QUnit.equal(captionStream.latestDts_, 4000, 'DTS is tracked correctly');
+
+  QUnit.equal(captions.length, 1, 'detected one caption');
+  QUnit.equal(captions[0].text, 'after reset data!!', 'parsed caption properly');
+});
+
 QUnit.test('extracts all theoretical caption channels', function() {
   var captions = [];
   captionStream.ccStreams_.forEach(function(cc) {
@@ -351,6 +614,57 @@ QUnit.test('drops data until first command that sets activeChannel', function() 
   QUnit.equal(captions.length, 1, 'caption 1 dropped');
   QUnit.equal(captions[0].text, 'test', 'caption with ambiguous channel dropped');
   QUnit.equal(captions[0].stream, 'CC1', 'caption went to right channel');
+});
+
+QUnit.test('clears buffer and drops data until first command that sets activeChannel after reset', function() {
+  var firstPackets, secondPackets, captions, seiNals1, seiNals2;
+  captions = [];
+
+  firstPackets = [
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    { pts: 1 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 2 * 1000, ccData: 0x142f, type: 0 },
+    // RCL, resume caption loading
+    { pts: 3 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 3 * 1000, ccData: 0x142e, type: 0 },
+    { pts: 4 * 1000, ccData: characters('te'), type: 0 },
+    { pts: 4 * 1000, ccData: characters('st'), type: 0 }
+  ];
+  secondPackets = [
+    { pts: 5 * 1000, ccData: characters('no'), type: 0 },
+    { pts: 5 * 1000, ccData: characters('t '), type: 0 },
+    { pts: 5 * 1000, ccData: characters('th'), type: 0 },
+    { pts: 5 * 1000, ccData: characters('is'), type: 0 },
+    { pts: 6 * 1000, ccData: 0x142f, type: 0 },
+    { pts: 6 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 7 * 1000, ccData: 0x142f, type: 0 },
+    // RCL, resume caption loading
+    { pts: 7 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 8 * 1000, ccData: characters('bu'), type: 0 },
+    { pts: 8 * 1000, ccData: characters('t '), type: 0 },
+    { pts: 8 * 1000, ccData: characters('th'), type: 0 },
+    { pts: 8 * 1000, ccData: characters('is'), type: 0 },
+    { pts: 9 * 1000, ccData: 0x142f, type: 0 },
+    { pts: 9 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 10 * 1000, ccData: 0x142f, type: 0 }
+  ];
+
+  seiNals1 = firstPackets.map(makeSeiFromCaptionPacket);
+  seiNals2 = secondPackets.map(makeSeiFromCaptionPacket);
+
+  captionStream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  seiNals1.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+  QUnit.equal(captionStream.ccStreams_[0].nonDisplayed_[14], 'test', 'yes');
+  captionStream.reset();
+  seiNals2.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.equal(captions.length, 1, 'detected one caption');
+  QUnit.equal(captions[0].text, 'but this', 'parsed caption properly');
 });
 
 QUnit.test('ignores CEA708 captions', function() {
@@ -751,6 +1065,7 @@ QUnit.test('applies mid-row underline', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
   QUnit.equal(captions[0].text, 'no <u>yes.</u>', 'properly closed by CR');
+  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
 QUnit.test('applies mid-row italics', function() {
@@ -770,6 +1085,7 @@ QUnit.test('applies mid-row italics', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
   QUnit.equal(captions[0].text, 'no <i>yes.</i>', 'properly closed by CR');
+  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
 QUnit.test('applies mid-row italics underline', function() {
@@ -790,6 +1106,7 @@ QUnit.test('applies mid-row italics underline', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
   QUnit.equal(captions[0].text, 'no <i><u>yes.</u></i>', 'properly closed by CR');
+  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
 // NOTE: With the exception of white italics PACs (the following two test
@@ -811,6 +1128,7 @@ QUnit.test('applies PAC underline', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
   QUnit.equal(captions[0].text, '<u>yes.</u>', 'properly closed by CR');
+  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
 QUnit.test('applies PAC white italics', function() {
@@ -830,6 +1148,7 @@ QUnit.test('applies PAC white italics', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
   QUnit.equal(captions[0].text, '<i>yes.</i>', 'properly closed by CR');
+  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
 QUnit.test('applies PAC white italics underline', function() {
@@ -849,6 +1168,7 @@ QUnit.test('applies PAC white italics underline', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
   QUnit.equal(captions[0].text, '<u><i>yes.</i></u>', 'properly closed by CR');
+  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
 QUnit.test('closes formatting at PAC row change', function() {
@@ -875,6 +1195,7 @@ QUnit.test('closes formatting at PAC row change', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
   QUnit.equal(captions[0].text, '<u><i>yes.</i></u>\nno', 'properly closed by PAC row change');
+  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
 QUnit.test('closes formatting at EOC', function() {
@@ -899,6 +1220,7 @@ QUnit.test('closes formatting at EOC', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
   QUnit.equal(captions[0].text, '<u><i>yes.</i></u>', 'properly closed by EOC');
+  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
 QUnit.test('closes formatting at negating mid-row code', function() {
@@ -921,6 +1243,7 @@ QUnit.test('closes formatting at negating mid-row code', function() {
   packets.forEach(cea608Stream.push, cea608Stream);
   cea608Stream.flushDisplayed();
   QUnit.equal(captions[0].text, 'no <i><u>yes.</u></i> no', 'properly closed by negating mid-row code');
+  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
 QUnit.test('roll-up display mode', function() {
@@ -1175,6 +1498,43 @@ QUnit.test('a second identical control code immediately following the first is i
   QUnit.equal(captions[0].text, '01', 'only two backspaces processed');
 });
 
+QUnit.test('a second identical control code separated by only padding from the first is ignored', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [ // RU2, roll-up captions 2 rows
+    { ccData: 0x1425, type: 0 },
+    // '01'
+    {
+      pts: 0 * 1000,
+      ccData: characters('01'),
+      type: 0
+    },
+    // '02'
+    {
+      pts: 1 * 1000,
+      ccData: characters('02'),
+      type: 0
+    },
+    // backspace
+    { ccData: 0x1421, type: 0 },
+    { ccData: 0x0000, type: 0 },
+    { ccData: 0x0000, type: 0 },
+    { ccData: 0x0000, type: 0 },
+    // backspace
+    { pts: 2 * 1000, ccData: 0x1421, type: 0 }, // duplicate is ignored
+    // backspace
+    { ccData: 0x1421, type: 0 },
+    // CR, carriage return
+    { pts: 3 * 1000, ccData: 0x142d, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 1, 'caption emitted');
+  QUnit.equal(captions[0].text, '01', 'only two backspaces processed');
+});
+
 QUnit.test('preamble address codes on same row are NOT converted into spaces', function() {
   var captions = [];
   cea608Stream.on('data', function(caption) {
@@ -1341,6 +1701,37 @@ QUnit.test('backspaces stop at the beginning of the line', function() {
 
   QUnit.equal(captions.length, 0, 'no caption emitted');
 });
+
+QUnit.test('reset works', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+  [ // RU2, roll-up captions 2 rows
+    { pts: 0, ccData: 0x1425, type: 0 },
+    { pts: 0, ccData: 0x1121, type: 0 },
+    { pts: 0, ccData: characters('01'), type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+  var buffer = cea608Stream.displayed_.map(function(row) {
+    return row.trim();
+  }).join('\n')
+  .replace(/^\n+|\n+$/g, '');
+
+  QUnit.equal(buffer, '<u>01', 'buffer is as expected');
+
+  cea608Stream.reset();
+  buffer = cea608Stream.displayed_
+    .map(function(row) {
+      return row.trim();
+    })
+    .join('\n')
+    .replace(/^\n+|\n+$/g, '');
+  QUnit.equal(buffer, '', 'displayed buffer reset successfully');
+  QUnit.equal(cea608Stream.lastControlCode_, null, 'last control code reset successfully');
+  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting was reset');
+
+});
+
 
 QUnit.skip('paint-on display mode', function() {
   QUnit.ok(false, 'not implemented');
