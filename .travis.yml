@@ -1,7 +1,15 @@
-language: node_js
 sudo: false
+dist: trusty
+language: node_js
 node_js:
-  - "stable"
+  - 'node'
+  - 'lts/argon'
 before_script:
+  - export CHROME_BIN=/usr/bin/google-chrome
   - export DISPLAY=:99.0
   - sh -e /etc/init.d/xvfb start
+addons:
+  # TODO: This should be using latest for firefox. It is currently turned off because
+  #       of https://github.com/travis-ci/travis-ci/issues/8242 When this issue is
+  #       resolved, this should be updated back to latest
+  chrome: stable

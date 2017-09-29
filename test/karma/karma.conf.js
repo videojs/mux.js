@@ -64,7 +64,10 @@ module.exports = function(config) {
 
     // start these browsers
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: process.env.TRAVIS ? ['Firefox'] : ['Chrome', 'Firefox'],
+    // TODO: This should include firefox for env.TRAVIS. It is currently turned off
+    //       because of https://github.com/travis-ci/travis-ci/issues/8242 When this issue
+    //       is resolved, this should be updated to include firefox
+    browsers: process.env.TRAVIS ? ['ChromeHeadless'] : ['ChromeHeadless', 'Firefox'],
 
 
     // Continuous Integration mode
