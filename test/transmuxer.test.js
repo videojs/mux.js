@@ -238,7 +238,8 @@ QUnit.test('parses a PES packet', function() {
 
   // setup a program map table
   transportParseStream.programMapTable = {
-    0x0010: mp2t.H264_STREAM_TYPE
+    video: 0x0010,
+    'timed-metadata': {}
   };
 
   transportParseStream.push(new Uint8Array([
@@ -257,7 +258,8 @@ QUnit.test('parses packets with variable length adaptation fields and a payload'
 
   // setup a program map table
   transportParseStream.programMapTable = {
-    0x0010: mp2t.H264_STREAM_TYPE
+    video: 0x0010,
+    'timed-metadata': {}
   };
 
   transportParseStream.push(new Uint8Array([
@@ -418,9 +420,8 @@ QUnit.test('parse the elementary streams from a program map table', function() {
 
   QUnit.ok(packet, 'parsed a packet');
   QUnit.ok(transportParseStream.programMapTable, 'parsed a program map');
-  QUnit.strictEqual(0x1b, transportParseStream.programMapTable[0x11], 'associated h264 with pid 0x11');
-  QUnit.strictEqual(0x0f, transportParseStream.programMapTable[0x12], 'associated adts with pid 0x12');
-  QUnit.strictEqual(transportParseStream.programMapTable[0], undefined, 'ignored trailing stuffing bytes');
+  QUnit.strictEqual(transportParseStream.programMapTable.video, 0x11, 'associated h264 with pid 0x11');
+  QUnit.strictEqual(transportParseStream.programMapTable.audio, 0x12, 'associated adts with pid 0x12');
   QUnit.deepEqual(transportParseStream.programMapTable, packet.programMapTable, 'recorded the PMT');
 });
 
@@ -592,8 +593,9 @@ QUnit.test('parses metadata events from PSI packets', function() {
   elementaryStream.push({
     type: 'pmt',
     programMapTable: {
-      1: 0x1b,
-      2: 0x0f
+      video: 1,
+      audio: 2,
+      'timed-metadata': {}
     }
   });
 
