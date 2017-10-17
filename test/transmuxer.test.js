@@ -2160,6 +2160,432 @@ QUnit.test('do not subtract the first frame\'s compositionTimeOffset from baseMe
   QUnit.equal(tfdt.baseMediaDecodeTime, 140, 'calculated baseMediaDecodeTime');
 });
 
+QUnit.test('aignGopsAtStart_ filters gops appropriately', function() {
+  var gopsToAlignWith, gops, actual, expected;
+
+  // atog === arrayToGops
+  var atog = function(list) {
+    var mapped = list.map(function(item) {
+      return {
+        pts: item,
+        dts: item,
+        nalCount: 1,
+        duration: 1,
+        byteLength: 1
+      };
+    });
+
+    mapped.byteLength = mapped.length;
+    mapped.nalCount = mapped.length;
+    mapped.duration = mapped.length;
+    mapped.dts = mapped[0].dts;
+    mapped.pts = mapped[0].pts;
+
+    return mapped;
+  };
+
+  // no gops to trim, all gops start after any alignment candidates
+  gopsToAlignWith = atog([0, 2, 4, 6, 8]);
+  gops = atog([10, 12, 13, 14, 16]);
+  expected = atog([10, 12, 13, 14, 16]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'no gops to trim, all gops start after any alignment candidates');
+
+  // no gops to trim, first gop has a match with first alignment candidate
+  gopsToAlignWith = atog([0, 2, 4, 6, 8]);
+  gops = atog([0, 2, 4, 6, 8]);
+  expected = atog([0, 2, 4, 6, 8]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'no gops to trim, first gop has a match with first alignment candidate');
+
+  // no gops to trim, first gop has a match with last alignment candidate
+  gopsToAlignWith = atog([0, 2, 4, 6, 8]);
+  gops = atog([8, 10, 12, 13, 14, 16]);
+  expected = atog([8, 10, 12, 13, 14, 16]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'no gops to trim, first gop has a match with last alignment candidate');
+
+  // no gops to trim, first gop has a match with an alignment candidate
+  gopsToAlignWith = atog([0, 2, 4, 6, 8]);
+  gops = atog([6, 9, 10, 12, 13, 14, 16]);
+  expected = atog([6, 9, 10, 12, 13, 14, 16]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'no gops to trim, first gop has a match with an alignment candidate');
+
+  // all gops trimmed, all gops come before first alignment candidate
+  gopsToAlignWith = atog([10, 12, 13, 14, 16]);
+  gops = atog([0, 2, 4, 6, 8]);
+  expected = null;
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'all gops trimmed, all gops come before first alignment candidate');
+
+  // all gops trimmed, all gops come before last alignment candidate, no match found
+  gopsToAlignWith = atog([10, 12, 13, 14, 16]);
+  gops = atog([0, 2, 4, 6, 8, 11, 15]);
+  expected = null;
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'all gops trimmed, all gops come before last alignment candidate, no match found');
+
+  // all gops trimmed, all gops contained between alignment candidates, no match found
+  gopsToAlignWith = atog([6, 10, 12, 13, 14, 16]);
+  gops = atog([7, 8, 9, 11, 15]);
+  expected = null;
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'all gops trimmed, all gops contained between alignment candidates, no match found');
+
+  // some gops trimmed, some gops before first alignment candidate
+  // match on first alignment candidate
+  gopsToAlignWith = atog([9, 10, 13, 16]);
+  gops = atog([7, 8, 9, 10, 12]);
+  expected = atog([9, 10, 12]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops before first alignment candidate,' +
+    'match on first alignment candidate');
+
+  // some gops trimmed, some gops before first alignment candidate
+  // match on an alignment candidate
+  gopsToAlignWith = atog([9, 10, 13, 16]);
+  gops = atog([7, 8, 11, 13, 14]);
+  expected = atog([13, 14]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops before first alignment candidate,' +
+    'match on an alignment candidate');
+
+  // some gops trimmed, some gops before first alignment candidate
+  // match on last alignment candidate
+  gopsToAlignWith = atog([9, 10, 13, 16]);
+  gops = atog([7, 8, 11, 12, 15, 16]);
+  expected = atog([16]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops before first alignment candidate,' +
+    'match on last alignment candidate');
+
+  // some gops trimmed, some gops after last alignment candidate
+  // match on an alignment candidate
+  gopsToAlignWith = atog([0, 3, 6, 9, 10]);
+  gops = atog([4, 5, 9, 11, 13]);
+  expected = atog([9, 11, 13]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops after last alignment candidate,' +
+    'match on an alignment candidate');
+
+  // some gops trimmed, some gops after last alignment candidate
+  // match on last alignment candidate
+  gopsToAlignWith = atog([0, 3, 6, 9, 10]);
+  gops = atog([4, 5, 7, 10, 13]);
+  expected = atog([10, 13]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops after last alignment candidate,' +
+    'match on last alignment candidate');
+
+  // some gops trimmed, some gops after last alignment candidate
+  // no match found
+  gopsToAlignWith = atog([0, 3, 6, 9, 10]);
+  gops = atog([4, 5, 7, 13, 15]);
+  expected = atog([13, 15]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops after last alignment candidate,' +
+    'no match found');
+
+  // some gops trimmed, gops contained between alignment candidates
+  // match with an alignment candidate
+  gopsToAlignWith = atog([0, 3, 6, 9, 10]);
+  gops = atog([2, 4, 6, 8]);
+  expected = atog([6, 8]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, gops contained between alignment candidates,' +
+    'match with an alignment candidate');
+
+  // some gops trimmed, alignment candidates contained between gops
+  // no match
+  gopsToAlignWith = atog([3, 6, 9, 10]);
+  gops = atog([0, 2, 4, 8, 11, 13]);
+  expected = atog([11, 13]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, alignment candidates contained between gops,' +
+    'no match');
+
+  // some gops trimmed, alignment candidates contained between gops
+  // match with first alignment candidate
+  gopsToAlignWith = atog([3, 6, 9, 10]);
+  gops = atog([0, 2, 3, 4, 5, 9, 10, 11]);
+  expected = atog([3, 4, 5, 9, 10, 11]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, alignment candidates contained between gops,' +
+    'match with first alignment candidate');
+
+  // some gops trimmed, alignment candidates contained between gops
+  // match with last alignment candidate
+  gopsToAlignWith = atog([3, 6, 9, 10]);
+  gops = atog([0, 2, 4, 8, 10, 13, 15]);
+  expected = atog([10, 13, 15]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, alignment candidates contained between gops,' +
+    'match with last alignment candidate');
+
+  // some gops trimmed, alignment candidates contained between gops
+  // match with an alignment candidate
+  gopsToAlignWith = atog([3, 6, 9, 10]);
+  gops = atog([0, 2, 4, 6, 9, 11, 13]);
+  expected = atog([6, 9, 11, 13]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtStart_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, alignment candidates contained between gops,' +
+    'match with an alignment candidate');
+});
+
+QUnit.test('alignGopsAtEnd_ filters gops appropriately', function() {
+  var gopsToAlignWith, gops, actual, expected;
+
+  // atog === arrayToGops
+  var atog = function(list) {
+    var mapped = list.map(function(item) {
+      return {
+        pts: item,
+        dts: item,
+        nalCount: 1,
+        duration: 1,
+        byteLength: 1
+      };
+    });
+
+    mapped.byteLength = mapped.length;
+    mapped.nalCount = mapped.length;
+    mapped.duration = mapped.length;
+    mapped.dts = mapped[0].dts;
+    mapped.pts = mapped[0].pts;
+
+    return mapped;
+  };
+
+  // no gops to trim, all gops start after any alignment candidates
+  gopsToAlignWith = atog([0, 2, 4, 6, 8]);
+  gops = atog([10, 12, 13, 14, 16]);
+  expected = atog([10, 12, 13, 14, 16]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'no gops to trim, all gops start after any alignment candidates');
+
+  // no gops to trim, first gop has a match with first alignment candidate
+  gopsToAlignWith = atog([0, 2, 4, 6, 8]);
+  gops = atog([0, 1, 3, 5, 7]);
+  expected = atog([0, 1, 3, 5, 7]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'no gops to trim, first gop has a match with first alignment candidate');
+
+  // no gops to trim, first gop has a match with last alignment candidate
+  gopsToAlignWith = atog([0, 2, 4, 6, 8]);
+  gops = atog([8, 10, 12, 13, 14, 16]);
+  expected = atog([8, 10, 12, 13, 14, 16]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'no gops to trim, first gop has a match with last alignment candidate');
+
+  // no gops to trim, first gop has a match with an alignment candidate
+  gopsToAlignWith = atog([0, 2, 4, 6, 8]);
+  gops = atog([6, 9, 10, 12, 13, 14, 16]);
+  expected = atog([6, 9, 10, 12, 13, 14, 16]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'no gops to trim, first gop has a match with an alignment candidate');
+
+  // all gops trimmed, all gops come before first alignment candidate
+  gopsToAlignWith = atog([10, 12, 13, 14, 16]);
+  gops = atog([0, 2, 4, 6, 8]);
+  expected = null;
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'all gops trimmed, all gops come before first alignment candidate');
+
+  // all gops trimmed, all gops come before last alignment candidate, no match found
+  gopsToAlignWith = atog([10, 12, 13, 14, 16]);
+  gops = atog([0, 2, 4, 6, 8, 11, 15]);
+  expected = null;
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'all gops trimmed, all gops come before last alignment candidate, no match found');
+
+  gopsToAlignWith = atog([10, 12, 13, 14, 16]);
+  gops = atog([8, 11, 15]);
+  expected = null;
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'all gops trimmed, all gops come before last alignment candidate, no match found');
+
+  // all gops trimmed, all gops contained between alignment candidates, no match found
+  gopsToAlignWith = atog([6, 10, 12, 13, 14, 16]);
+  gops = atog([7, 8, 9, 11, 15]);
+  expected = null;
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'all gops trimmed, all gops contained between alignment candidates, no match found');
+
+  // some gops trimmed, some gops before first alignment candidate
+  // match on first alignment candidate
+  gopsToAlignWith = atog([9, 11, 13, 16]);
+  gops = atog([7, 8, 9, 10, 12]);
+  expected = atog([9, 10, 12]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops before first alignment candidate,' +
+    'match on first alignment candidate');
+
+  // some gops trimmed, some gops before first alignment candidate
+  // match on an alignment candidate
+  gopsToAlignWith = atog([9, 10, 11, 13, 16]);
+  gops = atog([7, 8, 11, 13, 14, 15]);
+  expected = atog([13, 14, 15]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops before first alignment candidate,' +
+    'match on an alignment candidate');
+
+  // some gops trimmed, some gops before first alignment candidate
+  // match on last alignment candidate
+  gopsToAlignWith = atog([9, 10, 13, 16]);
+  gops = atog([7, 8, 11, 12, 15, 16]);
+  expected = atog([16]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops before first alignment candidate,' +
+    'match on last alignment candidate');
+
+  // some gops trimmed, some gops after last alignment candidate
+  // match on an alignment candidate
+  gopsToAlignWith = atog([0, 3, 6, 9, 10]);
+  gops = atog([4, 5, 6, 9, 11, 13]);
+  expected = atog([9, 11, 13]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops after last alignment candidate,' +
+    'match on an alignment candidate');
+
+  // some gops trimmed, some gops after last alignment candidate
+  // match on last alignment candidate
+  gopsToAlignWith = atog([0, 3, 6, 9, 10]);
+  gops = atog([4, 5, 7, 9, 10, 13]);
+  expected = atog([10, 13]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops after last alignment candidate,' +
+    'match on last alignment candidate');
+
+  // some gops trimmed, some gops after last alignment candidate
+  // no match found
+  gopsToAlignWith = atog([0, 3, 6, 9, 10]);
+  gops = atog([4, 5, 7, 13, 15]);
+  expected = atog([13, 15]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, some gops after last alignment candidate,' +
+    'no match found');
+
+  // some gops trimmed, gops contained between alignment candidates
+  // match with an alignment candidate
+  gopsToAlignWith = atog([0, 3, 6, 9, 10]);
+  gops = atog([2, 4, 6, 8]);
+  expected = atog([6, 8]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, gops contained between alignment candidates,' +
+    'match with an alignment candidate');
+
+  // some gops trimmed, alignment candidates contained between gops
+  // no match
+  gopsToAlignWith = atog([3, 6, 9, 10]);
+  gops = atog([0, 2, 4, 8, 11, 13]);
+  expected = atog([11, 13]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, alignment candidates contained between gops,' +
+    'no match');
+
+  // some gops trimmed, alignment candidates contained between gops
+  // match with first alignment candidate
+  gopsToAlignWith = atog([3, 6, 9, 10]);
+  gops = atog([0, 2, 3, 4, 5, 11]);
+  expected = atog([3, 4, 5, 11]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, alignment candidates contained between gops,' +
+    'match with first alignment candidate');
+
+  // some gops trimmed, alignment candidates contained between gops
+  // match with last alignment candidate
+  gopsToAlignWith = atog([3, 6, 9, 10]);
+  gops = atog([0, 2, 4, 8, 10, 13, 15]);
+  expected = atog([10, 13, 15]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, alignment candidates contained between gops,' +
+    'match with last alignment candidate');
+
+  // some gops trimmed, alignment candidates contained between gops
+  // match with an alignment candidate
+  gopsToAlignWith = atog([3, 6, 9, 10]);
+  gops = atog([0, 2, 4, 6, 9, 11, 13]);
+  expected = atog([9, 11, 13]);
+  videoSegmentStream.alignGopsWith(gopsToAlignWith);
+  actual = videoSegmentStream.alignGopsAtEnd_(gops);
+  QUnit.deepEqual(actual, expected,
+    'some gops trimmed, alignment candidates contained between gops,' +
+    'match with an alignment candidate');
+});
+
 QUnit.module('ADTS Stream', {
   setup: function() {
     adtsStream = new AdtsStream();
