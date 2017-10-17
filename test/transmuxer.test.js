@@ -8,6 +8,7 @@ var mp2t = require('../lib/m2ts'),
     mp4 = require('../lib/mp4'),
     QUnit = require('qunit'),
     testSegment = require('./utils/test-segment'),
+    testMiddlePatPMT = require('./utils/test-middle-pat-pmt'),
     mp4AudioProperties = require('../lib/mp4/transmuxer').AUDIO_PROPERTIES,
     mp4VideoProperties = require('../lib/mp4/transmuxer').VIDEO_PROPERTIES,
     clock = require('../lib/utils/clock'),
@@ -318,6 +319,20 @@ QUnit.test('parses the program map table pid from the program association table 
   transportParseStream.push(new Uint8Array(PAT));
   QUnit.ok(packet, 'parsed a packet');
   QUnit.strictEqual(0x0010, transportParseStream.pmtPid, 'parsed PMT pid');
+});
+
+QUnit.test('does not parse PES packets until after the PES has been parsed', function() {
+  var pesCount = 0;
+
+  transportParseStream.on('data', function(data) {
+    if (data.type === 'pmt') {
+      QUnit.equal(pesCount, 0, 'have not yet parsed any PES packets');
+    } else if (data.type === 'pes') {
+      pesCount++;
+    }
+  });
+
+  transportPacketStream.push(testMiddlePatPMT);
 });
 
 generatePMT = function(options) {
