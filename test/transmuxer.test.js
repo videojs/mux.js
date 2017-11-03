@@ -787,7 +787,7 @@ QUnit.test('parses an elementary stream packet without a pts or dts', function()
   QUnit.ok(!packet.dts, 'did not parse a dts');
 });
 
-QUnit.test('won\'t emit non-video packets if the PES_packet_length doesn\'t match contents', function() {
+QUnit.test('won\'t emit non-video packets if the PES_packet_length is larger than the contents', function() {
   var events = [];
   var pesHead = pesHeader(false, 1, 5);
 
@@ -807,11 +807,19 @@ QUnit.test('won\'t emit non-video packets if the PES_packet_length doesn\'t matc
     streamType: ADTS_STREAM_TYPE,
     data: new Uint8Array(pesHead.concat([1]))
   });
+  elementaryStream.push({
+    type: 'pes',
+    payloadUnitStartIndicator: true,
+    streamType: METADATA_STREAM_TYPE,
+    // data larger than 5 byte dataLength, should still emit event
+    data: new Uint8Array(pesHead.concat([1,1,1,1,1,1,1,1,1]))
+  })
   QUnit.equal(0, events.length, 'buffers partial packets');
 
   elementaryStream.flush();
-  QUnit.equal(events.length, 1, 'emitted a single packet');
-  QUnit.equal('video', events[0].type, 'identified video data');
+  QUnit.equal(events.length, 2, 'emitted 2 packets');
+  QUnit.equal(events[0].type, 'video', 'identified video data');
+  QUnit.equal(events[1].type, 'timed-metadata', 'identified timed-metadata');
 });
 
 QUnit.test('buffers audio and video program streams individually', function() {
