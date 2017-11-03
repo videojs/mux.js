@@ -812,8 +812,9 @@ QUnit.test('won\'t emit non-video packets if the PES_packet_length is larger tha
     payloadUnitStartIndicator: true,
     streamType: METADATA_STREAM_TYPE,
     // data larger than 5 byte dataLength, should still emit event
-    data: new Uint8Array(pesHead.concat([1,1,1,1,1,1,1,1,1]))
-  })
+    data: new Uint8Array(pesHead.concat([1, 1, 1, 1, 1, 1, 1, 1, 1]))
+  });
+
   QUnit.equal(0, events.length, 'buffers partial packets');
 
   elementaryStream.flush();
