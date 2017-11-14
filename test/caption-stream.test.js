@@ -428,6 +428,81 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
     {
       pts: 4000, dts: 4000, captions: [
         {ccData: 0x142f, type: 0 },
+        {ccData: 0x1420, type: 0 }
+      ]
+    },
+    {
+      pts: 5000, dts: 5000, captions: [
+        {ccData: 0x1420, type: 0 },
+        {ccData: characters(' a'), type: 0 },
+        {ccData: characters('nd'), type: 0 }
+      ]
+    },
+    {
+      pts: 6000, dts: 6000, captions: [
+        {ccData: characters(' e'), type: 0 },
+        {ccData: characters('ve'), type: 0 }
+      ]
+    },
+    {
+      pts: 6000, dts: 6000, captions: [
+        {ccData: characters('n '), type: 0 },
+        {ccData: characters('mo'), type: 0 }
+      ]
+    },
+    {
+      pts: 6000, dts: 6000, captions: [
+        {ccData: characters('re'), type: 0 },
+        {ccData: characters(' t'), type: 0 }
+      ]
+    },
+    {
+      pts: 5000, dts: 5000, captions: [
+        {ccData: 0x1420, type: 0 },
+        {ccData: characters(' a'), type: 0 },
+        {ccData: characters('nd'), type: 0 }
+      ]
+    },
+    {
+      pts: 6000, dts: 6000, captions: [
+        {ccData: characters(' e'), type: 0 },
+        {ccData: characters('ve'), type: 0 }
+      ]
+    },
+    {
+      pts: 6000, dts: 6000, captions: [
+        {ccData: characters('n '), type: 0 },
+        {ccData: characters('mo'), type: 0 }
+      ]
+    },
+    {
+      pts: 6000, dts: 6000, captions: [
+        {ccData: characters('re'), type: 0 },
+        {ccData: characters(' t'), type: 0 }
+      ]
+    },
+    {
+      pts: 6000, dts: 6000, captions: [
+        {ccData: characters('ex'), type: 0 },
+        {ccData: characters('t '), type: 0 }
+      ]
+    },
+    {
+      pts: 6000, dts: 6000, captions: [
+        {ccData: characters('da'), type: 0 },
+        {ccData: characters('ta'), type: 0 }
+      ]
+    },
+    {
+      pts: 7000, dts: 7000, captions: [
+        {ccData: characters(' h'), type: 0 },
+        {ccData: characters('er'), type: 0 }
+      ]
+    },
+    {
+      pts: 8000, dts: 8000, captions: [
+        {ccData: characters('e!'), type: 0 },
+        {ccData: 0x142f, type: 0 },
         {ccData: 0x142f, type: 0 },
         {ccData: 0x1420, type: 0 },
         {ccData: 0x142f, type: 0 }
@@ -445,8 +520,9 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
   seiNals.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.equal(captions.length, 1, 'detected one caption');
+  QUnit.equal(captions.length, 2, 'detected two captions');
   QUnit.equal(captions[0].text, 'test string data stuff', 'parsed caption properly');
+  QUnit.equal(captions[1].text, 'and even more text data here!', 'parsed caption properly');
 });
 
 QUnit.test("doesn't ignore older segments if reset", function() {
