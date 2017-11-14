@@ -1060,7 +1060,7 @@ QUnit.test('recognizes the Erase Displayed Memory command', function() {
   }, 'parsed the third caption');
 });
 
-QUnit.test('backspaces are applied to non-displayed memory', function() {
+QUnit.test('backspaces are applied to non-displayed memory for pop-on mode', function() {
   var captions = [], packets;
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1074,18 +1074,23 @@ QUnit.test('backspaces are applied to non-displayed memory', function() {
     // backspace
     { ccData: 0x1421, type: 0 },
     { ccData: characters('23'), type: 0 },
+    { pts: 1 * 1000, ccData: 0x1370, type: 0 },
+    { pts: 1 * 1000, ccData: characters('32'), type: 0 },
+    // backspace
+    { pts: 2 * 1000, ccData: 0x1421, type: 0 },
+    { pts: 3 * 1000, ccData: characters('10'), type: 0 },
     // EOC, End of Caption
-    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    { pts: 4 * 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
     { ccData: 0x1420, type: 0 },
     // EOC, End of Caption
-    { pts: 3 * 1000, ccData: 0x142f, type: 0 }
+    { pts: 5 * 1000, ccData: 0x142f, type: 0 }
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'detected a caption');
-  QUnit.equal(captions[0].text, '023', 'applied the backspace');
+  QUnit.equal(captions[0].text, '310\n\n023', 'applied the backspaces');
 });
 
 QUnit.test('backspaces on cleared memory are no-ops', function() {
@@ -1536,6 +1541,91 @@ QUnit.test('the roll-up count can be changed on-the-fly', function() {
   QUnit.equal(captions.length, 0, 'cleared the caption');
 });
 
+QUnit.test('switching to roll-up from pop-on wipes memories', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    { pts: 0 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 0 * 1000, ccData: characters('hi'), type: 0 },
+    // flip memories
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    { pts: 1 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 2 * 1000, ccData: characters('oh'), type: 0 },
+    { pts: 2 * 1000, ccData: 0x142f, type: 0 },
+    { pts: 3 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 3 * 1000, ccData: 0x142f, type: 0 },
+    { pts: 4 * 1000, ccData: 0x1425, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  var displayed = cea608Stream.displayed_.reduce(function(acc, val) {
+    acc += val.trim();
+    return acc;
+  });
+  var nonDisplayed = cea608Stream.nonDisplayed_.reduce(function(acc, val) {
+    acc += val.trim();
+    return acc;
+  });
+
+  QUnit.equal(displayed, '');
+  QUnit.equal(nonDisplayed, '');
+});
+
+QUnit.test('switching to roll-up from paint-on wipes memories', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    { pts: 0 * 1000, ccData: 0x1429, type: 0 },
+    { pts: 0 * 1000, ccData: characters('hi'), type: 0 },
+    // flip memories
+    { pts: 1 * 1000, ccData: 0x142c, type: 0 },
+    { pts: 2 * 1000, ccData: 0x1425, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  var displayed = cea608Stream.displayed_.reduce(function(acc, val) {
+    acc += val.trim();
+    return acc;
+  });
+  var nonDisplayed = cea608Stream.nonDisplayed_.reduce(function(acc, val) {
+    acc += val.trim();
+    return acc;
+  });
+
+  QUnit.equal(displayed, '');
+  QUnit.equal(nonDisplayed, '');
+});
+
+QUnit.test('switching to paint-on from pop-on doesn\'t wipe display', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    { pts: 0 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 0 * 1000, ccData: 0x1450, type: 0 },
+    { pts: 0 * 1000, ccData: characters('hi'), type: 0 },
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    { pts: 1 * 1000, ccData: 0x1420, type: 0 },
+    // flip memories
+    { pts: 2 * 1000, ccData: 0x1429, type: 0 },
+    { pts: 2 * 1000, ccData: 0x1450, type: 0 },
+    { pts: 2 * 1000, ccData: 0x1721, type: 0 },
+    { pts: 3 * 1000, ccData: characters('io'), type: 0 },
+    { pts: 4 * 1000, ccData: 0x142c, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 1, 'detected caption');
+  QUnit.equal(captions[0].text, 'hio', 'paint-on overwrote pop-on');
+  QUnit.equal(captions[0].startPts, 2000, 'proper start pts');
+  QUnit.equal(captions[0].endPts, 4000, 'proper end pts');
+});
+
 QUnit.test('backspaces are reflected in the generated captions', function() {
   var captions = [];
   cea608Stream.on('data', function(caption) {
@@ -1862,6 +1952,276 @@ QUnit.test('reset works', function() {
 });
 
 
-QUnit.skip('paint-on display mode', function() {
-  QUnit.ok(false, 'not implemented');
+QUnit.test('paint-on mode', function() {
+  var packets, captions;
+  packets = [
+    // RDC, resume direct captioning, begin display
+    { pts: 1000, ccData: 0x1429, type: 0 },
+    // 'hi'
+    { pts: 2000, ccData: characters('hi'), type: 0 },
+    // EDM, erase displayed memory. Finish display
+    { pts: 3000, ccData: 0x142c, type: 0 }
+  ];
+  captions = [];
+
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  packets.forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 1, 'detected a caption');
+  QUnit.deepEqual(captions[0], {
+    startPts: 1000,
+    endPts: 3000,
+    text: 'hi',
+    stream: 'CC1'
+  }, 'parsed the caption');
+});
+
+QUnit.test('preserves newlines from PACs in paint-on mode', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    // RDC, resume direct captioning
+    { pts: 1000, ccData: 0x1429, type: 0 },
+    { pts: 1000, ccData: 0x1350, type: 0 },
+    { pts: 2000, ccData: 0x5445, type: 0 },
+    { pts: 2000, ccData: 0x5354, type: 0 },
+    { pts: 3000, ccData: 0x1450, type: 0 },
+    { pts: 3000, ccData: 0x5354, type: 0 },
+    { pts: 4000, ccData: 0x5249, type: 0 },
+    { pts: 4000, ccData: 0x4e47, type: 0 },
+    { pts: 5000, ccData: 0x1470, type: 0 },
+    { pts: 5000, ccData: 0x4441, type: 0 },
+    { pts: 6000, ccData: 0x5441, type: 0 },
+    // EDM, erase displayed memory. Finish display
+    { pts: 6000, ccData: 0x142c, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 1, 'caption emitted');
+  QUnit.equal(captions[0].text, 'TEST\n\nSTRING\nDATA', 'Position PACs were converted to newlines');
+});
+
+QUnit.test('backspaces are reflected in the generated captions (paint-on)', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [ // RDC, resume direct captioning
+    { ccData: 0x1429, type: 0 },
+    // '01'
+    { pts: 0 * 1000, ccData: characters('01'), type: 0 },
+    // backspace
+    { pts: 0 * 1000, ccData: 0x1421, type: 0 },
+    { pts: 1 * 1000, ccData: characters('23'), type: 0 },
+    { pts: 2 * 1000, ccData: 0x1370, type: 0 },
+    { pts: 2 * 1000, ccData: characters('32'), type: 0 },
+    // backspace
+    { pts: 3 * 1000, ccData: 0x1421, type: 0 },
+    { pts: 4 * 1000, ccData: characters('10'), type: 0 },
+    // EDM, erase displayed memory
+    { pts: 5 * 1000, ccData: 0x142c, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 1, 'detected a caption');
+  QUnit.equal(captions[0].text, '310\n\n023', 'applied the backspaces');
+});
+
+QUnit.test('mix of all modes (extract from CNN)', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    { pts: 6675, ccData: 0x1425, type: 0 },
+    { pts: 6675, ccData: 0x142d, type: 0 },
+    { pts: 6675, ccData: 0x1170, type: 0 },
+    { pts: 6676, ccData: 0x5945, type: 0 },
+    { pts: 6676, ccData: 0x4152, type: 0 },
+    { pts: 6676, ccData: 0x2e00, type: 0 },
+    { pts: 6677, ccData: 0x1425, type: 0 },
+    { pts: 6677, ccData: 0x142d, type: 0 },
+    { pts: 6677, ccData: 0x1170, type: 0 },
+    { pts: 6677, ccData: 0x474f, type: 0 },
+    { pts: 6678, ccData: 0x2054, type: 0 },
+    { pts: 6678, ccData: 0x4f00, type: 0 },
+    { pts: 6678, ccData: 0x2043, type: 0 },
+    { pts: 6679, ccData: 0x4e4e, type: 0 },
+    { pts: 6679, ccData: 0x4845, type: 0 },
+    { pts: 6679, ccData: 0x524f, type: 0 },
+    { pts: 6680, ccData: 0x532e, type: 0 },
+    { pts: 6680, ccData: 0x434f, type: 0 },
+    { pts: 6680, ccData: 0x4d2e, type: 0 },
+    { pts: 6697, ccData: 0x142c, type: 0 },
+    { pts: 6749, ccData: 0x1429, type: 0 },
+    { pts: 6750, ccData: 0x1150, type: 0 },
+    { pts: 6750, ccData: 0x4469, type: 0 },
+    { pts: 6750, ccData: 0x6420, type: 0 },
+    { pts: 6750, ccData: 0x796f, type: 0 },
+    { pts: 6751, ccData: 0x7572, type: 0 },
+    { pts: 6751, ccData: 0x2053, type: 0 },
+    { pts: 6751, ccData: 0x656e, type: 0 },
+    { pts: 6752, ccData: 0x6174, type: 0 },
+    { pts: 6752, ccData: 0x6f72, type: 0 },
+    { pts: 6752, ccData: 0x206f, type: 0 },
+    { pts: 6753, ccData: 0x7220, type: 0 },
+    { pts: 6753, ccData: 0x436f, type: 0 },
+    { pts: 6753, ccData: 0x6e67, type: 0 },
+    { pts: 6753, ccData: 0x7265, type: 0 },
+    { pts: 6754, ccData: 0x7373, type: 0 },
+    { pts: 6754, ccData: 0x6d61, type: 0 },
+    { pts: 6754, ccData: 0x6e00, type: 0 },
+    { pts: 6755, ccData: 0x1170, type: 0 },
+    { pts: 6755, ccData: 0x1722, type: 0 },
+    { pts: 6755, ccData: 0x6765, type: 0 },
+    { pts: 6756, ccData: 0x7420, type: 0 },
+    { pts: 6756, ccData: 0x656c, type: 0 },
+    { pts: 6756, ccData: 0x6563, type: 0 },
+    { pts: 6756, ccData: 0x7465, type: 0 },
+    { pts: 6757, ccData: 0x6420, type: 0 },
+    { pts: 6757, ccData: 0x6279, type: 0 },
+    { pts: 6757, ccData: 0x2074, type: 0 },
+    { pts: 6758, ccData: 0x616c, type: 0 },
+    { pts: 6758, ccData: 0x6b69, type: 0 },
+    { pts: 6758, ccData: 0x6e67, type: 0 },
+    { pts: 6759, ccData: 0x2074, type: 0 },
+    { pts: 6759, ccData: 0x6f75, type: 0 },
+    { pts: 6759, ccData: 0x6768, type: 0 },
+    { pts: 6759, ccData: 0x1420, type: 0 },
+    { pts: 6760, ccData: 0x1152, type: 0 },
+    { pts: 6760, ccData: 0x1721, type: 0 },
+    { pts: 6760, ccData: 0x6f6e, type: 0 },
+    { pts: 6761, ccData: 0x2074, type: 0 },
+    { pts: 6761, ccData: 0x6865, type: 0 },
+    { pts: 6761, ccData: 0x206e, type: 0 },
+    { pts: 6762, ccData: 0x6174, type: 0 },
+    { pts: 6762, ccData: 0x696f, type: 0 },
+    { pts: 6762, ccData: 0x6e61, type: 0 },
+    { pts: 6762, ccData: 0x6c20, type: 0 },
+    { pts: 6763, ccData: 0x6465, type: 0 },
+    { pts: 6763, ccData: 0x6274, type: 0 },
+    { pts: 6763, ccData: 0x3f00, type: 0 },
+    { pts: 6781, ccData: 0x1420, type: 0 },
+    { pts: 6781, ccData: 0x142c, type: 0 },
+    { pts: 6782, ccData: 0x142f, type: 0 },
+    { pts: 6782, ccData: 0x1420, type: 0 },
+    { pts: 6782, ccData: 0x1152, type: 0 },
+    { pts: 6783, ccData: 0x1722, type: 0 },
+    { pts: 6783, ccData: 0x5769, type: 0 },
+    { pts: 6783, ccData: 0x6c6c, type: 0 },
+    { pts: 6783, ccData: 0x2074, type: 0 },
+    { pts: 6784, ccData: 0x6865, type: 0 },
+    { pts: 6784, ccData: 0x7920, type: 0 },
+    { pts: 6784, ccData: 0x7374, type: 0 },
+    { pts: 6785, ccData: 0x6179, type: 0 },
+    { pts: 6785, ccData: 0x2074, type: 0 },
+    { pts: 6785, ccData: 0x7275, type: 0 },
+    { pts: 6786, ccData: 0x6500, type: 0 },
+    { pts: 6786, ccData: 0x1174, type: 0 },
+    { pts: 6786, ccData: 0x746f, type: 0 },
+    { pts: 6786, ccData: 0x2074, type: 0 },
+    { pts: 6787, ccData: 0x6865, type: 0 },
+    { pts: 6787, ccData: 0x6972, type: 0 },
+    { pts: 6787, ccData: 0x2077, type: 0 },
+    { pts: 6788, ccData: 0x6f72, type: 0 },
+    { pts: 6788, ccData: 0x6473, type: 0 },
+    { pts: 6788, ccData: 0x3f00, type: 0 },
+    { pts: 6797, ccData: 0x1420, type: 0 },
+    { pts: 6797, ccData: 0x142c, type: 0 },
+    { pts: 6798, ccData: 0x142f, type: 0 },
+    { pts: 6799, ccData: 0x1420, type: 0 },
+    { pts: 6838, ccData: 0x142f, type: 0 },
+    { pts: 6841, ccData: 0x1425, type: 0 },
+    { pts: 6841, ccData: 0x142d, type: 0 },
+    { pts: 6841, ccData: 0x1170, type: 0 },
+    { pts: 6841, ccData: 0x3e3e, type: 0 },
+    { pts: 6841, ccData: 0x3e00, type: 0 },
+    { pts: 6842, ccData: 0x204e, type: 0 },
+    { pts: 6842, ccData: 0x4f00, type: 0 },
+    { pts: 6842, ccData: 0x204d, type: 0 },
+    { pts: 6842, ccData: 0x4f52, type: 0 },
+    { pts: 6842, ccData: 0x4500, type: 0 },
+    { pts: 6842, ccData: 0x2000, type: 0 },
+    { pts: 6842, ccData: 0x5350, type: 0 },
+    { pts: 6843, ccData: 0x4543, type: 0 },
+    { pts: 6843, ccData: 0x554c, type: 0 },
+    { pts: 6843, ccData: 0x4154, type: 0 },
+    { pts: 6843, ccData: 0x494f, type: 0 },
+    { pts: 6843, ccData: 0x4e2c, type: 0 },
+    { pts: 6843, ccData: 0x204e, type: 0 },
+    { pts: 6843, ccData: 0x4f00, type: 0 },
+    { pts: 6843, ccData: 0x204d, type: 0 },
+    { pts: 6844, ccData: 0x4f52, type: 0 },
+    { pts: 6844, ccData: 0x4500, type: 0 },
+    { pts: 6844, ccData: 0x1425, type: 0 },
+    { pts: 6844, ccData: 0x142d, type: 0 },
+    { pts: 6844, ccData: 0x1170, type: 0 },
+    { pts: 6844, ccData: 0x5255, type: 0 },
+    { pts: 6844, ccData: 0x4d4f, type: 0 },
+    { pts: 6844, ccData: 0x5253, type: 0 },
+    { pts: 6844, ccData: 0x204f, type: 0 },
+    { pts: 6845, ccData: 0x5200, type: 0 },
+    { pts: 6845, ccData: 0x2047, type: 0 },
+    { pts: 6845, ccData: 0x5545, type: 0 },
+    { pts: 6845, ccData: 0x5353, type: 0 },
+    { pts: 6845, ccData: 0x494e, type: 0 },
+    { pts: 6845, ccData: 0x4700, type: 0 },
+    { pts: 6845, ccData: 0x2047, type: 0 },
+    { pts: 6845, ccData: 0x414d, type: 0 },
+    { pts: 6845, ccData: 0x4553, type: 0 },
+    { pts: 6845, ccData: 0x2e00, type: 0 },
+    { pts: 6846, ccData: 0x1425, type: 0 },
+    { pts: 6846, ccData: 0x142d, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 7, 'detected 7 captions of varying types');
+  QUnit.deepEqual(captions[0], {
+    startPts: 6675,
+    endPts: 6677,
+    text: 'YEAR.',
+    stream: 'CC1'
+  }, 'parsed the 1st roll-up caption');
+  QUnit.deepEqual(captions[1], {
+    startPts: 6677,
+    endPts: 6697,
+    text: 'YEAR.\nGO TO CNNHEROS.COM.',
+    stream: 'CC1'
+  }, 'parsed the 2nd roll-up caption');
+  QUnit.deepEqual(captions[2], {
+    startPts: 6749,
+    endPts: 6781,
+    text: 'Did your Senator or Congressman\nget elected by talking tough',
+    stream: 'CC1'
+  }, 'parsed the paint-on caption');
+  QUnit.deepEqual(captions[3], {
+    startPts: 6782,
+    endPts: 6797,
+    text: 'on the national debt?',
+    stream: 'CC1'
+  }, 'parsed the 1st pop-on caption');
+  QUnit.deepEqual(captions[4], {
+    startPts: 6798,
+    endPts: 6838,
+    text: 'Will they stay true\nto their words?',
+    stream: 'CC1'
+  }, 'parsed the 2nd pop-on caption');
+  QUnit.deepEqual(captions[5], {
+    startPts: 6841,
+    endPts: 6844,
+    text: '>>> NO MORE SPECULATION, NO MORE',
+    stream: 'CC1'
+  }, 'parsed the 3rd roll-up caption');
+  QUnit.deepEqual(captions[6], {
+    startPts: 6844,
+    endPts: 6846,
+    text: '>>> NO MORE SPECULATION, NO MORE\nRUMORS OR GUESSING GAMES.',
+    stream: 'CC1'
+  }, 'parsed the 4th roll-up caption');
+
 });
