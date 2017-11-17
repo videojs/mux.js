@@ -1541,7 +1541,7 @@ QUnit.test('the roll-up count can be changed on-the-fly', function() {
   QUnit.equal(captions.length, 0, 'cleared the caption');
 });
 
-QUnit.test('switching to roll-up from pop-on wipes memories', function() {
+QUnit.test('switching to roll-up from pop-on wipes memories and flushes captions', function() {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1555,9 +1555,7 @@ QUnit.test('switching to roll-up from pop-on wipes memories', function() {
     { pts: 1 * 1000, ccData: 0x1420, type: 0 },
     { pts: 2 * 1000, ccData: characters('oh'), type: 0 },
     { pts: 2 * 1000, ccData: 0x142f, type: 0 },
-    { pts: 3 * 1000, ccData: 0x1420, type: 0 },
-    { pts: 3 * 1000, ccData: 0x142f, type: 0 },
-    { pts: 4 * 1000, ccData: 0x1425, type: 0 }
+    { pts: 3 * 1000, ccData: 0x1425, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   var displayed = cea608Stream.displayed_.reduce(function(acc, val) {
@@ -1569,11 +1567,24 @@ QUnit.test('switching to roll-up from pop-on wipes memories', function() {
     return acc;
   });
 
+  QUnit.equal(captions.length, 2, 'both captions flushed');
   QUnit.equal(displayed, '');
   QUnit.equal(nonDisplayed, '');
+  QUnit.deepEqual(captions[0], {
+    startPts: 1000,
+    endPts: 2000,
+    text: 'hi',
+    stream: 'CC1'
+  }, 'first caption correct');
+  QUnit.deepEqual(captions[1], {
+    startPts: 2000,
+    endPts: 3000,
+    text: 'oh',
+    stream: 'CC1'
+  }, 'second caption correct');
 });
 
-QUnit.test('switching to roll-up from paint-on wipes memories', function() {
+QUnit.test('switching to roll-up from paint-on wipes memories and flushes captions', function() {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1582,9 +1593,7 @@ QUnit.test('switching to roll-up from paint-on wipes memories', function() {
   [
     { pts: 0 * 1000, ccData: 0x1429, type: 0 },
     { pts: 0 * 1000, ccData: characters('hi'), type: 0 },
-    // flip memories
-    { pts: 1 * 1000, ccData: 0x142c, type: 0 },
-    { pts: 2 * 1000, ccData: 0x1425, type: 0 }
+    { pts: 1 * 1000, ccData: 0x1425, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   var displayed = cea608Stream.displayed_.reduce(function(acc, val) {
@@ -1596,8 +1605,15 @@ QUnit.test('switching to roll-up from paint-on wipes memories', function() {
     return acc;
   });
 
+  QUnit.equal(captions.length, 1, 'flushed caption');
   QUnit.equal(displayed, '');
   QUnit.equal(nonDisplayed, '');
+  QUnit.deepEqual(captions[0], {
+    startPts: 0,
+    endPts: 1000,
+    text: 'hi',
+    stream: 'CC1'
+  }, 'caption correct');
 });
 
 QUnit.test('switching to paint-on from pop-on doesn\'t wipe display', function() {
