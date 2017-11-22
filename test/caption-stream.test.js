@@ -1616,7 +1616,9 @@ QUnit.test('switching to roll-up from paint-on wipes memories and flushes captio
   }, 'caption correct');
 });
 
-QUnit.test('switching to paint-on from pop-on doesn\'t wipe display', function() {
+// NOTE: This should change to not wiping the display when caption
+// positioning is properly implemented
+QUnit.test('switching to paint-on from pop-on flushes display', function() {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1636,10 +1638,13 @@ QUnit.test('switching to paint-on from pop-on doesn\'t wipe display', function()
     { pts: 4 * 1000, ccData: 0x142c, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected caption');
-  QUnit.equal(captions[0].text, 'hio', 'paint-on overwrote pop-on');
-  QUnit.equal(captions[0].startPts, 2000, 'proper start pts');
-  QUnit.equal(captions[0].endPts, 4000, 'proper end pts');
+  QUnit.equal(captions.length, 2, 'detected 2 captions');
+  QUnit.equal(captions[0].text, 'hi', 'pop-on caption received');
+  QUnit.equal(captions[0].startPts, 1000, 'proper start pts');
+  QUnit.equal(captions[0].endPts, 2000, 'proper end pts');
+  QUnit.equal(captions[1].text, 'io', 'paint-on caption received');
+  QUnit.equal(captions[1].startPts, 2000, 'proper start pts');
+  QUnit.equal(captions[1].endPts, 4000, 'proper end pts');
 });
 
 QUnit.test('backspaces are reflected in the generated captions', function() {
