@@ -2074,6 +2074,45 @@ QUnit.test('calculates baseMediaDecodeTime values from the first DTS ever seen a
   QUnit.equal(tfdt.baseMediaDecodeTime, 90, 'calculated baseMediaDecodeTime');
 });
 
+QUnit.test('doesn\'t adjust baseMediaDecodeType when configured to', function() {
+  videoSegmentStream.setOptionsForTesting_({keepOriginalTimestamps: true});
+
+  var segment, boxes, tfdt;
+  videoSegmentStream.on('data', function(data) {
+    segment = data.boxes;
+  });
+
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 100,
+    pts: 100
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 100,
+    pts: 100
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 200,
+    pts: 200
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 300,
+    pts: 300
+  });
+  videoSegmentStream.flush();
+
+  boxes = mp4.tools.inspect(segment);
+  tfdt = boxes[0].boxes[1].boxes[1];
+  QUnit.equal(tfdt.baseMediaDecodeTime, 100, 'calculated baseMediaDecodeTime');
+});
+
 QUnit.test('calculates baseMediaDecodeTime values relative to a customizable baseMediaDecodeTime', function() {
   var segment, boxes, tfdt, baseMediaDecodeTimeValue;
 
