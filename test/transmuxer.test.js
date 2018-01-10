@@ -1424,8 +1424,10 @@ QUnit.test('can be reset', function() {
 QUnit.module('VideoSegmentStream', {
   setup: function() {
     var track = {};
-    videoSegmentStream = new VideoSegmentStream(track);
+    var options = {};
+    videoSegmentStream = new VideoSegmentStream(track, options);
     videoSegmentStream.track = track;
+    videoSegmentStream.options = options;
     videoSegmentStream.track.timelineStartInfo = {
       dts: 10,
       pts: 10,
@@ -2075,7 +2077,7 @@ QUnit.test('calculates baseMediaDecodeTime values from the first DTS ever seen a
 });
 
 QUnit.test('doesn\'t adjust baseMediaDecodeType when configured to', function() {
-  videoSegmentStream.setOptionsForTesting_({keepOriginalTimestamps: true});
+  videoSegmentStream.options.keepOriginalTimestamps = true;
 
   var segment, boxes, tfdt;
   videoSegmentStream.on('data', function(data) {
