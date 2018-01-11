@@ -2076,7 +2076,7 @@ QUnit.test('calculates baseMediaDecodeTime values from the first DTS ever seen a
   QUnit.equal(tfdt.baseMediaDecodeTime, 90, 'calculated baseMediaDecodeTime');
 });
 
-QUnit.test('doesn\'t adjust baseMediaDecodeType when configured to', function() {
+QUnit.test('doesn\'t adjust baseMediaDecodeTime when configured to keep original timestamps', function() {
   videoSegmentStream.options.keepOriginalTimestamps = true;
 
   var segment, boxes, tfdt;
