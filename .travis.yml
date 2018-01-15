@@ -1,9 +1,6 @@
 sudo: false
 dist: trusty
 language: node_js
-node_js:
-  - 'node'
-  - 'lts/argon'
 before_script:
   - export CHROME_BIN=/usr/bin/google-chrome
   - export DISPLAY=:99.0
