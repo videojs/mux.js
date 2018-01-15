@@ -67,12 +67,12 @@ module.exports = function(config) {
     //       because of https://github.com/travis-ci/travis-ci/issues/8242 When this issue
     //       is resolved, this should be updated to include firefox
     customLaunchers: {
-      ChromeTravis: {
+      ChromeHeadlessNoSandbox: {
         base: 'ChromeHeadless',
         flags: ['--no-sandbox']
       }
     },
-    browsers: process.env.TRAVIS ? ['ChromeTravis'] : ['ChromeHeadless', 'Firefox'],
+    browsers: ['ChromeHeadlessNoSandbox', 'FirefoxHeadless'],
 
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
