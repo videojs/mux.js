@@ -1,9 +1,6 @@
 sudo: false
 dist: trusty
 language: node_js
-node_js:
-  - 'node'
-  - 'lts/argon'
 addons:
   chrome: stable
   firefox: latest
