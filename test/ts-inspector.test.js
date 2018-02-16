@@ -117,14 +117,16 @@ QUnit.test('can parse an aac segment', function() {
         pts: 895690,
         dts: 895690,
         ptsTime: 895690 / PES_TIMESCALE,
-        dtsTime: 895690 / PES_TIMESCALE
+        dtsTime: 895690 / PES_TIMESCALE,
+        frameDuration: 1024 * PES_TIMESCALE / 44100
       },
       {
         type: 'audio',
         pts: (895690 + (430 * 1024 * PES_TIMESCALE / 44100)),
         dts: (895690 + (430 * 1024 * PES_TIMESCALE / 44100)),
         ptsTime: (895690 + (430 * 1024 * PES_TIMESCALE / 44100)) / PES_TIMESCALE,
-        dtsTime: (895690 + (430 * 1024 * PES_TIMESCALE / 44100)) / PES_TIMESCALE
+        dtsTime: (895690 + (430 * 1024 * PES_TIMESCALE / 44100)) / PES_TIMESCALE,
+        frameDuration: 1024 * PES_TIMESCALE / 44100
       }
     ]
   };
