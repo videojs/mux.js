@@ -45,14 +45,18 @@ QUnit.test('can parse a ts segment', function() {
         pts: 126000,
         dts: 126000,
         ptsTime: 126000 / PES_TIMESCALE,
-        dtsTime: 126000 / PES_TIMESCALE
+        dtsTime: 126000 / PES_TIMESCALE,
+        frameDuration: 2880,
+        frameDurationTime: 2880 / PES_TIMESCALE
       },
       {
         type: 'audio',
         pts: 859518,
         dts: 859518,
         ptsTime: 859518 / PES_TIMESCALE,
-        dtsTime: 859518 / PES_TIMESCALE
+        dtsTime: 859518 / PES_TIMESCALE,
+        frameDuration: 2880,
+        frameDurationTime: 2880 / PES_TIMESCALE
       }
     ]
   };
@@ -93,14 +97,18 @@ QUnit.test('adjusts timestamp values based on provided reference', function() {
         pts: (126000 + rollover),
         dts: (126000 + rollover),
         ptsTime: (126000 + rollover) / PES_TIMESCALE,
-        dtsTime: (126000 + rollover) / PES_TIMESCALE
+        dtsTime: (126000 + rollover) / PES_TIMESCALE,
+        frameDuration: 2880,
+        frameDurationTime: 2880 / PES_TIMESCALE
       },
       {
         type: 'audio',
         pts: (859518 + rollover),
         dts: (859518 + rollover),
         ptsTime: (859518 + rollover) / PES_TIMESCALE,
-        dtsTime: (859518 + rollover) / PES_TIMESCALE
+        dtsTime: (859518 + rollover) / PES_TIMESCALE,
+        frameDuration: 2880,
+        frameDurationTime: 2880 / PES_TIMESCALE
       }
     ]
   };
