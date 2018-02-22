@@ -15,6 +15,8 @@ QUnit.test('returns null for empty segment input', function() {
 });
 
 QUnit.test('can parse a ts segment', function() {
+  var sampleCount = 1024;
+  var sampleRate = 44100;
   var expected = {
     video: [
       {
@@ -46,8 +48,8 @@ QUnit.test('can parse a ts segment', function() {
         dts: 126000,
         ptsTime: 126000 / PES_TIMESCALE,
         dtsTime: 126000 / PES_TIMESCALE,
-        frameDuration: 2880,
-        frameDurationTime: 2880 / PES_TIMESCALE
+        frameDuration: sampleCount * PES_TIMESCALE / sampleRate,
+        frameDurationTime: sampleCount / sampleRate
       },
       {
         type: 'audio',
@@ -55,8 +57,8 @@ QUnit.test('can parse a ts segment', function() {
         dts: 859518,
         ptsTime: 859518 / PES_TIMESCALE,
         dtsTime: 859518 / PES_TIMESCALE,
-        frameDuration: 2880,
-        frameDurationTime: 2880 / PES_TIMESCALE
+        frameDuration: sampleCount * PES_TIMESCALE / sampleRate,
+        frameDurationTime: sampleCount / sampleRate
       }
     ]
   };
@@ -66,7 +68,8 @@ QUnit.test('can parse a ts segment', function() {
 
 QUnit.test('adjusts timestamp values based on provided reference', function() {
   var rollover = Math.pow(2, 33);
-
+  var sampleCount = 1024;
+  var sampleRate = 44100;
   var expected = {
     video: [
       {
@@ -98,8 +101,8 @@ QUnit.test('adjusts timestamp values based on provided reference', function() {
         dts: (126000 + rollover),
         ptsTime: (126000 + rollover) / PES_TIMESCALE,
         dtsTime: (126000 + rollover) / PES_TIMESCALE,
-        frameDuration: 2880,
-        frameDurationTime: 2880 / PES_TIMESCALE
+        frameDuration: sampleCount * PES_TIMESCALE / sampleRate,
+        frameDurationTime: sampleCount / sampleRate
       },
       {
         type: 'audio',
@@ -107,8 +110,8 @@ QUnit.test('adjusts timestamp values based on provided reference', function() {
         dts: (859518 + rollover),
         ptsTime: (859518 + rollover) / PES_TIMESCALE,
         dtsTime: (859518 + rollover) / PES_TIMESCALE,
-        frameDuration: 2880,
-        frameDurationTime: 2880 / PES_TIMESCALE
+        frameDuration: sampleCount * PES_TIMESCALE / sampleRate,
+        frameDurationTime: sampleCount / sampleRate
       }
     ]
   };

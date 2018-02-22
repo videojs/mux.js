@@ -71,3 +71,18 @@ QUnit.test('correctly determines if video pes packet contains a key frame', func
   QUnit.ok(!probe.videoPacketContainsKeyFrame(videoNoKeyFramePacket),
     'detects no key frame in packet');
 });
+
+QUnit.test('gets ADTS header offset from elementary stream starting at PES header',
+function() {
+  var pesHeader = [
+    71, 65, 1, 48, 7, 16, 0, 6, 207, 192, 126, 0, 0, 0, 1, 192, 0, 172, 132, 128, 5,
+    33, 0, 55, 63, 1
+  ];
+  var adtsHeader = [255, 241, 76, 128, 20, 159, 252];
+  var adtsData = [33, 121];
+  var packet = new Uint8Array(pesHeader.concat(adtsHeader).concat(adtsData));
+
+  QUnit.equal(probe.getAdtsHeaderOffset(packet),
+              pesHeader.length,
+              'correctly gets ADTS header offset');
+});
