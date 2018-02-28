@@ -86,25 +86,3 @@ function() {
               pesHeader.length,
               'correctly gets ADTS header offset');
 });
-
-QUnit.test('gets frame duration from elementary stream starting at PES header',
-function() {
-  var pesHeader = [
-    71, 65, 1, 48, 7, 16, 0, 6, 207, 192, 126, 0, 0, 0, 1, 192, 0, 172, 132, 128, 5,
-    33, 0, 55, 63, 1
-  ];
-  var adtsHeader = [255, 241, 76, 128, 20, 159, 252];
-  var adtsData = [33, 121];
-  var packet = new Uint8Array(pesHeader.concat(adtsHeader).concat(adtsData));
-
-  QUnit.equal(probe.parseFrameDuration(packet), 1920, 'gets frame duration');
-  QUnit.equal(
-    probe.parseFrameDuration(new Uint8Array(pesHeader.concat(adtsHeader.slice(1)))),
-    null,
-    'null when ADTS header not found');
-  QUnit.equal(
-    probe.parseFrameDuration(
-      new Uint8Array(pesHeader.concat(adtsHeader.slice(0, adtsHeader.length - 1)))),
-    null,
-    'null when ADTS header not long enough');
-});

@@ -2,11 +2,15 @@
 
 var
   QUnit = require('qunit'),
-  inspect = require('../lib/tools/ts-inspector.js').inspect,
+  tsInspector = require('../lib/tools/ts-inspector.js'),
+  StreamTypes = require('../lib/m2ts/stream-types.js'),
   tsSegment = require('./utils/test-segment.js'),
   tsNoAudioSegment = require('./utils/test-no-audio-segment.js'),
   aacSegment = require('./utils/test-aac-segment.js'),
-  PES_TIMESCALE = 90000;
+  inspect = tsInspector.inspect,
+  PES_TIMESCALE = 90000,
+  MP2T_PACKET_LENGTH = 188, // bytes
+  SYNC_BYTE = 0x47;
 
 QUnit.module('TS Inspector');
 
@@ -179,3 +183,278 @@ QUnit.test('can parse ts segment with no audio muxed in', function() {
     'parses ts segment without audio timing data');
 });
 
+QUnit.test('can get next PES packet', function() {
+  // 4 byte minimum TS header
+  var tsHeader = [SYNC_BYTE, 65, 1, 18];
+  // packet prefix start code is 0x000001, followed by header info
+  var pesHeader = [0, 0, 1, 192, 14, 90, 132, 128, 5, 33, 1, 19, 8, 59];
+  // start the ADTS header, but don't finish it
+  var adtsHeaderStart = [255, 241, 92, 128, 29];
+  // finish the ADTS header (7 bytes total for the header here since no CRC)
+  var adtsHeaderEnd = [255, 252];
+  var numJunkBytes =
+    MP2T_PACKET_LENGTH - tsHeader.length - pesHeader.length - adtsHeaderStart.length;
+  var numAacBytes =
+    MP2T_PACKET_LENGTH - tsHeader.length - pesHeader.length - adtsHeaderEnd.length;
+  var junkBytes = Array.apply(null, new Array(numJunkBytes)).map(function() {
+    return 5;
+  });
+  var aacBytes = Array.apply(null, new Array(numAacBytes)).map(function() {
+    return 5;
+  });
+  // start with the end of an old packet (junk/offset bytes)
+  var offsetBytes = [1, 2, 3];
+  var bytes = new Uint8Array(
+    offsetBytes
+      .concat(tsHeader)
+      .concat(pesHeader)
+      .concat(junkBytes)
+      .concat(adtsHeaderStart)
+      .concat(tsHeader)
+      .concat(pesHeader)
+      .concat(adtsHeaderEnd)
+      .concat(aacBytes)
+      .concat([SYNC_BYTE]));
+  var pmt = {
+    pid: 256,
+    table: {
+      257: StreamTypes.ADTS_STREAM_TYPE
+    }
+  };
+  var firstStartIndex = offsetBytes.length;
+  var firstEndIndex = offsetBytes.length + MP2T_PACKET_LENGTH;
+  var firstPacket = bytes.subarray(firstStartIndex, firstEndIndex);
+  var secondStartIndex = firstStartIndex + MP2T_PACKET_LENGTH;
+  var secondEndIndex = secondStartIndex + MP2T_PACKET_LENGTH;
+  var secondPacket = bytes.subarray(secondStartIndex, secondEndIndex);
+
+  QUnit.deepEqual(
+    tsInspector.nextPesPacket_(bytes, pmt, offsetBytes.length, 'audio'),
+    {
+      packet: firstPacket,
+      startIndex: firstStartIndex,
+      endIndex: firstEndIndex
+    },
+    'gets first PES packet');
+
+  QUnit.deepEqual(
+    tsInspector.nextPesPacket_(bytes, pmt, 0, 'audio'),
+    {
+      packet: firstPacket,
+      startIndex: firstStartIndex,
+      endIndex: firstEndIndex
+    },
+    'gets first PES packet without offset specification');
+
+  QUnit.deepEqual(
+    tsInspector.nextPesPacket_(bytes, pmt, secondStartIndex, 'audio'),
+    {
+      packet: secondPacket,
+      startIndex: secondStartIndex,
+      endIndex: secondEndIndex
+    },
+    'gets second PES packet');
+
+  QUnit.deepEqual(
+    tsInspector.nextPesPacket_(
+      bytes, pmt, secondStartIndex - offsetBytes.length, 'audio'),
+    {
+      packet: secondPacket,
+      startIndex: secondStartIndex,
+      endIndex: secondEndIndex
+    },
+    'gets second PES packet');
+});
+
+QUnit.test('can get next PES packet when separated by different type', function() {
+  // 4 byte minimum TS header
+  var tsHeader = [SYNC_BYTE, 65, 1, 18];
+  var videoTsHeader = [SYNC_BYTE, 64, 1, 18];
+  // packet prefix start code is 0x000001, followed by header info
+  var pesHeader = [0, 0, 1, 192, 14, 90, 132, 128, 5, 33, 1, 19, 8, 59];
+  // start the ADTS header, but don't finish it
+  var adtsHeaderStart = [255, 241, 92, 128, 29];
+  // finish the ADTS header (7 bytes total for the header here since no CRC)
+  var adtsHeaderEnd = [255, 252];
+  var numJunkBytes =
+    MP2T_PACKET_LENGTH - tsHeader.length - pesHeader.length - adtsHeaderStart.length;
+  var numAacBytes =
+    MP2T_PACKET_LENGTH - tsHeader.length - pesHeader.length - adtsHeaderEnd.length;
+  var numVideoBytes = MP2T_PACKET_LENGTH - videoTsHeader.length - pesHeader.length;
+  var junkBytes = Array.apply(null, new Array(numJunkBytes)).map(function() {
+    return 5;
+  });
+  var aacBytes = Array.apply(null, new Array(numAacBytes)).map(function() {
+    return 5;
+  });
+  var videoBytes = Array.apply(null, new Array(numVideoBytes)).map(function() {
+    return 5;
+  });
+  // start with the end of an old packet (junk/offset bytes)
+  var offsetBytes = [1, 2, 3];
+  var bytes = new Uint8Array(
+    offsetBytes
+      .concat(tsHeader)
+      .concat(pesHeader)
+      .concat(junkBytes)
+      .concat(adtsHeaderStart)
+      .concat(videoTsHeader)
+      .concat(pesHeader)
+      .concat(videoBytes)
+      .concat(tsHeader)
+      .concat(pesHeader)
+      .concat(adtsHeaderEnd)
+      .concat(aacBytes)
+      .concat([SYNC_BYTE]));
+  var pmt = {
+    pid: 256,
+    table: {
+      257: StreamTypes.ADTS_STREAM_TYPE
+    }
+  };
+  var firstEndIndex = offsetBytes.length + MP2T_PACKET_LENGTH;
+  // skip over the video packet in the middle
+  var secondStartIndex = firstEndIndex + MP2T_PACKET_LENGTH;
+  var secondEndIndex = secondStartIndex + MP2T_PACKET_LENGTH;
+  var secondPacket = bytes.subarray(secondStartIndex, secondEndIndex);
+
+  QUnit.deepEqual(
+    tsInspector.nextPesPacket_(bytes, pmt, firstEndIndex, 'audio'),
+    {
+      packet: secondPacket,
+      startIndex: secondStartIndex,
+      endIndex: secondEndIndex
+    },
+    'gets next PES packet');
+});
+
+QUnit.test('can parse frame duration from a stream of TS packet bytes', function() {
+  // start with the end of an old packet (junk/offset bytes)
+  var offsetBytes = [3, 100, 5, 100];
+  // 4 byte minimum TS header
+  var tsHeader = [SYNC_BYTE, 65, 1, 18];
+  // packet prefix start code is 0x000001, followed by header info
+  var pesHeader = [0, 0, 1, 192, 14, 90, 132, 128, 5, 33, 1, 19, 8, 59];
+  var adtsHeader = [255, 241, 92, 128, 29, 255, 252];
+  var aacData = [33, 121];
+  var tsBytes = new Uint8Array(
+    offsetBytes.concat(tsHeader).concat(pesHeader).concat(adtsHeader).concat(aacData));
+  // technically the packet isn't a full 188 bytes, but should be a good test with that
+  // extra detail
+  var packet = tsBytes.subarray(offsetBytes.length);
+  var pmt = {
+    pid: 256,
+    table: {
+      257: StreamTypes.ADTS_STREAM_TYPE
+    }
+  };
+
+  var frameDuration = tsInspector.parseFrameDuration_(
+    tsBytes, pmt, packet, offsetBytes.length, tsBytes.length);
+
+  QUnit.equal(frameDuration, 1024 * 90000 / 22050, 'parsed frame duration');
+});
+
+QUnit.test('can parse frame duration from ADTS header split across separate TS packets',
+function() {
+  // 4 byte minimum TS header
+  var tsHeader = [SYNC_BYTE, 65, 1, 18];
+  // packet prefix start code is 0x000001, followed by header info
+  var pesHeader = [0, 0, 1, 192, 14, 90, 132, 128, 5, 33, 1, 19, 8, 59];
+  // start the ADTS header, but don't finish it
+  var adtsHeaderStart = [255, 241, 92, 128, 29];
+  // finish the ADTS header (7 bytes total for the header here since no CRC)
+  var adtsHeaderEnd = [255, 252];
+  var numJunkBytes =
+    MP2T_PACKET_LENGTH - tsHeader.length - pesHeader.length - adtsHeaderStart.length;
+  var numAacBytes =
+    MP2T_PACKET_LENGTH - tsHeader.length - pesHeader.length - adtsHeaderEnd.length;
+  var junkBytes = Array.apply(null, new Array(numJunkBytes)).map(function() {
+    return 5;
+  });
+  var aacBytes = Array.apply(null, new Array(numAacBytes)).map(function() {
+    return 5;
+  });
+  // start with the end of an old packet (junk/offset bytes)
+  var offsetBytes = [1, 2, 3];
+  var tsBytes = new Uint8Array(
+    offsetBytes
+      .concat(tsHeader)
+      .concat(pesHeader)
+      .concat(junkBytes)
+      .concat(adtsHeaderStart)
+      .concat(tsHeader)
+      .concat(pesHeader)
+      .concat(adtsHeaderEnd)
+      .concat(aacBytes)
+      .concat([SYNC_BYTE]));
+  var packet =
+    tsBytes.subarray(offsetBytes.length, offsetBytes.length + MP2T_PACKET_LENGTH);
+  var pmt = {
+    pid: 256,
+    table: {
+      257: StreamTypes.ADTS_STREAM_TYPE
+    }
+  };
+
+  var frameDuration = tsInspector.parseFrameDuration_(
+    tsBytes,
+    pmt,
+    packet,
+    offsetBytes.length,
+    offsetBytes.length + MP2T_PACKET_LENGTH);
+
+  QUnit.equal(frameDuration,
+              1024 * 90000 / 22050,
+              'parsed frame duration across TS packets');
+});
+
+QUnit.test('can parse frame duration from ADTS header when not in first TS packet',
+function() {
+  // 4 byte minimum TS header
+  var tsHeader = [SYNC_BYTE, 65, 1, 18];
+  // packet prefix start code is 0x000001, followed by header info
+  var pesHeader = [0, 0, 1, 192, 14, 90, 132, 128, 5, 33, 1, 19, 8, 59];
+  // 7 bytes total for the header here since no CRC
+  var adtsHeader = [255, 241, 92, 128, 29, 255, 252];
+  var numJunkBytes = MP2T_PACKET_LENGTH - tsHeader.length - pesHeader.length;
+  var numAacBytes =
+    MP2T_PACKET_LENGTH - tsHeader.length - pesHeader.length - adtsHeader.length;
+  var junkBytes = Array.apply(null, new Array(numJunkBytes)).map(function() {
+    return 5;
+  });
+  var aacBytes = Array.apply(null, new Array(numAacBytes)).map(function() {
+    return 5;
+  });
+  // start with the end of an old packet (junk/offset bytes)
+  var offsetBytes = [1, 2, 3];
+  var tsBytes = new Uint8Array(
+    offsetBytes
+      .concat(tsHeader)
+      .concat(pesHeader)
+      .concat(junkBytes)
+      .concat(tsHeader)
+      .concat(pesHeader)
+      .concat(adtsHeader)
+      .concat(aacBytes)
+      .concat([SYNC_BYTE]));
+  var packet =
+    tsBytes.subarray(offsetBytes.length, offsetBytes.length + MP2T_PACKET_LENGTH);
+  var pmt = {
+    pid: 256,
+    table: {
+      257: StreamTypes.ADTS_STREAM_TYPE
+    }
+  };
+
+  var frameDuration = tsInspector.parseFrameDuration_(
+    tsBytes,
+    pmt,
+    packet,
+    offsetBytes.length,
+    offsetBytes.length + MP2T_PACKET_LENGTH);
+
+  QUnit.equal(frameDuration,
+              1024 * 90000 / 22050,
+              'parsed frame duration when not in initial packet');
+});
