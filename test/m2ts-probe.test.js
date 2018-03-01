@@ -6,6 +6,8 @@ var
   testSegment = require('./utils/test-segment.js'),
   stuffedPesPacket = require('./utils/test-stuffed-pes.js');
 
+var SYNC_BYTE = 0x47;
+
 /**
  * All subarray indices verified with the use of thumbcoil.
  */
@@ -74,15 +76,54 @@ QUnit.test('correctly determines if video pes packet contains a key frame', func
 
 QUnit.test('gets ADTS header offset from elementary stream starting at PES header',
 function() {
-  var pesHeader = [
-    71, 65, 1, 48, 7, 16, 0, 6, 207, 192, 126, 0, 0, 0, 1, 192, 0, 172, 132, 128, 5,
-    33, 0, 55, 63, 1
-  ];
+  // 4 byte minimum TS header
+  var tsHeader = [SYNC_BYTE, 65, 1, 18];
+  // packet prefix start code is 0x000001, followed by header info
+  var pesHeader = [0, 0, 1, 192, 14, 90, 132, 128, 5, 33, 1, 19, 8, 59];
   var adtsHeader = [255, 241, 76, 128, 20, 159, 252];
   var adtsData = [33, 121];
-  var packet = new Uint8Array(pesHeader.concat(adtsHeader).concat(adtsData));
+  var packet = new Uint8Array(
+    tsHeader.concat(pesHeader).concat(adtsHeader).concat(adtsData));
 
   QUnit.equal(probe.getAdtsHeaderOffset(packet),
-              pesHeader.length,
+              tsHeader.length + pesHeader.length,
               'correctly gets ADTS header offset');
+});
+
+QUnit.test(
+'gets ADTS header offset from elementary stream starting at PES header with ' +
+  'an adaptation field',
+function() {
+  // 4 byte minimum TS header, adaptation field specified with 11 (adaptation field
+  // followed by payload) as 0b00110000 in the last byte (decimal 48)
+  var tsHeader = [SYNC_BYTE, 65, 1, 18, 48];
+  // arbitrary length
+  var adaptationFieldLength = 4;
+  var adaptationField = [adaptationFieldLength - 1, 0, 0, 0];
+  // packet prefix start code is 0x000001, followed by header info
+  var pesHeader = [0, 0, 1, 192, 14, 90, 132, 128, 5, 33, 1, 19, 8, 59];
+  var adtsHeader = [255, 241, 76, 128, 20, 159, 252];
+  var adtsData = [33, 121];
+  var packet = new Uint8Array(
+    tsHeader
+      .concat(adaptationField)
+      .concat(pesHeader)
+      .concat(adtsHeader)
+      .concat(adtsData));
+
+  QUnit.equal(probe.getAdtsHeaderOffset(packet),
+              tsHeader.length + adaptationField.length + pesHeader.length,
+              'correctly gets ADTS header offset');
+});
+
+QUnit.test('no ADTS header offset when no ADTS header', function() {
+  // 4 byte minimum TS header
+  var tsHeader = [SYNC_BYTE, 65, 1, 18];
+  // packet prefix start code is 0x000001, followed by header info
+  var pesHeader = [0, 0, 1, 192, 14, 90, 132, 128, 5, 33, 1, 19, 8, 59];
+  // 10 bytes to account for max ADTS header length (9) and 1 byte of data
+  var junkData = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5];
+  var packet = new Uint8Array(tsHeader.concat(pesHeader).concat(junkData));
+
+  QUnit.notOk(probe.getAdtsHeaderOffset(packet), 'no ADTS header offset');
 });

@@ -22,5 +22,5 @@ QUnit.test('concats typed arrays into a new typed array', function() {
   QUnit.deepEqual(
     new Uint8Array([0, 1, 2, 3, 4]),
     typedArrayUtils.concatTypedArrays(new Uint8Array([0, 1]), new Uint8Array([2, 3, 4])),
-    'handled simple case');
+    'handles simple case');
 });
