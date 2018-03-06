@@ -2035,11 +2035,12 @@ QUnit.test('backspaces are reflected in the generated captions (paint-on)', func
 
   [ // RDC, resume direct captioning
     { ccData: 0x1429, type: 0 },
-    // '01'
+    // '01', default row 15
     { pts: 0 * 1000, ccData: characters('01'), type: 0 },
     // backspace
     { pts: 0 * 1000, ccData: 0x1421, type: 0 },
     { pts: 1 * 1000, ccData: characters('23'), type: 0 },
+    // switch to row 13
     { pts: 2 * 1000, ccData: 0x1370, type: 0 },
     { pts: 2 * 1000, ccData: characters('32'), type: 0 },
     // backspace
