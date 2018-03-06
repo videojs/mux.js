@@ -1559,11 +1559,11 @@ QUnit.test('switching to roll-up from pop-on wipes memories and flushes captions
   ].forEach(cea608Stream.push, cea608Stream);
 
   var displayed = cea608Stream.displayed_.reduce(function(acc, val) {
-    acc += val.trim();
+    acc += val;
     return acc;
   });
   var nonDisplayed = cea608Stream.nonDisplayed_.reduce(function(acc, val) {
-    acc += val.trim();
+    acc += val;
     return acc;
   });
 
@@ -1597,11 +1597,11 @@ QUnit.test('switching to roll-up from paint-on wipes memories and flushes captio
   ].forEach(cea608Stream.push, cea608Stream);
 
   var displayed = cea608Stream.displayed_.reduce(function(acc, val) {
-    acc += val.trim();
+    acc += val;
     return acc;
   });
   var nonDisplayed = cea608Stream.nonDisplayed_.reduce(function(acc, val) {
-    acc += val.trim();
+    acc += val;
     return acc;
   });
 
