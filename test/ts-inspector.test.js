@@ -412,6 +412,60 @@ function() {
               'parsed frame duration across TS packets');
 });
 
+QUnit.test('can parse frame duration when ADTS sync word is split across TS packets',
+function() {
+  // 4 byte minimum TS header
+  var tsHeader = [SYNC_BYTE, 65, 1, 18];
+  // packet prefix start code is 0x000001, followed by header info
+  var pesHeader = [0, 0, 1, 192, 14, 90, 132, 128, 5, 33, 1, 19, 8, 59];
+  // start the ADTS header, but split the sync word
+  var adtsHeaderStart = [255];
+  // finish the ADTS header (7 bytes total for the header here since no CRC)
+  var adtsHeaderEnd = [241, 92, 128, 29, 255, 252];
+  var numJunkBytes =
+    MP2T_PACKET_LENGTH - tsHeader.length - pesHeader.length - adtsHeaderStart.length;
+  var numAacBytes =
+    MP2T_PACKET_LENGTH - tsHeader.length - pesHeader.length - adtsHeaderEnd.length;
+  var junkBytes = Array.apply(null, new Array(numJunkBytes)).map(function() {
+    return 5;
+  });
+  var aacBytes = Array.apply(null, new Array(numAacBytes)).map(function() {
+    return 5;
+  });
+  // start with the end of an old packet (junk/offset bytes)
+  var offsetBytes = [1, 2, 3];
+  var tsBytes = new Uint8Array(
+    offsetBytes
+      .concat(tsHeader)
+      .concat(pesHeader)
+      .concat(junkBytes)
+      .concat(adtsHeaderStart)
+      .concat(tsHeader)
+      .concat(pesHeader)
+      .concat(adtsHeaderEnd)
+      .concat(aacBytes)
+      .concat([SYNC_BYTE]));
+  var packet =
+    tsBytes.subarray(offsetBytes.length, offsetBytes.length + MP2T_PACKET_LENGTH);
+  var pmt = {
+    pid: 256,
+    table: {
+      257: StreamTypes.ADTS_STREAM_TYPE
+    }
+  };
+
+  var frameDuration = tsInspector.parseFrameDuration_(
+    tsBytes,
+    pmt,
+    packet,
+    offsetBytes.length,
+    offsetBytes.length + MP2T_PACKET_LENGTH);
+
+  QUnit.equal(frameDuration,
+              1024 * 90000 / 22050,
+              'parsed frame duration across TS packets');
+});
+
 QUnit.test('can parse frame duration from ADTS header when not in first TS packet',
 function() {
   // 4 byte minimum TS header
@@ -538,7 +592,8 @@ QUnit.test('can get full ADTS header with CRC', function() {
   // packet prefix start code is 0x000001, followed by header info
   var pesHeader = [0, 0, 1, 192, 14, 90, 132, 128, 5, 33, 1, 19, 8, 59];
   // 9 bytes total for the header here since CRC
-  var adtsHeader = [255, 242, 92, 128, 29, 255, 252, 1, 1];
+  // crc specified by a 0 in the last bit of the second byte
+  var adtsHeader = [255, 240, 92, 128, 29, 255, 252, 1, 1];
   var aacData = [33, 121];
   var tsBytes = new Uint8Array(
     offsetBytes.concat(tsHeader).concat(pesHeader).concat(adtsHeader).concat(aacData));
