@@ -74,7 +74,7 @@
     "karma-browserify": "^4.4.2",
     "karma-chrome-launcher": "^2.2.0",
     "karma-firefox-launcher": "^1.1.0",
-    "karma-qunit": "^0.1.5",
+    "karma-qunit": "^2.0.0",
     "npm-run-all": "^1.4.0",
     "portscanner": "^1.0.0",
     "qunitjs": "^1.0.0",
