@@ -1,6 +1,5 @@
 # mux.js [![Build Status](https://travis-ci.org/videojs/mux.js.svg?branch=master)](https://travis-ci.org/videojs/mux.js) [![Greenkeeper badge](https://badges.greenkeeper.io/videojs/mux.js.svg)](https://greenkeeper.io/)
 
-
 Lightweight utilities for inspecting and manipulating video container formats.
 
 Lead Maintainer: Jon-Carlos Rivera [@imbcmdth](https://github.com/imbcmdth)
