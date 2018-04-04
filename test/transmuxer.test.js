@@ -3615,6 +3615,12 @@ validateTrackFragment = function(track, segment, metadata, type) {
       QUnit.equal(sample.flags.isDependedOn, 0, 'dependency of other samples is unknown');
       QUnit.equal(sample.flags.hasRedundancy, 0, 'sample redundancy is unknown');
       QUnit.equal(sample.flags.degradationPriority, 0, 'sample degradation priority is zero');
+      // If current sample is Key frame
+      if (sample.flags.dependsOn === 2) {
+        QUnit.equal(sample.flags.isNonSyncSample, 0, 'samples_is_non_sync_sample flag is zero');
+      } else {
+        QUnit.equal(sample.flags.isNonSyncSample, 1, 'samples_is_non_sync_sample flag is one');
+      }
     } else {
       QUnit.equal(sample.duration, 1024,
             'aac sample duration is always 1024');
