@@ -3898,7 +3898,7 @@ QUnit.test('parses nal units split across multiple packets', function() {
     ])
   });
 
-  QUnit.equal(nalUnits.length, 1, 'found two nals');
+  QUnit.equal(nalUnits.length, 1, 'found one nal');
   QUnit.deepEqual(nalUnits[0], new Uint8Array([0x09, 0xFF, 0x12, 0xDD]), 'has the proper payload');
 });
 
