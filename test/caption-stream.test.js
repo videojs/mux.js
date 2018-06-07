@@ -1568,8 +1568,8 @@ QUnit.test('switching to roll-up from pop-on wipes memories and flushes captions
   });
 
   QUnit.equal(captions.length, 2, 'both captions flushed');
-  QUnit.equal(displayed, '');
-  QUnit.equal(nonDisplayed, '');
+  QUnit.equal(displayed, '', 'displayed memory is wiped');
+  QUnit.equal(nonDisplayed, '', 'non-displayed memory is wiped');
   QUnit.deepEqual(captions[0], {
     startPts: 1000,
     endPts: 2000,
@@ -1606,8 +1606,8 @@ QUnit.test('switching to roll-up from paint-on wipes memories and flushes captio
   });
 
   QUnit.equal(captions.length, 1, 'flushed caption');
-  QUnit.equal(displayed, '');
-  QUnit.equal(nonDisplayed, '');
+  QUnit.equal(displayed, '', 'displayed memory is wiped');
+  QUnit.equal(nonDisplayed, '', 'non-displayed memory is wiped');
   QUnit.deepEqual(captions[0], {
     startPts: 0,
     endPts: 1000,
