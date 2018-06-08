@@ -1074,6 +1074,7 @@ QUnit.test('backspaces are applied to non-displayed memory for pop-on mode', fun
     // backspace
     { ccData: 0x1421, type: 0 },
     { ccData: characters('23'), type: 0 },
+    // PAC: row 13, no indent
     { pts: 1 * 1000, ccData: 0x1370, type: 0 },
     { pts: 1 * 1000, ccData: characters('32'), type: 0 },
     // backspace
@@ -1083,7 +1084,7 @@ QUnit.test('backspaces are applied to non-displayed memory for pop-on mode', fun
     { pts: 4 * 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
     { ccData: 0x1420, type: 0 },
-    // EOC, End of Caption
+    // EOC, End of Caption, flush caption
     { pts: 5 * 1000, ccData: 0x142f, type: 0 }
   ];
 
@@ -1548,13 +1549,17 @@ QUnit.test('switching to roll-up from pop-on wipes memories and flushes captions
   });
 
   [
+    // RCL (resume caption loading)
     { pts: 0 * 1000, ccData: 0x1420, type: 0 },
     { pts: 0 * 1000, ccData: characters('hi'), type: 0 },
-    // flip memories
+    // EOC (end of caption), mark 1st caption start
     { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    // RCL, resume caption loading
     { pts: 1 * 1000, ccData: 0x1420, type: 0 },
     { pts: 2 * 1000, ccData: characters('oh'), type: 0 },
+    // EOC, mark 2nd caption start and flush 1st caption
     { pts: 2 * 1000, ccData: 0x142f, type: 0 },
+    // RU2 (roll-up, 2 rows), flush 2nd caption
     { pts: 3 * 1000, ccData: 0x1425, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
@@ -1591,8 +1596,10 @@ QUnit.test('switching to roll-up from paint-on wipes memories and flushes captio
   });
 
   [
+    // RDC (resume direct captioning)
     { pts: 0 * 1000, ccData: 0x1429, type: 0 },
     { pts: 0 * 1000, ccData: characters('hi'), type: 0 },
+    // RU2 (roll-up, 2 rows), flush displayed caption
     { pts: 1 * 1000, ccData: 0x1425, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
@@ -1625,16 +1632,23 @@ QUnit.test('switching to paint-on from pop-on flushes display', function() {
   });
 
   [
+    // RCL (resume caption loading)
     { pts: 0 * 1000, ccData: 0x1420, type: 0 },
+    // PAC: row 14, indent 0
     { pts: 0 * 1000, ccData: 0x1450, type: 0 },
     { pts: 0 * 1000, ccData: characters('hi'), type: 0 },
+    // EOC (end of caption), mark caption start
     { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    // RCL
     { pts: 1 * 1000, ccData: 0x1420, type: 0 },
-    // flip memories
+    // RDC (resume direct captioning), flush caption
     { pts: 2 * 1000, ccData: 0x1429, type: 0 },
+    // PAC: row 14, indent 0
     { pts: 2 * 1000, ccData: 0x1450, type: 0 },
+    // TO1 (tab offset 1 column)
     { pts: 2 * 1000, ccData: 0x1721, type: 0 },
     { pts: 3 * 1000, ccData: characters('io'), type: 0 },
+    // EDM (erase displayed memory), flush paint-on caption
     { pts: 4 * 1000, ccData: 0x142c, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
@@ -1978,9 +1992,8 @@ QUnit.test('paint-on mode', function() {
   packets = [
     // RDC, resume direct captioning, begin display
     { pts: 1000, ccData: 0x1429, type: 0 },
-    // 'hi'
     { pts: 2000, ccData: characters('hi'), type: 0 },
-    // EDM, erase displayed memory. Finish display
+    // EDM, erase displayed memory. Finish display, flush caption
     { pts: 3000, ccData: 0x142c, type: 0 }
   ];
   captions = [];
@@ -2009,17 +2022,23 @@ QUnit.test('preserves newlines from PACs in paint-on mode', function() {
   [
     // RDC, resume direct captioning
     { pts: 1000, ccData: 0x1429, type: 0 },
+    // PAC: row 12, indent 0
     { pts: 1000, ccData: 0x1350, type: 0 },
+    // text: TEST
     { pts: 2000, ccData: 0x5445, type: 0 },
     { pts: 2000, ccData: 0x5354, type: 0 },
+    // PAC: row 14, indent 0
     { pts: 3000, ccData: 0x1450, type: 0 },
+    // text: STRING
     { pts: 3000, ccData: 0x5354, type: 0 },
     { pts: 4000, ccData: 0x5249, type: 0 },
     { pts: 4000, ccData: 0x4e47, type: 0 },
+    // PAC: row 15, indent 0
     { pts: 5000, ccData: 0x1470, type: 0 },
+    // text: DATA
     { pts: 5000, ccData: 0x4441, type: 0 },
     { pts: 6000, ccData: 0x5441, type: 0 },
-    // EDM, erase displayed memory. Finish display
+    // EDM, erase displayed memory. Finish display, flush caption
     { pts: 6000, ccData: 0x142c, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
@@ -2040,13 +2059,13 @@ QUnit.test('backspaces are reflected in the generated captions (paint-on)', func
     // backspace
     { pts: 0 * 1000, ccData: 0x1421, type: 0 },
     { pts: 1 * 1000, ccData: characters('23'), type: 0 },
-    // switch to row 13
+    // PAC: row 13, indent 0
     { pts: 2 * 1000, ccData: 0x1370, type: 0 },
     { pts: 2 * 1000, ccData: characters('32'), type: 0 },
     // backspace
     { pts: 3 * 1000, ccData: 0x1421, type: 0 },
     { pts: 4 * 1000, ccData: characters('10'), type: 0 },
-    // EDM, erase displayed memory
+    // EDM, erase displayed memory, flush caption
     { pts: 5 * 1000, ccData: 0x142c, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
@@ -2061,15 +2080,23 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
   });
 
   [
+    // RU2 (roll-up, 2 rows)
     { pts: 6675, ccData: 0x1425, type: 0 },
+    // CR (carriange return), flush nothing
     { pts: 6675, ccData: 0x142d, type: 0 },
+    // PAC: row 2, indent 0
     { pts: 6675, ccData: 0x1170, type: 0 },
+    // text: YEAR.
     { pts: 6676, ccData: 0x5945, type: 0 },
     { pts: 6676, ccData: 0x4152, type: 0 },
     { pts: 6676, ccData: 0x2e00, type: 0 },
+    // RU2 (roll-up, 2 rows)
     { pts: 6677, ccData: 0x1425, type: 0 },
+    // CR (carriange return), flush 1 row
     { pts: 6677, ccData: 0x142d, type: 0 },
+    // PAC: row 2, indent 0
     { pts: 6677, ccData: 0x1170, type: 0 },
+    // text: GO TO CNNHEROS.COM.
     { pts: 6677, ccData: 0x474f, type: 0 },
     { pts: 6678, ccData: 0x2054, type: 0 },
     { pts: 6678, ccData: 0x4f00, type: 0 },
@@ -2080,9 +2107,13 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     { pts: 6680, ccData: 0x532e, type: 0 },
     { pts: 6680, ccData: 0x434f, type: 0 },
     { pts: 6680, ccData: 0x4d2e, type: 0 },
+    // EDM (erase displayed memory), flush 2 displayed roll-up rows
     { pts: 6697, ccData: 0x142c, type: 0 },
+    // RDC (resume direct captioning), wipes memories, flushes nothing
     { pts: 6749, ccData: 0x1429, type: 0 },
+    // PAC: row 1, indent 0
     { pts: 6750, ccData: 0x1150, type: 0 },
+    // text: Did your Senator or Congressman
     { pts: 6750, ccData: 0x4469, type: 0 },
     { pts: 6750, ccData: 0x6420, type: 0 },
     { pts: 6750, ccData: 0x796f, type: 0 },
@@ -2099,8 +2130,11 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     { pts: 6754, ccData: 0x7373, type: 0 },
     { pts: 6754, ccData: 0x6d61, type: 0 },
     { pts: 6754, ccData: 0x6e00, type: 0 },
+    // PAC: row 2, indent 0
     { pts: 6755, ccData: 0x1170, type: 0 },
+    // TO2 (tab offset 2 columns)
     { pts: 6755, ccData: 0x1722, type: 0 },
+    // text: get elected by talking tough
     { pts: 6755, ccData: 0x6765, type: 0 },
     { pts: 6756, ccData: 0x7420, type: 0 },
     { pts: 6756, ccData: 0x656c, type: 0 },
@@ -2115,9 +2149,13 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     { pts: 6759, ccData: 0x2074, type: 0 },
     { pts: 6759, ccData: 0x6f75, type: 0 },
     { pts: 6759, ccData: 0x6768, type: 0 },
+    // RCL (resume caption loading)
     { pts: 6759, ccData: 0x1420, type: 0 },
+    // PAC: row 1, indent 4
     { pts: 6760, ccData: 0x1152, type: 0 },
+    // TO1 (tab offset 1 column)
     { pts: 6760, ccData: 0x1721, type: 0 },
+    // text: on the national debt?
     { pts: 6760, ccData: 0x6f6e, type: 0 },
     { pts: 6761, ccData: 0x2074, type: 0 },
     { pts: 6761, ccData: 0x6865, type: 0 },
@@ -2129,12 +2167,19 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     { pts: 6763, ccData: 0x6465, type: 0 },
     { pts: 6763, ccData: 0x6274, type: 0 },
     { pts: 6763, ccData: 0x3f00, type: 0 },
+    // RCL (resume caption loading)
     { pts: 6781, ccData: 0x1420, type: 0 },
+    // EDM (erase displayed memory), flush paint-on caption
     { pts: 6781, ccData: 0x142c, type: 0 },
+    // EOC (end of caption), mark pop-on caption 1 start
     { pts: 6782, ccData: 0x142f, type: 0 },
+    // RCL (resume caption loading)
     { pts: 6782, ccData: 0x1420, type: 0 },
+    // PAC: row 1, indent 4
     { pts: 6782, ccData: 0x1152, type: 0 },
+    // TO2 (tab offset 2 columns)
     { pts: 6783, ccData: 0x1722, type: 0 },
+    // text: Will they stay true
     { pts: 6783, ccData: 0x5769, type: 0 },
     { pts: 6783, ccData: 0x6c6c, type: 0 },
     { pts: 6783, ccData: 0x2074, type: 0 },
@@ -2145,7 +2190,9 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     { pts: 6785, ccData: 0x2074, type: 0 },
     { pts: 6785, ccData: 0x7275, type: 0 },
     { pts: 6786, ccData: 0x6500, type: 0 },
+    // PAC: row 2, indent 8
     { pts: 6786, ccData: 0x1174, type: 0 },
+    // text: to their words?
     { pts: 6786, ccData: 0x746f, type: 0 },
     { pts: 6786, ccData: 0x2074, type: 0 },
     { pts: 6787, ccData: 0x6865, type: 0 },
@@ -2154,14 +2201,23 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     { pts: 6788, ccData: 0x6f72, type: 0 },
     { pts: 6788, ccData: 0x6473, type: 0 },
     { pts: 6788, ccData: 0x3f00, type: 0 },
+    // RCL (resume caption loading)
     { pts: 6797, ccData: 0x1420, type: 0 },
+    // EDM (erase displayed memory), mark pop-on caption 1 end and flush
     { pts: 6797, ccData: 0x142c, type: 0 },
+    // EOC (end of caption), mark pop-on caption 2 start, flush nothing
     { pts: 6798, ccData: 0x142f, type: 0 },
+    // RCL
     { pts: 6799, ccData: 0x1420, type: 0 },
+    // EOC, mark pop-on caption 2 end and flush
     { pts: 6838, ccData: 0x142f, type: 0 },
+    // RU2 (roll-up, 2 rows), wipes memories
     { pts: 6841, ccData: 0x1425, type: 0 },
+    // CR (carriage return), flush nothing
     { pts: 6841, ccData: 0x142d, type: 0 },
+    // PAC: row 2, indent 0
     { pts: 6841, ccData: 0x1170, type: 0 },
+    // text: NO MORE SPECULATION, NO MORE
     { pts: 6841, ccData: 0x3e3e, type: 0 },
     { pts: 6841, ccData: 0x3e00, type: 0 },
     { pts: 6842, ccData: 0x204e, type: 0 },
@@ -2181,9 +2237,13 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     { pts: 6843, ccData: 0x204d, type: 0 },
     { pts: 6844, ccData: 0x4f52, type: 0 },
     { pts: 6844, ccData: 0x4500, type: 0 },
+    // RU2 (roll-up, two rows)
     { pts: 6844, ccData: 0x1425, type: 0 },
+    // CR (carriage return), flush 1 roll-up row
     { pts: 6844, ccData: 0x142d, type: 0 },
+    // PAC: row 2, indent 0
     { pts: 6844, ccData: 0x1170, type: 0 },
+    // text: RUMORS OR GUESSING GAMES.
     { pts: 6844, ccData: 0x5255, type: 0 },
     { pts: 6844, ccData: 0x4d4f, type: 0 },
     { pts: 6844, ccData: 0x5253, type: 0 },
@@ -2198,7 +2258,9 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     { pts: 6845, ccData: 0x414d, type: 0 },
     { pts: 6845, ccData: 0x4553, type: 0 },
     { pts: 6845, ccData: 0x2e00, type: 0 },
+    // RU2 (roll-up, 2 rows)
     { pts: 6846, ccData: 0x1425, type: 0 },
+    // CR (carriage return), flush 2 roll-up rows
     { pts: 6846, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
