@@ -871,21 +871,32 @@ QUnit.test('ignores CEA708 captions', function() {
   QUnit.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN\nIF WE DON\'T HAVE TO.', 'parsed third caption correctly');
 });
 
-// Full character translation testa are below for Cea608Stream, they just only
+// Full character translation tests are below for Cea608Stream, they just only
 // test support for CC1
 QUnit.test('special and extended character codes work regardless of field and data channel', function() {
   var packets, seiNals, captions = [];
   packets = [
+    // RU2 (roll-up, 2 rows), CC2
     { ccData: 0x1c25, type: 0 },
+    // ®
     { ccData: 0x1930, type: 0 },
+    // CR (carriage return), CC2, flush caption
     { ccData: 0x1c2d, type: 0 },
+    // RU2, CC3
     { ccData: 0x1525, type: 1 },
+    // "
     { ccData: 0x2200, type: 1 },
+    // «
     { ccData: 0x123e, type: 1 },
+    // CR, CC3, flush caption
     { ccData: 0x152d, type: 1 },
+    // RU2, CC4
     { ccData: 0x1d25, type: 1 },
+    // "
     { ccData: 0x2200, type: 1 },
+    // »
     { ccData: 0x1a3f, type: 1 },
+    // CR, CC4, flush caption
     { ccData: 0x1d2d, type: 1 }
   ];
 
