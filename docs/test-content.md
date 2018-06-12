@@ -1,0 +1,54 @@
+# Creating Test Content
+
+## Creating CEA-608 Content
+
+- Use ffmpeg to create an MP4 file to start with:
+
+`ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 output.mp4`
+
+This uses the `testsrc` source generates a test video pattern with a color and timestamp. For this example, we are using a duration of `300` seconds, a size of `1280x720` and a framerate of `30fps`.
+
+- Create an [srt file](#srt) with the captions you would like to see with their timestamps.
+
+- Use ffmpeg to convert `ouput.mp4` to a flv file:
+
+`ffmpeg -i output.mp4 -c:v libx264 -crf 19 output.flv`
+
+`-crf` affects the quality of the file output.
+
+- Use [libcaption](#libcaption) to embed the captions into the flv:
+
+`flv+srt output.flv captions.srt with-captions.flv`
+
+- Use ffmpeg to convert `with-captions.flv` to mp4
+
+`ffmpeg -i with-captions.flv -c:v libx264 -crf 19 -strict experimental with-captions.mp4`
+
+- Use [Bento4](#bento4) to convert the file into a FMP4 file:
+
+`bento4 mp4fragment with-captions.mp4 \
+  --verbosity 3 \
+  --fragment-duration 4000 \
+  --timescale 90000 \
+  with-captions-fragment.mf4`
+
+- Use [Bento4](#bento4) to split the file into an init segment and a fmp4 media segment:
+
+`bento4 mp4split --verbose \
+  --init-segment with-captions-init.mp4 \
+  --media-segment with-captions-segment-%llu..m4s \
+  with-captions-fragment.mf4`
+
+- Use [Bento4](#bento4) to create a DASH manifest:
+
+`mp4dash -v \
+  --mpd-name=with-captions.mpd \
+  --init-segment=with-captions-init.mp4 \
+  with-captions-fragment.mf4`
+
+This will create a DASH MPD and media segments in a new directory called `output`.
+
+
+[srt]: https://en.wikipedia.org/wiki/SubRip#SubRip_text_file_format
+[libcaption]: https://github.com/szatmary/libcaption
+[bento4]: https://www.bento4.com/documentation/
