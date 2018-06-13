@@ -872,7 +872,8 @@ QUnit.test('ignores CEA708 captions', function() {
 });
 
 // Full character translation tests are below for Cea608Stream, they just only
-// test support for CC1
+// test support for CC1. See those tests and the source code for more about the
+// mechanics of special and extended characters.
 QUnit.test('special and extended character codes work regardless of field and data channel', function() {
   var packets, seiNals, captions = [];
   packets = [
