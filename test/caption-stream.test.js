@@ -1771,6 +1771,7 @@ QUnit.test('a second identical control code separated by only padding from the f
     },
     // backspace
     { ccData: 0x1421, type: 0 },
+    // padding
     { ccData: 0x0000, type: 0 },
     { ccData: 0x0000, type: 0 },
     { ccData: 0x0000, type: 0 },
@@ -1827,15 +1828,18 @@ QUnit.test('preserves newlines from PACs in pop-on mode', function() {
     { ccData: 0x142e, type: 0 },
     // PAC: row 12, indent 0
     { ccData: 0x1350, type: 0 },
+    // text: TEST
     { ccData: 0x5445, type: 0 },
     { ccData: 0x5354, type: 0 },
     // PAC: row 14, indent 0
     { ccData: 0x1450, type: 0 },
+    // text: STRING
     { ccData: 0x5354, type: 0 },
     { ccData: 0x5249, type: 0 },
     { ccData: 0x4e47, type: 0 },
     // PAC: row 15, indent 0
     { ccData: 0x1470, type: 0 },
+    // text: DATA
     { ccData: 0x4441, type: 0 },
     { ccData: 0x5441, type: 0 },
     // EOC, end of caption
