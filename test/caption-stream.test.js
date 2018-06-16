@@ -317,8 +317,8 @@ QUnit.test('drops duplicate segments', function() {
   packets = [
     {
       pts: 1000, dts: 1000, captions: [
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL (resume caption loading)
+        {ccData: 0x1420, type: 0 }, // RCL, duplicate as per spec
         {ccData: characters('te'), type: 0 },
         {ccData: characters('st'), type: 0 }
       ]
@@ -353,10 +353,10 @@ QUnit.test('drops duplicate segments', function() {
     },
     {
       pts: 4000, dts: 4000, captions: [
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x142f, type: 0 }
+        {ccData: 0x142f, type: 0 }, // EOC (end of caption), mark display start
+        {ccData: 0x142f, type: 0 }, // EOC, duplicate as per spec
+        {ccData: 0x142f, type: 0 }, // EOC, mark display end and flush
+        {ccData: 0x142f, type: 0 } // EOC, duplicate as per spec
       ]
     }
   ];
@@ -380,8 +380,8 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
   packets = [
     {
       pts: 1000, dts: 1000, captions: [
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL (resume caption loading)
+        {ccData: 0x1420, type: 0 }, // RCL, duplicate as per spec
         {ccData: characters('te'), type: 0 }
       ]
     },
@@ -427,13 +427,14 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
     },
     {
       pts: 4000, dts: 4000, captions: [
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x1420, type: 0 }
+        {ccData: 0x142f, type: 0 }, // EOC (end of caption)
+        // EOC not duplicated for robustness testing
+        {ccData: 0x1420, type: 0 } // RCL (resume caption loading)
       ]
     },
     {
       pts: 5000, dts: 5000, captions: [
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL, duplicated as per spec
         {ccData: characters(' a'), type: 0 },
         {ccData: characters('nd'), type: 0 }
       ]
@@ -458,7 +459,7 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
     },
     {
       pts: 5000, dts: 5000, captions: [
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL, duplicated as per spec
         {ccData: characters(' a'), type: 0 },
         {ccData: characters('nd'), type: 0 }
       ]
@@ -502,10 +503,10 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
     {
       pts: 8000, dts: 8000, captions: [
         {ccData: characters('e!'), type: 0 },
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x142f, type: 0 }
+        {ccData: 0x142f, type: 0 }, // EOC (end of caption), mark display start
+        {ccData: 0x142f, type: 0 }, // EOC, duplicated as per spec
+        {ccData: 0x142f, type: 0 } // EOC, mark display end and flush
+        // EOC not duplicated for robustness testing
       ]
     }
   ];
@@ -530,8 +531,8 @@ QUnit.test("doesn't ignore older segments if reset", function() {
   firstPackets = [
     {
       pts: 11000, dts: 11000, captions: [
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL (resume caption loading)
+        {ccData: 0x1420, type: 0 }, // RCL, duplicated as per spec
         {ccData: characters('te'), type: 0 }
       ]
     },
@@ -558,8 +559,8 @@ QUnit.test("doesn't ignore older segments if reset", function() {
   secondPackets = [
     {
       pts: 1000, dts: 1000, captions: [
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL (resume caption loading)
+        {ccData: 0x1420, type: 0 }, // RCL, duplicated as per spec
         {ccData: characters('af'), type: 0 }
       ]
     },
@@ -585,10 +586,10 @@ QUnit.test("doesn't ignore older segments if reset", function() {
     },
     {
       pts: 4000, dts: 4000, captions: [
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x142f, type: 0 }
+        {ccData: 0x142f, type: 0 }, // EOC (end of caption), mark display start
+        {ccData: 0x142f, type: 0 }, // EOC, duplicated as per spec
+        {ccData: 0x142f, type: 0 } // EOC, mark display end and flush
+        // EOC not duplicated for robustness testing
       ]
     }
   ];
@@ -624,28 +625,31 @@ QUnit.test('extracts all theoretical caption channels', function() {
     });
   });
 
+  // RU2 = roll-up, 2 rows
+  // CR = carriage return
   var packets = [
-    { pts: 1000, type: 0, ccData: 0x1425 },
-    { pts: 2000, type: 0, ccData: characters('1a') },
-    { pts: 3000, type: 0, ccData: 0x1c25 },
-    { pts: 4000, type: 1, ccData: 0x1525 },
-    { pts: 5000, type: 1, ccData: characters('3a') },
+    { pts: 1000, type: 0, ccData: 0x1425 }, // RU2 (sets CC1)
+    { pts: 2000, type: 0, ccData: characters('1a') }, // CC1
+    { pts: 3000, type: 0, ccData: 0x1c25 }, // RU2 (sets CC2)
+    { pts: 4000, type: 1, ccData: 0x1525 }, // RU2 (sets CC3)
+    { pts: 5000, type: 1, ccData: characters('3a') }, // CC3
     // this next one tests if active channel is tracked per-field
-    { pts: 6000, type: 0, ccData: characters('2a') },
-    { pts: 7000, type: 1, ccData: 0x1d25 },
-    { pts: 8000, type: 1, ccData: characters('4a') },
-    { pts: 9000, type: 1, ccData: characters('4b') },
-    { pts: 10000, type: 0, ccData: 0x142d },
-    { pts: 11000, type: 0, ccData: 0x1c2d },
-    { pts: 12000, type: 0, ccData: 0x1425 },
-    { pts: 13000, type: 0, ccData: characters('1b') },
-    { pts: 14000, type: 0, ccData: characters('1c') },
-    { pts: 15000, type: 0, ccData: 0x142d },
-    { pts: 16000, type: 1, ccData: 0x152d },
-    { pts: 17000, type: 1, ccData: 0x1d2d },
-    { pts: 18000, type: 0, ccData: 0x1c25 },
-    { pts: 19000, type: 0, ccData: characters('2b') },
-    { pts: 20000, type: 0, ccData: 0x1c2d }
+    // instead of globally
+    { pts: 6000, type: 0, ccData: characters('2a') }, // CC2
+    { pts: 7000, type: 1, ccData: 0x1d25 }, // RU2 (sets CC4)
+    { pts: 8000, type: 1, ccData: characters('4a') }, // CC4
+    { pts: 9000, type: 1, ccData: characters('4b') }, // CC4
+    { pts: 10000, type: 0, ccData: 0x142d }, // CR (sets + flushes CC1)
+    { pts: 11000, type: 0, ccData: 0x1c2d }, // CR (sets + flushes CC2)
+    { pts: 12000, type: 0, ccData: 0x1425 }, // RU2 (sets CC1)
+    { pts: 13000, type: 0, ccData: characters('1b') }, // CC1
+    { pts: 14000, type: 0, ccData: characters('1c') }, // CC1
+    { pts: 15000, type: 0, ccData: 0x142d }, // CR (sets + flushes CC1)
+    { pts: 16000, type: 1, ccData: 0x152d }, // CR (sets + flushes CC3)
+    { pts: 17000, type: 1, ccData: 0x1d2d }, // CR (sets + flushes CC4)
+    { pts: 18000, type: 0, ccData: 0x1c25 }, // RU2 (sets CC2)
+    { pts: 19000, type: 0, ccData: characters('2b') }, // CC2
+    { pts: 20000, type: 0, ccData: 0x1c2d } // CR (sets + flushes CC2)
   ];
 
   var seiNals = packets.map(makeSeiFromCaptionPacket);
@@ -671,38 +675,54 @@ QUnit.test('drops data until first command that sets activeChannel for a field',
   });
 
   var packets = [
+    // test that packets in same field and same data channel are dropped
+    // before a control code that sets the data channel
     { pts: 0 * 1000, ccData: characters('no'), type: 0 },
     { pts: 0 * 1000, ccData: characters('t '), type: 0 },
     { pts: 0 * 1000, ccData: characters('th'), type: 0 },
     { pts: 0 * 1000, ccData: characters('is'), type: 0 },
+    // EOC (end of caption), sets CC1
     { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    // RCL (resume caption loading)
     { pts: 1 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, if data wasn't dropped this would dispatch a caption
     { pts: 2 * 1000, ccData: 0x142f, type: 0 },
-    // RCL, resume caption loading
+    // RCL
     { pts: 3 * 1000, ccData: 0x1420, type: 0 },
-    { pts: 3 * 1000, ccData: 0x142e, type: 0 },
     { pts: 4 * 1000, ccData: characters('fi'), type: 0 },
     { pts: 4 * 1000, ccData: characters('el'), type: 0 },
     { pts: 4 * 1000, ccData: characters('d0'), type: 0 },
+    // EOC, mark display start
     { pts: 5 * 1000, ccData: 0x142f, type: 0 },
-    { pts: 5 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, duplicated as per spec
+    { pts: 5 * 1000, ccData: 0x142f, type: 0 },
+    // EOC, mark display end and flush
     { pts: 6 * 1000, ccData: 0x142f, type: 0 },
+    // EOC not duplicated cuz not necessary
+    // now switch to field 1 and test that packets in the same field
+    // but DIFFERENT data channel are dropped
     { pts: 7 * 1000, ccData: characters('or'), type: 1 },
     { pts: 7 * 1000, ccData: characters(' t'), type: 1 },
     { pts: 7 * 1000, ccData: characters('hi'), type: 1 },
     { pts: 7 * 1000, ccData: characters('s.'), type: 1 },
+    // EOC (end of caption, sets CC4)
     { pts: 8 * 1000, ccData: 0x1d2f, type: 1 },
+    // RCL (resume caption loading)
     { pts: 8 * 1000, ccData: 0x1d20, type: 1 },
+    // EOC, if data wasn't dropped this would dispatch a caption
     { pts: 9 * 1000, ccData: 0x1d2f, type: 1 },
-    // RCL, resume caption loading
+    // RCL
     { pts: 10 * 1000, ccData: 0x1d20, type: 1 },
-    { pts: 10 * 1000, ccData: 0x1d2e, type: 1 },
     { pts: 11 * 1000, ccData: characters('fi'), type: 1 },
     { pts: 11 * 1000, ccData: characters('el'), type: 1 },
     { pts: 11 * 1000, ccData: characters('d1'), type: 1 },
+    // EOC, mark display start
     { pts: 12 * 1000, ccData: 0x1d2f, type: 1 },
-    { pts: 12 * 1000, ccData: 0x1d20, type: 1 },
+    // EOC, duplicated as per spec
+    { pts: 12 * 1000, ccData: 0x1d2f, type: 1 },
+    // EOC, mark display end and flush
     { pts: 13 * 1000, ccData: 0x1d2f, type: 1 }
+    // EOC not duplicated cuz not necessary
   ];
 
   var seiNals = packets.map(makeSeiFromCaptionPacket);
@@ -721,26 +741,29 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
   captions = [];
 
   firstPackets = [
-    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    // RCL (resume caption loading), CC1
     { pts: 1 * 1000, ccData: 0x1420, type: 0 },
-    { pts: 2 * 1000, ccData: 0x142f, type: 0 },
-    // RCL, resume caption loading
-    { pts: 3 * 1000, ccData: 0x1420, type: 0 },
-    { pts: 3 * 1000, ccData: 0x142e, type: 0 },
+    { pts: 2 * 1000, ccData: characters('fi'), type: 0 },
+    { pts: 2 * 1000, ccData: characters('el'), type: 0 },
+    { pts: 2 * 1000, ccData: characters('d0'), type: 0 },
+    // EOC (end of caption), swap text to displayed memory
+    { pts: 3 * 1000, ccData: 0x142f, type: 0 },
     { pts: 4 * 1000, ccData: characters('fi'), type: 0 },
     { pts: 4 * 1000, ccData: characters('el'), type: 0 },
     { pts: 4 * 1000, ccData: characters('d0'), type: 0 },
-    { pts: 5 * 1000, ccData: 0x1d2f, type: 1 },
+    // RCL (resume caption loading), CC4
     { pts: 5 * 1000, ccData: 0x1d20, type: 1 },
-    { pts: 6 * 1000, ccData: 0x1d2f, type: 1 },
-    // RCL, resume caption loading
-    { pts: 7 * 1000, ccData: 0x1d20, type: 1 },
-    { pts: 7 * 1000, ccData: 0x1d2e, type: 1 },
+    { pts: 6 * 1000, ccData: characters('fi'), type: 1 },
+    { pts: 6 * 1000, ccData: characters('el'), type: 1 },
+    { pts: 6 * 1000, ccData: characters('d1'), type: 1 },
+    // EOC (end of caption), swap text to displayed memory
+    { pts: 7 * 1000, ccData: 0x1d2f, type: 1 },
     { pts: 8 * 1000, ccData: characters('fi'), type: 1 },
     { pts: 8 * 1000, ccData: characters('el'), type: 1 },
     { pts: 8 * 1000, ccData: characters('d1'), type: 1 }
   ];
   secondPackets = [
+    // following packets are dropped
     { pts: 9 * 1000, ccData: characters('no'), type: 0 },
     { pts: 9 * 1000, ccData: characters('t '), type: 0 },
     { pts: 9 * 1000, ccData: characters('th'), type: 0 },
@@ -749,14 +772,21 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
     { pts: 10 * 1000, ccData: characters(' t'), type: 1 },
     { pts: 10 * 1000, ccData: characters('hi'), type: 1 },
     { pts: 10 * 1000, ccData: characters('s.'), type: 1 },
+    // EOC (end of caption), sets CC1
     { pts: 11 * 1000, ccData: 0x142f, type: 0 },
+    // RCL (resume caption loading), CC1
     { pts: 11 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, sets CC4
     { pts: 12 * 1000, ccData: 0x1d2f, type: 1 },
+    // RCL, CC4
     { pts: 12 * 1000, ccData: 0x1d20, type: 1 },
+    // EOC, CC1, would dispatch caption if packets weren't ignored
     { pts: 13 * 1000, ccData: 0x142f, type: 0 },
-    // RCL , resume caption loading
+    // RCL, CC1
     { pts: 13 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, CC4, would dispatch caption if packets weren't ignored
     { pts: 14 * 1000, ccData: 0x1d2f, type: 1 },
+    // RCL, CC4
     { pts: 14 * 1000, ccData: 0x1d20, type: 1 },
     { pts: 18 * 1000, ccData: characters('bu'), type: 0 },
     { pts: 18 * 1000, ccData: characters('t '), type: 0 },
@@ -766,12 +796,20 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
     { pts: 19 * 1000, ccData: characters('d '), type: 1 },
     { pts: 19 * 1000, ccData: characters('th'), type: 1 },
     { pts: 19 * 1000, ccData: characters('is'), type: 1 },
+    // EOC (end of caption), CC1, mark caption 1 start
     { pts: 20 * 1000, ccData: 0x142f, type: 0 },
-    { pts: 20 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, CC1, duplicated as per spec
+    { pts: 20 * 1000, ccData: 0x142f, type: 0 },
+    // EOC, CC1, mark caption 1 end and dispatch
     { pts: 21 * 1000, ccData: 0x142f, type: 0 },
+    // No duplicate EOC cuz not necessary
+    // EOC, CC4, mark caption 2 start
     { pts: 22 * 1000, ccData: 0x1d2f, type: 1 },
-    { pts: 22 * 1000, ccData: 0x1d20, type: 1 },
+    // EOC, CC4, duplicated as per spec
+    { pts: 22 * 1000, ccData: 0x1d2f, type: 1 },
+    // EOC, CC4, mark caption 2 end and dispatch
     { pts: 23 * 1000, ccData: 0x1d2f, type: 1 }
+    // No duplicate EOC cuz not necessary
   ];
 
   seiNals1 = firstPackets.map(makeSeiFromCaptionPacket);
@@ -783,9 +821,27 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
 
   seiNals1.forEach(captionStream.push, captionStream);
   captionStream.flush();
-  QUnit.equal(captionStream.ccStreams_[0].nonDisplayed_[14], 'field0', 'yes');
-  QUnit.equal(captionStream.ccStreams_[3].nonDisplayed_[14], 'field1', 'yes');
+
+  QUnit.equal(captionStream.ccStreams_[0].nonDisplayed_[14], 'field0',
+    'there is data in non-displayed memory for field 0 before reset');
+  QUnit.equal(captionStream.ccStreams_[3].nonDisplayed_[14], 'field1',
+    'there is data in non-displayed memory for field 1 before reset');
+  QUnit.equal(captionStream.ccStreams_[0].displayed_[14], 'field0',
+    'there is data in displayed memory for field 0 before reset');
+  QUnit.equal(captionStream.ccStreams_[3].displayed_[14], 'field1',
+    'there is data in displayed memory for field 1 before reset');
+
   captionStream.reset();
+
+  QUnit.equal(captionStream.ccStreams_[0].nonDisplayed_[14], '',
+    'there is no data in non-displayed memory for field 0 after reset');
+  QUnit.equal(captionStream.ccStreams_[3].nonDisplayed_[14], '',
+    'there is no data in non-displayed memory for field 1 after reset');
+  QUnit.equal(captionStream.ccStreams_[0].displayed_[14], '',
+    'there is no data in displayed memory for field 0 after reset');
+  QUnit.equal(captionStream.ccStreams_[3].displayed_[14], '',
+    'there is no data in displayed memory for field 1 after reset');
+
   seiNals2.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
@@ -813,6 +869,49 @@ QUnit.test('ignores CEA708 captions', function() {
   // there is also bad data in the captions, but the null ascii character is removed
   QUnit.equal(captions[1].text, 'IT\'S NOT A THREAT TO ANYBODY.', 'parsed second caption correctly');
   QUnit.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN\nIF WE DON\'T HAVE TO.', 'parsed third caption correctly');
+});
+
+// Full character translation tests are below for Cea608Stream, they just only
+// test support for CC1. See those tests and the source code for more about the
+// mechanics of special and extended characters.
+QUnit.test('special and extended character codes work regardless of field and data channel', function() {
+  var packets, seiNals, captions = [];
+  packets = [
+    // RU2 (roll-up, 2 rows), CC2
+    { ccData: 0x1c25, type: 0 },
+    // ®
+    { ccData: 0x1930, type: 0 },
+    // CR (carriage return), CC2, flush caption
+    { ccData: 0x1c2d, type: 0 },
+    // RU2, CC3
+    { ccData: 0x1525, type: 1 },
+    // "
+    { ccData: 0x2200, type: 1 },
+    // «
+    { ccData: 0x123e, type: 1 },
+    // CR, CC3, flush caption
+    { ccData: 0x152d, type: 1 },
+    // RU2, CC4
+    { ccData: 0x1d25, type: 1 },
+    // "
+    { ccData: 0x2200, type: 1 },
+    // »
+    { ccData: 0x1a3f, type: 1 },
+    // CR, CC4, flush caption
+    { ccData: 0x1d2d, type: 1 }
+  ];
+
+  captionStream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  seiNals = packets.map(makeSeiFromCaptionPacket);
+  seiNals.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.deepEqual(captions[0].text, String.fromCharCode(0xae), 'CC2 special character correct');
+  QUnit.deepEqual(captions[1].text, String.fromCharCode(0xab), 'CC3 extended character correct');
+  QUnit.deepEqual(captions[2].text, String.fromCharCode(0xbb), 'CC4 extended character correct');
 });
 
 var cea608Stream;
@@ -860,12 +959,14 @@ QUnit.test('converts non-ASCII character codes to ASCII', function() {
         'translated non-standard characters');
 });
 
-QUnit.test('converts special character codes to ASCII', function() {
+QUnit.test('properly handles special character codes', function() {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
     { ccData: 0x1420, type: 0 },
     // Special characters as defined by CEA-608
+    // see the CHARACTER_TRANSLATION hash in lib/m2ts/caption-stream for the
+    // mapping table
     { ccData: 0x1130, type: 0 },
     { ccData: 0x1131, type: 0 },
     { ccData: 0x1132, type: 0 },
@@ -886,7 +987,7 @@ QUnit.test('converts special character codes to ASCII', function() {
     { pts: 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
     { ccData: 0x1420, type: 0 },
-    // EOC, End of Caption, clear the display
+    // EOC, End of Caption, CC1, clear the display
     { pts: 10 * 1000, ccData: 0x142f, type: 0 }
   ];
   captions = [];
@@ -902,7 +1003,7 @@ QUnit.test('converts special character codes to ASCII', function() {
         'translated special characters');
 });
 
-QUnit.test('properly handles special and extended character codes', function() {
+QUnit.test('properly handles extended character codes', function() {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
@@ -910,6 +1011,8 @@ QUnit.test('properly handles special and extended character codes', function() {
     // Extended characters are defined in CEA-608 as a standard character,
     // which is followed by an extended character, and the standard character
     // gets deleted.
+    // see the CHARACTER_TRANSLATION hash in lib/m2ts/caption-stream for the
+    // mapping table
     { ccData: 0x2200, type: 0 },
     { ccData: 0x123e, type: 0 },
     { ccData: 0x4c41, type: 0 },
@@ -1190,11 +1293,14 @@ QUnit.test('applies mid-row underline', function() {
   });
 
   var packets = [
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
     { ccData: characters('no'), type: 0 },
+    // mid-row, white underline
     { ccData: 0x1121, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1210,11 +1316,14 @@ QUnit.test('applies mid-row italics', function() {
   });
 
   var packets = [
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
     { ccData: characters('no'), type: 0 },
+    // mid-row, italics
     { ccData: 0x112e, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1230,12 +1339,14 @@ QUnit.test('applies mid-row italics underline', function() {
   });
 
   var packets = [
-    // RCL, resume caption loading
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
     { ccData: characters('no'), type: 0 },
+    // mid-row, italics underline
     { ccData: 0x112f, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1253,11 +1364,13 @@ QUnit.test('applies PAC underline', function() {
   });
 
   var packets = [
-    // RCL, resume caption loading
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
+    // PAC: row 15, white underline
     { ccData: 0x1461, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1273,11 +1386,13 @@ QUnit.test('applies PAC white italics', function() {
   });
 
   var packets = [
-    // RCL, resume caption loading
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
+    // PAC: row 15, white italics
     { ccData: 0x146e, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1293,11 +1408,13 @@ QUnit.test('applies PAC white italics underline', function() {
   });
 
   var packets = [
-    // RCL, resume caption loading
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
+    // PAC: row 15, white italics underline
     { ccData: 0x146f, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1315,9 +1432,11 @@ QUnit.test('closes formatting at PAC row change', function() {
   var packets = [
     // RCL, resume caption loading
     { ccData: 0x1420, type: 0 },
+    // PAC: row 14, white italics underlime
     { ccData: 0x144f, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // PAC: row 15, indent 0
     { ccData: 0x1470, type: 0 },
     { ccData: characters('no'), type: 0 },
     // EOC, End of Caption
@@ -1342,6 +1461,7 @@ QUnit.test('closes formatting at EOC', function() {
   var packets = [
     // RCL, resume caption loading
     { ccData: 0x1420, type: 0 },
+    // PAC: row 15, white italics underline
     { ccData: 0x146f, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
@@ -1365,12 +1485,14 @@ QUnit.test('closes formatting at negating mid-row code', function() {
   });
 
   var packets = [
-    // RCL, resume caption loading
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
     { ccData: characters('no'), type: 0 },
+    // mid-row: italics underline
     { ccData: 0x112f, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // mid-row: white
     { ccData: 0x1120, type: 0 },
     { ccData: characters('no'), type: 0 }
   ];
@@ -1774,19 +1896,18 @@ QUnit.test('a second identical control code separated by only padding from the f
     },
     // backspace
     { ccData: 0x1421, type: 0 },
+    // padding
     { ccData: 0x0000, type: 0 },
     { ccData: 0x0000, type: 0 },
     { ccData: 0x0000, type: 0 },
     // backspace
     { pts: 2 * 1000, ccData: 0x1421, type: 0 }, // duplicate is ignored
-    // backspace
-    { ccData: 0x1421, type: 0 },
     // CR, carriage return
     { pts: 3 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'caption emitted');
-  QUnit.equal(captions[0].text, '01', 'only two backspaces processed');
+  QUnit.equal(captions[0].text, '010', 'only one backspace processed');
 });
 
 QUnit.test('preamble address codes on same row are NOT converted into spaces', function() {
@@ -1828,19 +1949,29 @@ QUnit.test('preserves newlines from PACs in pop-on mode', function() {
   [
     // RCL, resume caption loading
     { ccData: 0x1420, type: 0 },
+    // ENM, erase non-displayed memory
     { ccData: 0x142e, type: 0 },
+    // PAC: row 12, indent 0
     { ccData: 0x1350, type: 0 },
+    // text: TEST
     { ccData: 0x5445, type: 0 },
     { ccData: 0x5354, type: 0 },
+    // PAC: row 14, indent 0
     { ccData: 0x1450, type: 0 },
+    // text: STRING
     { ccData: 0x5354, type: 0 },
     { ccData: 0x5249, type: 0 },
     { ccData: 0x4e47, type: 0 },
+    // PAC: row 15, indent 0
     { ccData: 0x1470, type: 0 },
+    // text: DATA
     { ccData: 0x4441, type: 0 },
     { ccData: 0x5441, type: 0 },
+    // EOC, end of caption
     { pts: 1 * 1000, ccData: 0x142f, type: 0 },
-    { pts: 1 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, duplicated as per spec
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    // EOC, dispatch caption
     { pts: 2 * 1000, ccData: 0x142f, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
@@ -1963,6 +2094,7 @@ QUnit.test('reset works', function() {
   });
   [ // RU2, roll-up captions 2 rows
     { pts: 0, ccData: 0x1425, type: 0 },
+    // mid-row: white underline
     { pts: 0, ccData: 0x1121, type: 0 },
     { pts: 0, ccData: characters('01'), type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
