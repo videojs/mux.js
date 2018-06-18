@@ -36,12 +36,13 @@ QUnit.skip('parse captions from real segment', function() {
   var captions = captionsParser.parse(dashInit, dashSegment);
 
   QUnit.equal(captions.length, 1);
-  QUnit.equal(captions[0].text, '00:05:00');
+  QUnit.equal(captions[0].text, '00:01:00');
   QUnit.equal(captions[0].stream, 'CC1');
-  // FIXME: these two fail at the moment
-  // should have matched sample with pts 26967000
-  QUnit.equal(captions[0].startTime, 300);
-  QUnit.equal(captions[0].endTime, 360);
+  // FIXME: these two fail at the moment,
+  // startTime is close, endTime is not 1 minute
+  // later as expected
+  QUnit.equal(captions[0].startTime, 60);
+  QUnit.equal(captions[0].endTime, 120);
 });
 
 // TODO: wip
