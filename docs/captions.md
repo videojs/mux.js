@@ -12,6 +12,15 @@ for live events. In-band HLS captions follow the CEA-708 standard.
 
 In this project, in-band captions are parsed using a [CaptionStream](#caption-stream). For MPEG2-TS sources, the CaptionStream is used as part of the [Transmuxer TS Pipeline](#transmuxer). For ISOBMFF sources, the CaptionStream is used as part of the [MP4 CaptionsParser](#mp4-caption-parser).
 
+## Is my stream CEA-608/CEA-708 compatible?
+
+If you are having difficulties getting caption data as you expect out of Mux.js, take a look at our [Troubleshooting Guide](/docs/troubleshooting.md#608/708-caption-parsing) to ensure your content is compatible.
+
+# Useful Tools
+
+- [CCExtractor](#cc-extractor)
+- [Thumbcoil](#thumbcoil)
+
 # References
 - [Rec. ITU-T H.264](#h264-spec): H.264 video data specification. CEA-708 captions are encapsulated in supplemental enhancement information (SEI) network abstraction layer (NAL) units within the video stream.
 - [ANSI/SCTE 128-1](#ansi-scte-spec): the binary encapsulation of caption data within an SEI user_data_registered_itu_t_t35 payload.
@@ -23,3 +32,5 @@ In this project, in-band captions are parsed using a [CaptionStream](#caption-st
 [caption-stream]: /lib/m2ts/caption-stream.js
 [transmuxer]: /lib/mp4/transmuxer.js
 [mp4-caption-parser]: /lib/mp4/captions-parser.js
+[thumbcoil]: http://thumb.co.il/
+[cc-extractor]: https://github.com/CCExtractor/ccextractor
