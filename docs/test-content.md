@@ -8,9 +8,9 @@
 
 - Use ffmpeg to create an MP4 file to start with:
 
-  `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 output.mp4`
+  `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p output.mp4`
 
-  This uses the `testsrc` source generates a test video pattern with a color and timestamp. For this example, we are using a duration of `300` seconds, a size of `1280x720` and a framerate of `30fps`.
+  This uses the `testsrc` source generates a test video pattern with a color and timestamp. For this example, we are using a duration of `300` seconds, a size of `1280x720` and a framerate of `30fps`. We also specify extra settings `profile` and `pix_fmt` to force the output to be encoded using `avc1.42C01F`.
 
 - Create an [srt file](#srt) with the captions you would like to see with their timestamps.
 
