@@ -8,7 +8,10 @@
 
 - Use ffmpeg to create an MP4 file to start with:
 
-  `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p output.mp4`
+  `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p output.mp4` (no audio)
+  
+   `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p \`
+   `-filter_complex "aevalsrc=0.1*sin(2*PI*(360-2.5/2)*t) | 0.1*sin(2*PI*(360+2.5/2)*t):d=300" output.mp4` (audio + video)
 
   This uses the `testsrc` source generates a test video pattern with a color and timestamp. For this example, we are using a duration of `300` seconds, a size of `1280x720` and a framerate of `30fps`. We also specify extra settings `profile` and `pix_fmt` to force the output to be encoded using `avc1.42C01F`.
 
@@ -16,7 +19,7 @@
 
 - Use ffmpeg to convert `ouput.mp4` to a flv file:
 
-  `ffmpeg -i output.mp4 -c:v libx264 -crf 19 output.flv`
+  `ffmpeg -i output.mp4 -c:v libx264 -crf 19 -profile:v baseline -pix_fmt yuv420p output.flv`
 
   `-crf` affects the quality of the file output.
 
