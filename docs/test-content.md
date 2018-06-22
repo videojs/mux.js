@@ -19,17 +19,18 @@
 
 - Use ffmpeg to convert `ouput.mp4` to a flv file:
 
-  `ffmpeg -i output.mp4 -c:v libx264 -crf 19 -profile:v baseline -pix_fmt yuv420p output.flv`
+  `ffmpeg -i output.mp4 -c:v libx264 -crf 19 -profile:v baseline output.flv`
 
   `-crf` affects the quality of the file output.
 
 - Use [libcaption](#libcaption) to embed the captions into the flv:
+**Note**: There's an open PR to double control codes that should be used instead of master https://github.com/szatmary/libcaption/pull/33 
 
   `flv+srt output.flv captions.srt with-captions.flv`
 
 - Use ffmpeg to convert `with-captions.flv` to mp4
 
-  `ffmpeg -i with-captions.flv -c:v libx264 -crf 19 -strict experimental with-captions.mp4`
+  `ffmpeg -i with-captions.flv -acodec copy -vcodec copy with-captions.mp4`
 
 - Use [Bento4](#bento4) to convert the file into a FMP4 file:
 
@@ -39,16 +40,16 @@
     --timescale 90000 \
     with-captions-fragment.mf4`
 
-- Use [Bento4](#bento4) to split the file into an init segment and a fmp4 media segment:
+- Use [Bento4](#bento4) to split the file into an init segment and a fmp4 media segments:
 
   `bento4 mp4split --verbose \
     --init-segment with-captions-init.mp4 \
-    --media-segment with-captions-segment-%llu..m4s \
+    --media-segment segs/with-captions-segment-%llu.m4s \
     with-captions-fragment.mf4`
 
 - Use [Bento4](#bento4) to create a DASH manifest:
 
-  `mp4dash -v \
+  `bento4 mp4dash -v \
     --mpd-name=with-captions.mpd \
     --init-segment=with-captions-init.mp4 \
     with-captions-fragment.mf4`
