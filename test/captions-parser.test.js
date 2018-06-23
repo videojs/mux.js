@@ -44,12 +44,20 @@ QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
     'got the expected version0 caption text');
   QUnit.equal(version0Captions[0].stream, 'CC1',
     'returned the correct caption stream CC1');
+  QUnit.equal(version0Captions[0].startTime, 30 / 90000,
+    'the start time for version0 caption is correct');
+  QUnit.equal(version0Captions[0].endTime, 30 / 90000,
+    'the end time for version0 caption is correct');
 
   QUnit.equal(version1Captions.length, 1, 'got version1 caption');
   QUnit.equal(version1Captions[0].text, 'test string #2',
     'got the expected version1 caption text');
   QUnit.equal(version1Captions[0].stream, 'CC4',
     'returned the correct caption stream CC4');
+  QUnit.equal(version1Captions[0].startTime, 30 / 90000,
+    'the start time for version1 caption is correct');
+  QUnit.equal(version1Captions[0].endTime, 30 / 90000,
+    'the end time for version1 caption is correct');
 });
 
 // ---------
@@ -221,9 +229,12 @@ version1Init =
         box('mdhd',
           0x01, // version 1
           0x00, 0x00, 0x00, // flags
+          0x00, 0x00, 0x00, 0x00,
           0x00, 0x00, 0x00, 0x00, // creation_time
+          0x00, 0x00, 0x00, 0x00,
           0x00, 0x00, 0x00, 0x00, // modification_time
           0x00, 0x01, 0x5f, 0x90, // timescale = 90000
+          0x00, 0x00, 0x00, 0x00,
           0x00, 0x00, 0x00, 0x00, // duration
           mp4Helpers.typeBytes('eng'), // language
           0x00, 0x00)))); // pre_defined = 0
@@ -233,14 +244,11 @@ version1Moof =
     box('traf',
       box('tfhd',
         0x01, // version
-        0x00, 0x00, 0x00, // flags
+        0x00, 0x00, 0x18, // flags
         0x00, 0x00, 0x00, 0x02, // track_ID
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, // base_data_offset
-        0x00, 0x00, 0x00, 0x00, // sample_description_index
-        0x00, 0x00, 0x00, 0x00, // default_sample_duration
-        0x00, 0x00, 0x00, 0x00, // default_sample_size
-        0x00, 0x00, 0x00, 0x00), // default_sample_flags,
+        // no base_data_offset, sample_description_index
+        0x00, 0x00, 0x00, 0x0a, // default_sample_duration = 10
+        0x00, 0x00, 0x00, 0x0a), // default_sample_size = 10
       box('tfdt',
         0x01, // version
         0x00, 0x00, 0x00, // flags
@@ -248,19 +256,15 @@ version1Moof =
         0x00, 0x00, 0x00, 0x00), // baseMediaDecodeTime,
       box('trun',
         0x01, // version
-        0x00, 0x0f, 0x01, // flags: dataOffsetPresent, sampleDurationPresent,
-                          // sampleSizePresent, sampleFlagsPresent,
+        0x00, 0x0c, 0x05, // flags: dataOffsetPresent, sampleFlagsPresent,
+                          // firstSampleFlagsPresent,
                           // sampleCompositionTimeOffsetsPresent
         0x00, 0x00, 0x00, 0x02, // sample_count
         0x00, 0x00, 0x00, 0x00, // data_offset, no first_sample_flags
         // sample 1
-        0x00, 0x00, 0x00, 0x0a, // sample_duration = 10
-        0x00, 0x00, 0x00, 0x0a, // sample_size = 10
         0x00, 0x00, 0x00, 0x00, // sample_flags
         0x00, 0x00, 0x00, 0x0a, // signed sample_composition_time_offset = 10
         // sample 2
-        0x00, 0x00, 0x00, 0x0a, // sample_duration = 10
-        0x00, 0x00, 0x00, 0x0a, // sample_size = 10
         0x00, 0x00, 0x00, 0x00, // sample_flags
         0x00, 0x00, 0x00, 0x14))); // signed sample_composition_time_offset = 20
 
