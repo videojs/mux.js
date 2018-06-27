@@ -11,7 +11,7 @@
   `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p output.mp4` (no audio)
   
    `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p \`
-   `-filter_complex "aevalsrc=0.1*sin(2*PI*(360-2.5/2)*t) | 0.1*sin(2*PI*(360+2.5/2)*t):d=300" output.mp4` (audio + video)
+   `-filter_complex "anoisesrc=d=300" output.mp4` (audio + video)
 
   This uses the `testsrc` source generates a test video pattern with a color and timestamp. For this example, we are using a duration of `300` seconds, a size of `1280x720` and a framerate of `30fps`. We also specify extra settings `profile` and `pix_fmt` to force the output to be encoded using `avc1.42C01F`.
 
@@ -19,9 +19,7 @@
 
 - Use ffmpeg to convert `ouput.mp4` to a flv file:
 
-  `ffmpeg -i output.mp4 -c:v libx264 -crf 19 -profile:v baseline output.flv`
-
-  `-crf` affects the quality of the file output.
+  `ffmpeg -i output.mp4 -acodec copy -vcodec copy output.flv`
 
 - Use [libcaption](#libcaption) to embed the captions into the flv:
 **Note**: There's an open PR to double control codes that should be used instead of master https://github.com/szatmary/libcaption/pull/33 
@@ -52,6 +50,7 @@
   `bento4 mp4dash -v \
     --mpd-name=with-captions.mpd \
     --init-segment=with-captions-init.mp4 \
+    --subtitles
     with-captions-fragment.mf4`
 
   This will create a DASH MPD and media segments in a new directory called `output`.
