@@ -24,46 +24,56 @@ var version1Segment;
 QUnit.module('MP4 Caption Parser');
 
 QUnit.test('parse captions from real segment', function() {
-  var captions = captionsParser.parse(dashInit, dashSegment);
+  var cc = captionsParser.parse(dashInit, dashSegment);
 
-  QUnit.equal(captions.length, 1);
-  QUnit.equal(captions[0].text, '00:01:00');
-  QUnit.equal(captions[0].stream, 'CC1');
+  QUnit.equal(cc.captions.length, 1);
+  QUnit.equal(cc.captions[0].text, '00:01:00');
+  QUnit.equal(cc.captions[0].stream, 'CC1');
+  QUnit.equal(cc.captionStreams.CC1, true);
 });
 
 QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
-  var version0Captions =
+  var v0Captions =
     captionsParser.parse(new Uint8Array(version0Init),
                          new Uint8Array(version0Segment));
-  var version1Captions =
+  var v1Captions =
     captionsParser.parse(new Uint8Array(version1Init),
                          new Uint8Array(version1Segment));
 
-  QUnit.equal(version0Captions.length, 1, 'got 1 version0 caption');
-  QUnit.equal(version0Captions[0].text, 'test string #1',
+  QUnit.equal(v0Captions.captions.length, 1, 'got 1 version0 caption');
+  QUnit.equal(v0Captions.captions[0].text, 'test string #1',
     'got the expected version0 caption text');
-  QUnit.equal(version0Captions[0].stream, 'CC1',
+  QUnit.equal(v0Captions.captions[0].stream, 'CC1',
     'returned the correct caption stream CC1');
-  QUnit.equal(version0Captions[0].startTime, 30 / 90000,
+  QUnit.equal(v0Captions.captions[0].startTime, 30 / 90000,
     'the start time for version0 caption is correct');
-  QUnit.equal(version0Captions[0].endTime, 30 / 90000,
+  QUnit.equal(v0Captions.captions[0].endTime, 30 / 90000,
     'the end time for version0 caption is correct');
+  QUnit.equal(v0Captions.captionStreams.CC1, true,
+    'stream is CC1');
+  QUnit.ok(!v0Captions.captionStreams.CC4,
+    'stream is not CC4');
 
-  QUnit.equal(version1Captions.length, 1, 'got version1 caption');
-  QUnit.equal(version1Captions[0].text, 'test string #2',
+  QUnit.equal(v1Captions.captions.length, 1, 'got version1 caption');
+  QUnit.equal(v1Captions.captions[0].text, 'test string #2',
     'got the expected version1 caption text');
-  QUnit.equal(version1Captions[0].stream, 'CC4',
+  QUnit.equal(v1Captions.captions[0].stream, 'CC4',
     'returned the correct caption stream CC4');
-  QUnit.equal(version1Captions[0].startTime, 30 / 90000,
+  QUnit.equal(v1Captions.captions[0].startTime, 30 / 90000,
     'the start time for version1 caption is correct');
-  QUnit.equal(version1Captions[0].endTime, 30 / 90000,
+  QUnit.equal(v1Captions.captions[0].endTime, 30 / 90000,
     'the end time for version1 caption is correct');
+  QUnit.equal(v1Captions.captionStreams.CC4, true,
+    'stream is CC4');
+  QUnit.ok(!v1Captions.captionStreams.CC1,
+    'stream is not CC1');
 });
 
 // ---------
 // Test Data
 // ---------
 
+// "test string #1", channel 1, field 1
 packets0 = [
   // Send another command so that the second EOC isn't ignored
   { ccData: 0x1420, type: 0 },
@@ -88,6 +98,7 @@ packets0 = [
   { ccData: 0x142f, type: 0 }
 ];
 
+// "test string #2", channel 2, field 2
 packets1 = [
   // Send another command so that the second EOC isn't ignored
   { ccData: 0x1d20, type: 1 },
@@ -112,9 +123,11 @@ packets1 = [
   { ccData: 0x1d2f, type: 1 }
 ];
 
-//
-// version 0
-//
+/**
+ * version 0:
+ * Uses version 0 boxes, no first sample flags
+ * sample size, flags, duration, composition time offset included.
+**/
 
 version0Init =
   box('moov',
@@ -191,9 +204,11 @@ version0Moof =
 
 version0Segment = version0Moof.concat(makeMdatFromCaptionPackets(packets0));
 
-//
-// version 1
-//
+/**
+ * version 1:
+ * Uses version 1 boxes, has first sample flags,
+ * other samples include flags and composition time offset only.
+**/
 
 version1Init =
   box('moov',
@@ -260,7 +275,7 @@ version1Moof =
                           // firstSampleFlagsPresent,
                           // sampleCompositionTimeOffsetsPresent
         0x00, 0x00, 0x00, 0x02, // sample_count
-        0x00, 0x00, 0x00, 0x00, // data_offset, no first_sample_flags
+        0x00, 0x00, 0x00, 0x00, // data_offset, has first_sample_flags
         // sample 1
         0x00, 0x00, 0x00, 0x00, // sample_flags
         0x00, 0x00, 0x00, 0x0a, // signed sample_composition_time_offset = 10
