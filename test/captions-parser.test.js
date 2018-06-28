@@ -1,9 +1,12 @@
 'use strict';
 
-var captionsParser = require('../lib/mp4').captionsParser;
+var CaptionsParser = require('../lib/mp4').CaptionsParser;
+var captionsParser;
 
-var dashInit = require('./utils/dash-608-708-captions-init-segment');
-var dashSegment = require('./utils/dash-608-708-captions-segment');
+var dashInit = require('./utils/dash-608-captions-init.mp4');
+// This file includes 2 segments data to force a flush
+// of the first caption. The second caption is at 200s
+var dashSegment = require('./utils/dash-608-captions-seg.m4s');
 
 var mp4Helpers = require('./utils/mp4-helpers');
 var box = mp4Helpers.box;
@@ -21,38 +24,57 @@ var version1Init;
 var version1Moof;
 var version1Segment;
 
-QUnit.module('MP4 Caption Parser');
+QUnit.module('MP4 Caption Parser', {
+  beforeEach: function() {
+    captionsParser = new CaptionsParser();
+    captionsParser.init();
+  }
+});
 
 QUnit.test('parse captions from real segment', function() {
   var cc = captionsParser.parse(dashInit, dashSegment);
 
   QUnit.equal(cc.captions.length, 1);
-  QUnit.equal(cc.captions[0].text, '00:01:00');
-  QUnit.equal(cc.captions[0].stream, 'CC1');
-  QUnit.equal(cc.captionStreams.CC1, true);
+  QUnit.equal(cc.captions[0].text, '00:00:00',
+    'real segment caption has correct text');
+  QUnit.equal(cc.captions[0].stream, 'CC1',
+    'real segment caption has correct stream');
+  QUnit.equal(cc.captions[0].startTime, 0,
+    'real segment caption has correct startTime');
+  QUnit.equal(cc.captions[0].endTime, 119,
+    'real segment caption has correct endTime');
+  QUnit.equal(cc.captionStreams.CC1, true,
+    'real segment caption streams have correct settings');
 });
 
 QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
-  var v0Captions =
-    captionsParser.parse(new Uint8Array(version0Init),
-                         new Uint8Array(version0Segment));
-  var v1Captions =
-    captionsParser.parse(new Uint8Array(version1Init),
-                         new Uint8Array(version1Segment));
+  var v0Captions;
+  var v1Captions;
+
+  v0Captions = captionsParser.parse(
+    new Uint8Array(version0Init),
+    new Uint8Array(version0Segment));
 
   QUnit.equal(v0Captions.captions.length, 1, 'got 1 version0 caption');
   QUnit.equal(v0Captions.captions[0].text, 'test string #1',
     'got the expected version0 caption text');
   QUnit.equal(v0Captions.captions[0].stream, 'CC1',
     'returned the correct caption stream CC1');
-  QUnit.equal(v0Captions.captions[0].startTime, 30 / 90000,
+  QUnit.equal(v0Captions.captions[0].startTime, 10 / 90000,
     'the start time for version0 caption is correct');
-  QUnit.equal(v0Captions.captions[0].endTime, 30 / 90000,
+  QUnit.equal(v0Captions.captions[0].endTime, 10 / 90000,
     'the end time for version0 caption is correct');
   QUnit.equal(v0Captions.captionStreams.CC1, true,
     'stream is CC1');
   QUnit.ok(!v0Captions.captionStreams.CC4,
     'stream is not CC4');
+
+  // Reset the parser to clear parsed captions
+  captionsParser.reset();
+
+  v1Captions = captionsParser.parse(
+    new Uint8Array(version1Init),
+    new Uint8Array(version1Segment));
 
   QUnit.equal(v1Captions.captions.length, 1, 'got version1 caption');
   QUnit.equal(v1Captions.captions[0].text, 'test string #2',
@@ -67,6 +89,8 @@ QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
     'stream is CC4');
   QUnit.ok(!v1Captions.captionStreams.CC1,
     'stream is not CC1');
+
+  captionsParser.reset();
 });
 
 // ---------
@@ -268,7 +292,7 @@ version1Moof =
         0x01, // version
         0x00, 0x00, 0x00, // flags
         0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00), // baseMediaDecodeTime,
+        0x00, 0x00, 0x00, 0x14), // baseMediaDecodeTime = 20,
       box('trun',
         0x01, // version
         0x00, 0x0c, 0x05, // flags: dataOffsetPresent, sampleFlagsPresent,

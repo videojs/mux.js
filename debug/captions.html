@@ -135,6 +135,7 @@
       $ = document.querySelector.bind(document),
       inputs = $('#inputs'),
       m2ts = $('#m2ts'),
+      captionsParser = new muxjs.mp4.CaptionsParser(),
 
       initResult,
       segmentResult,
@@ -375,9 +376,11 @@
       var segmentBytes = new Uint8Array(segmentResult);
       var texifiedParsed;
 
-      dashParsed = muxjs.mp4.captionsParser.parse(initBytes, segmentBytes);
+      captionsParser.init();
+      dashParsed = captionsParser.parse(initBytes, segmentBytes);
 
       dashBoxes.innerHTML = JSON.stringify(dashParsed, null, 2);
+      captionsParser.reset();
     });
 
     $('#save-muxed').addEventListener('click', function () {
