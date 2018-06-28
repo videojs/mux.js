@@ -9,10 +9,10 @@
 - Use ffmpeg to create an MP4 file to start with:
 
   `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p output.mp4` (no audio)
-  
+
    `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p -filter_complex "anoisesrc=d=300" output.mp4` (audio + video)
 
-  This uses the `testsrc` source generates a test video pattern with a color and timestamp. For this example, we are using a duration of `300` seconds, a size of `1280x720` and a framerate of `30fps`. We also specify extra settings `profile` and `pix_fmt` to force the output to be encoded using `avc1.42C01F`.
+  This uses ffmpeg's built-in `testsrc` source which generates a test video pattern with a color and timestamp. For this example, we are using a duration of `300` seconds, a size of `1280x720` and a framerate of `30fps`. We also specify extra settings `profile` and `pix_fmt` to force the output to be encoded using `avc1.42C01F`.
 
 - Create an [srt file](#srt) with the captions you would like to see with their timestamps.
 
@@ -21,7 +21,6 @@
   `ffmpeg -i output.mp4 -acodec copy -vcodec copy output.flv`
 
 - Use [libcaption](#libcaption) to embed the captions into the flv:
-**Note**: There's an open PR to double control codes that should be used instead of master https://github.com/szatmary/libcaption/pull/33 
 
   `flv+srt output.flv captions.srt with-captions.flv`
 

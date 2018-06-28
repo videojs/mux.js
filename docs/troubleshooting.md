@@ -10,6 +10,7 @@
 You may want to confirm the SEI NAL units are constructed according to the CEA-608 or CEA-708 specification. Specifically:
 
 - that control codes/commands are doubled
-- that control codes for the second field start at `0x15` rather than `0x14`, or in other words, are `1 +` the hex value of the equivalent code in the first field.
+- control codes starting from 0x14, 0x20 and ending with 0x14, 0x2f in field 1 are replaced with 0x15, 0x20 to 0x15, 0x2f when used in field 2
+- control codes starting from 0x1c, 0x20 and ending with 0x1c, 0x2f in field 1 are replaced with 0x1d, 0x20 to 0x1d, 0x2f when used in field 2
 
 [caption-parsing]: /docs/troubleshooting.md#608/708-caption-parsing
