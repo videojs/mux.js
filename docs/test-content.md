@@ -10,8 +10,7 @@
 
   `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p output.mp4` (no audio)
   
-   `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p \`
-   `-filter_complex "anoisesrc=d=300" output.mp4` (audio + video)
+   `ffmpeg -f lavfi -i testsrc=duration=300:size=1280x720:rate=30 -profile:v baseline -pix_fmt yuv420p -filter_complex "anoisesrc=d=300" output.mp4` (audio + video)
 
   This uses the `testsrc` source generates a test video pattern with a color and timestamp. For this example, we are using a duration of `300` seconds, a size of `1280x720` and a framerate of `30fps`. We also specify extra settings `profile` and `pix_fmt` to force the output to be encoded using `avc1.42C01F`.
 
@@ -37,6 +36,8 @@
     --fragment-duration 4000 \
     --timescale 90000 \
     with-captions-fragment.mf4`
+
+Then do *either* of the following:
 
 - Use [Bento4](#bento4) to split the file into an init segment and a fmp4 media segments:
 
