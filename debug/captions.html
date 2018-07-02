@@ -377,7 +377,8 @@
       var texifiedParsed;
 
       captionsParser.init();
-      dashParsed = captionsParser.parse(initBytes, segmentBytes);
+      captionsParser.setInitSegment(initBytes);
+      dashParsed = captionsParser.parse(segmentBytes);
 
       dashBoxes.innerHTML = JSON.stringify(dashParsed, null, 2);
       captionsParser.reset();
