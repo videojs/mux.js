@@ -1,5 +1,6 @@
 'use strict';
 
+var probe = require('../lib/mp4/probe');
 var CaptionsParser = require('../lib/mp4').CaptionsParser;
 var captionsParser;
 
@@ -15,12 +16,10 @@ var makeMdatFromCaptionPackets = seiNalUnitGenerator.makeMdatFromCaptionPackets;
 var characters = seiNalUnitGenerator.characters;
 
 var packets0;
-var version0Init;
 var version0Moof;
 var version0Segment;
 
 var packets1;
-var version1Init;
 var version1Moof;
 var version1Segment;
 
@@ -36,10 +35,14 @@ QUnit.module('MP4 Caption Parser', {
 });
 
 QUnit.test('parse captions from real segment', function() {
+  var trackIds;
+  var timescales;
   var cc;
 
-  captionsParser.setInitSegment(dashInit);
-  cc = captionsParser.parse(dashSegment);
+  trackIds = probe.videoTrackIds(dashInit);
+  timescales = probe.timescale(dashInit);
+
+  cc = captionsParser.parse(dashSegment, trackIds, timescales);
 
   QUnit.equal(cc.captions.length, 1);
   QUnit.equal(cc.captions[0].text, '00:00:00',
@@ -55,12 +58,17 @@ QUnit.test('parse captions from real segment', function() {
 });
 
 QUnit.test('parse captions when init segment received late', function() {
+  var trackIds;
+  var timescales;
   var cc;
 
-  cc = captionsParser.parse(dashSegment);
+  trackIds = probe.videoTrackIds(dashInit);
+  timescales = probe.timescale(dashInit);
+
+  cc = captionsParser.parse(dashSegment, [], {});
   QUnit.ok(!cc, 'there should not be any parsed captions yet');
 
-  cc = captionsParser.setInitSegment(dashInit);
+  cc = captionsParser.parse(dashSegment, trackIds, timescales);
   QUnit.equal(cc.captions.length, 1);
 });
 
@@ -68,8 +76,10 @@ QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
   var v0Captions;
   var v1Captions;
 
-  captionsParser.setInitSegment(new Uint8Array(version0Init));
-  v0Captions = captionsParser.parse(new Uint8Array(version0Segment));
+  v0Captions = captionsParser.parse(
+    new Uint8Array(version0Segment), // segment
+    [1], // trackIds
+    { 1: 90000 }); // timescales);
 
   QUnit.equal(v0Captions.captions.length, 1, 'got 1 version0 caption');
   QUnit.equal(v0Captions.captions[0].text, 'test string #1',
@@ -86,10 +96,12 @@ QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
     'stream is not CC4');
 
   // Clear parsed captions
-  captionsParser.resetStoredCaptions();
+  captionsParser.clearParsedCaptions();
 
-  captionsParser.setInitSegment(new Uint8Array(version1Init));
-  v1Captions = captionsParser.parse(new Uint8Array(version1Segment));
+  v1Captions = captionsParser.parse(
+    new Uint8Array(version1Segment),
+    [2], // trackIds
+    { 2: 90000 }); // timescales
 
   QUnit.equal(v1Captions.captions.length, 1, 'got version1 caption');
   QUnit.equal(v1Captions.captions[0].text, 'test string #2',
@@ -165,45 +177,6 @@ packets1 = [
  * Uses version 0 boxes, no first sample flags
  * sample size, flags, duration, composition time offset included.
 **/
-
-version0Init =
-  box('moov',
-    box('trak',
-      box('tkhd',
-        0x00, // version 0
-        0x00, 0x00, 0x00, // flags
-        0x00, 0x00, 0x00, 0x00, // creation_time
-        0x00, 0x00, 0x00, 0x00, // modification_time
-        0x00, 0x00, 0x00, 0x01, // trackId
-        0x00, 0x00, 0x00, 0x00, // reserved = 0
-        0x00, 0x00, 0x00, 0x00, // duration
-        0x00, 0x00, // layer
-        0x00, 0x00, // alternate_group
-        0x00, 0x00, // non-audio track volume
-        0x00, 0x00, // reserved
-        mp4Helpers.unityMatrix,
-        0x01, 0x2c, 0x00, 0x00, // 300 in 16.16 fixed-point
-        0x00, 0x96, 0x00, 0x00), // 150 in 16.16 fixed-point
-      box('mdia',
-        box('hdlr',
-          0x00, // version 0
-          0x00, 0x00, 0x00, // flags
-          0x00, 0x00, 0x00, 0x00, // pre_defined = 0
-          mp4Helpers.typeBytes('vide'), // handler_type
-          0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x00, // reserved = 0
-          mp4Helpers.typeBytes('version0')), // name,
-        box('mdhd',
-          0x00, // version 0
-          0x00, 0x00, 0x00, // flags
-          0x00, 0x00, 0x00, 0x00, // creation_time
-          0x00, 0x00, 0x00, 0x00, // modification_time
-          0x00, 0x01, 0x5f, 0x90, // timescale = 90000
-          0x00, 0x00, 0x00, 0x00, // duration
-          mp4Helpers.typeBytes('eng'), // language
-          0x00, 0x00)))); // pre_defined = 0
-
 version0Moof =
   box('moof',
     box('traf',
@@ -246,51 +219,6 @@ version0Segment = version0Moof.concat(makeMdatFromCaptionPackets(packets0));
  * Uses version 1 boxes, has first sample flags,
  * other samples include flags and composition time offset only.
 **/
-
-version1Init =
-  box('moov',
-    box('trak',
-      box('tkhd',
-        0x01, // version 1
-        0x00, 0x00, 0x00, // flags
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, // creation_time
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, // modification_time
-        0x00, 0x00, 0x00, 0x02, // trackId
-        0x00, 0x00, 0x00, 0x00, // reserved = 0
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, // duration
-        0x00, 0x00, // layer
-        0x00, 0x00, // alternate_group
-        0x00, 0x00, // non-audio track volume
-        0x00, 0x00, // reserved
-        mp4Helpers.unityMatrix,
-        0x01, 0x2c, 0x00, 0x00, // 300 in 16.16 fixed-point
-        0x00, 0x96, 0x00, 0x00), // 150 in 16.16 fixed-point
-      box('mdia',
-        box('hdlr',
-          0x01, // version 1
-          0x00, 0x00, 0x00, // flags
-          0x00, 0x00, 0x00, 0x00, // pre_defined = 0
-          mp4Helpers.typeBytes('vide'), // handler_type
-          0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x00, // reserved = 0
-          mp4Helpers.typeBytes('version1')), // name
-        box('mdhd',
-          0x01, // version 1
-          0x00, 0x00, 0x00, // flags
-          0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x00, // creation_time
-          0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x00, // modification_time
-          0x00, 0x01, 0x5f, 0x90, // timescale = 90000
-          0x00, 0x00, 0x00, 0x00,
-          0x00, 0x00, 0x00, 0x00, // duration
-          mp4Helpers.typeBytes('eng'), // language
-          0x00, 0x00)))); // pre_defined = 0
-
 version1Moof =
   box('moof',
     box('traf',

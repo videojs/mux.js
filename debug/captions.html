@@ -136,6 +136,7 @@
       inputs = $('#inputs'),
       m2ts = $('#m2ts'),
       captionsParser = new muxjs.mp4.CaptionsParser(),
+      probe = muxjs.mp4.probe,
 
       initResult,
       segmentResult,
@@ -374,11 +375,12 @@
 
       var initBytes = new Uint8Array(initResult);
       var segmentBytes = new Uint8Array(segmentResult);
+      var videoTrackIds = probe.videoTrackIds(initBytes);
+      var timescales = probe.timescale(initBytes);
       var texifiedParsed;
 
       captionsParser.init();
-      captionsParser.setInitSegment(initBytes);
-      dashParsed = captionsParser.parse(segmentBytes);
+      dashParsed = captionsParser.parse(segmentBytes, videoTrackIds, timescales);
 
       dashBoxes.innerHTML = JSON.stringify(dashParsed, null, 2);
       captionsParser.reset();
