@@ -135,7 +135,7 @@
       $ = document.querySelector.bind(document),
       inputs = $('#inputs'),
       m2ts = $('#m2ts'),
-      captionsParser = new muxjs.mp4.CaptionsParser(),
+      captionParser = new muxjs.mp4.CaptionParser(),
       probe = muxjs.mp4.probe,
 
       initResult,
@@ -379,11 +379,11 @@
       var timescales = probe.timescale(initBytes);
       var texifiedParsed;
 
-      captionsParser.init();
-      dashParsed = captionsParser.parse(segmentBytes, videoTrackIds, timescales);
+      captionParser.init();
+      dashParsed = captionParser.parse(segmentBytes, videoTrackIds, timescales);
 
       dashBoxes.innerHTML = JSON.stringify(dashParsed, null, 2);
-      captionsParser.reset();
+      captionParser.reset();
     });
 
     $('#save-muxed').addEventListener('click', function () {

@@ -1,8 +1,8 @@
 'use strict';
 
 var probe = require('../lib/mp4/probe');
-var CaptionsParser = require('../lib/mp4').CaptionsParser;
-var captionsParser;
+var CaptionParser = require('../lib/mp4').CaptionParser;
+var captionParser;
 
 var dashInit = require('./utils/dash-608-captions-init.mp4');
 // This file includes 2 segments data to force a flush
@@ -25,12 +25,12 @@ var version1Segment;
 
 QUnit.module('MP4 Caption Parser', {
   beforeEach: function() {
-    captionsParser = new CaptionsParser();
-    captionsParser.init();
+    captionParser = new CaptionParser();
+    captionParser.init();
   },
 
   afterEach: function() {
-    captionsParser.reset();
+    captionParser.reset();
   }
 });
 
@@ -42,7 +42,7 @@ QUnit.test('parse captions from real segment', function() {
   trackIds = probe.videoTrackIds(dashInit);
   timescales = probe.timescale(dashInit);
 
-  cc = captionsParser.parse(dashSegment, trackIds, timescales);
+  cc = captionParser.parse(dashSegment, trackIds, timescales);
 
   QUnit.equal(cc.captions.length, 1);
   QUnit.equal(cc.captions[0].text, '00:00:00',
@@ -65,10 +65,10 @@ QUnit.test('parse captions when init segment received late', function() {
   trackIds = probe.videoTrackIds(dashInit);
   timescales = probe.timescale(dashInit);
 
-  cc = captionsParser.parse(dashSegment, [], {});
+  cc = captionParser.parse(dashSegment, [], {});
   QUnit.ok(!cc, 'there should not be any parsed captions yet');
 
-  cc = captionsParser.parse(dashSegment, trackIds, timescales);
+  cc = captionParser.parse(dashSegment, trackIds, timescales);
   QUnit.equal(cc.captions.length, 1);
 });
 
@@ -76,7 +76,7 @@ QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
   var v0Captions;
   var v1Captions;
 
-  v0Captions = captionsParser.parse(
+  v0Captions = captionParser.parse(
     new Uint8Array(version0Segment), // segment
     [1], // trackIds
     { 1: 90000 }); // timescales);
@@ -96,9 +96,9 @@ QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
     'stream is not CC4');
 
   // Clear parsed captions
-  captionsParser.clearParsedCaptions();
+  captionParser.clearParsedCaptions();
 
-  v1Captions = captionsParser.parse(
+  v1Captions = captionParser.parse(
     new Uint8Array(version1Segment),
     [2], // trackIds
     { 2: 90000 }); // timescales
