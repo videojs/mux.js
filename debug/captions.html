@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title></title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width">
+
+  <link rel="stylesheet" href="css/normalize.min.css">
+  <link rel="stylesheet" href="css/main.css">
+
+  <script src="js/vendor/modernizr-2.6.2.min.js"></script>
+  <style>
+    fieldset {
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <!--[if lt IE 7]>
+      <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+      <![endif]-->
+
+  <div class="header-container">
+    <header class="wrapper clearfix">
+      <h1 class="title">Captions Analyzer</h1>
+    </header>
+  </div>
+
+  <div class="main-container">
+    <div class="main wrapper clearfix">
+
+      <article>
+        <header>
+          <p>
+            This page can help you inspect the results of parsing CEA-708 captions.
+        </header>
+        <section>
+          <h2>Inputs</h2>
+          <form id="inputs">
+            <legend>
+              The input with the checked radio box will be loaded into
+              the player on this page.
+            </legend>
+            <fieldset>
+              <legend>M2TS Input</legend>
+              <div>
+                <input id="m2ts-active" type=radio name=active checked value="m2ts">
+                <label>
+                  Your .TS or .AAC segment:
+                  <input type="file" id="m2ts">
+                </label>
+                <button id="save-muxed" type="button">Save Transmuxer Output</button>
+              </div>
+              <div>
+                <label><input id="combined-output" type=checkbox name=combined checked value="combined">&nbsp;Remux output into a single output?
+                </label>
+              </div>
+              <div>
+                Otherwise, output only:&nbsp;
+                <label><input id="video-output" type=radio name=output disabled checked value="video">&nbsp;Video
+                </label>
+                <label><input id="audio-output" type=radio name=output disabled checked value="audio">&nbsp;Audio
+                </label>
+              </div>
+              <div>
+                <label><input id="reset-tranmsuxer" type=checkbox name=reset checked value="reset">&nbsp;Recreate the Transmuxer &amp; MediaSource for each file open?
+                </label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>DASH Input</legend>
+              <div>
+                <label>
+                  <input id="dash-active" type=radio name=active value="dash">
+                  Set DASH active
+                </label>
+              </div>
+              <div>
+                <label>
+                  Select the init segment of a DASH source:
+                  <input type="file" id="dash-init">
+                </label>
+              </div>
+              <div>
+                <label>
+                  Select the media segment of a DASH source or an fmp4:
+                  <input type="file" id="dash-media">
+                </label>
+              </div>
+              <button id="parse-dash" type="button">Parse Captions</button>
+            </fieldset>
+            <div>
+              <label>
+                Codecs:
+                <input id="codecs" type="text" value="avc1.64001f,mp4a.40.5">
+              </label>
+            </div>
+          </form>
+        </section>
+        <section id="video-place">
+        </section>
+        <section>
+          <h2>Structure</h2>
+          <div class="result-wrapper">
+            <pre class="dash-boxes"></pre>
+          </div>
+        </section>
+      </article>
+
+    </div> <!-- #main -->
+  </div> <!-- #main-container -->
+
+  <div class="footer-container">
+    <footer class="wrapper">
+      <h3>footer</h3>
+    </footer>
+  </div>
+
+
+  <script src="../dist/mux.js"></script>
+
+  <script>
+      /*! @source http://purl.eligrey.com/github/FileSaver.js/blob/master/FileSaver.js */
+    window.saveAs=function(view){"use strict";if(typeof navigator!=="undefined"&&/MSIE [1-9]\./.test(navigator.userAgent)){return}var doc=view.document,get_URL=function(){return view.URL||view.webkitURL||view},save_link=doc.createElementNS("http://www.w3.org/1999/xhtml","a"),can_use_save_link="download"in save_link,click=function(node){var event=new MouseEvent("click");node.dispatchEvent(event)},is_safari=/Version\/[\d\.]+.*Safari/.test(navigator.userAgent),webkit_req_fs=view.webkitRequestFileSystem,req_fs=view.requestFileSystem||webkit_req_fs||view.mozRequestFileSystem,throw_outside=function(ex){(view.setImmediate||view.setTimeout)(function(){throw ex},0)},force_saveable_type="application/octet-stream",fs_min_size=0,arbitrary_revoke_timeout=500,revoke=function(file){var revoker=function(){if(typeof file==="string"){get_URL().revokeObjectURL(file)}else{file.remove()}};if(view.chrome){revoker()}else{setTimeout(revoker,arbitrary_revoke_timeout)}},dispatch=function(filesaver,event_types,event){event_types=[].concat(event_types);var i=event_types.length;while(i--){var listener=filesaver["on"+event_types[i]];if(typeof listener==="function"){try{listener.call(filesaver,event||filesaver)}catch(ex){throw_outside(ex)}}}},auto_bom=function(blob){if(/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(blob.type)){return new Blob(["\ufeff",blob],{type:blob.type})}return blob},FileSaver=function(blob,name,no_auto_bom){if(!no_auto_bom){blob=auto_bom(blob)}var filesaver=this,type=blob.type,blob_changed=false,object_url,target_view,dispatch_all=function(){dispatch(filesaver,"writestart progress write writeend".split(" "))},fs_error=function(){if(target_view&&is_safari&&typeof FileReader!=="undefined"){var reader=new FileReader;reader.onloadend=function(){var base64Data=reader.result;target_view.location.href="data:attachment/file"+base64Data.slice(base64Data.search(/[,;]/));filesaver.readyState=filesaver.DONE;dispatch_all()};reader.readAsDataURL(blob);filesaver.readyState=filesaver.INIT;return}if(blob_changed||!object_url){object_url=get_URL().createObjectURL(blob)}if(target_view){target_view.location.href=object_url}else{var new_tab=view.open(object_url,"_blank");if(new_tab==undefined&&is_safari){view.location.href=object_url}}filesaver.readyState=filesaver.DONE;dispatch_all();revoke(object_url)},abortable=function(func){return function(){if(filesaver.readyState!==filesaver.DONE){return func.apply(this,arguments)}}},create_if_not_found={create:true,exclusive:false},slice;filesaver.readyState=filesaver.INIT;if(!name){name="download"}if(can_use_save_link){object_url=get_URL().createObjectURL(blob);setTimeout(function(){save_link.href=object_url;save_link.download=name;click(save_link);dispatch_all();revoke(object_url);filesaver.readyState=filesaver.DONE});return}if(view.chrome&&type&&type!==force_saveable_type){slice=blob.slice||blob.webkitSlice;blob=slice.call(blob,0,blob.size,force_saveable_type);blob_changed=true}if(webkit_req_fs&&name!=="download"){name+=".download"}if(type===force_saveable_type||webkit_req_fs){target_view=view}if(!req_fs){fs_error();return}fs_min_size+=blob.size;req_fs(view.TEMPORARY,fs_min_size,abortable(function(fs){fs.root.getDirectory("saved",create_if_not_found,abortable(function(dir){var save=function(){dir.getFile(name,create_if_not_found,abortable(function(file){file.createWriter(abortable(function(writer){writer.onwriteend=function(event){target_view.location.href=file.toURL();filesaver.readyState=filesaver.DONE;dispatch(filesaver,"writeend",event);revoke(file)};writer.onerror=function(){var error=writer.error;if(error.code!==error.ABORT_ERR){fs_error()}};"writestart progress write abort".split(" ").forEach(function(event){writer["on"+event]=filesaver["on"+event]});writer.write(blob);filesaver.abort=function(){writer.abort();filesaver.readyState=filesaver.DONE};filesaver.readyState=filesaver.WRITING}),fs_error)}),fs_error)};dir.getFile(name,{create:false},abortable(function(file){file.remove();save()}),abortable(function(ex){if(ex.code===ex.NOT_FOUND_ERR){save()}else{fs_error()}}))}),fs_error)}),fs_error)},FS_proto=FileSaver.prototype,saveAs=function(blob,name,no_auto_bom){return new FileSaver(blob,name,no_auto_bom)};if(typeof navigator!=="undefined"&&navigator.msSaveOrOpenBlob){return function(blob,name,no_auto_bom){if(!no_auto_bom){blob=auto_bom(blob)}return navigator.msSaveOrOpenBlob(blob,name||"download")}}FS_proto.abort=function(){var filesaver=this;filesaver.readyState=filesaver.DONE;dispatch(filesaver,"abort")};FS_proto.readyState=FS_proto.INIT=0;FS_proto.WRITING=1;FS_proto.DONE=2;FS_proto.error=FS_proto.onwritestart=FS_proto.onprogress=FS_proto.onwrite=FS_proto.onabort=FS_proto.onerror=FS_proto.onwriteend=null;return saveAs}(typeof self!=="undefined"&&self||typeof window!=="undefined"&&window||this.content);if(typeof module!=="undefined"&&module.exports){module.exports.saveAs=saveAs}else if(typeof define!=="undefined"&&define!==null&&define.amd!=null){define([],function(){return saveAs})}
+  </script>
+  <script>
+    'use strict';
+    var
+      $ = document.querySelector.bind(document),
+      inputs = $('#inputs'),
+      m2ts = $('#m2ts'),
+      captionParser = new muxjs.mp4.CaptionParser(),
+      probe = muxjs.mp4.probe,
+
+      initResult,
+      segmentResult,
+
+      vjsParsed,
+      dashParsed,
+      saveConfig,
+      restoreConfig,
+      saveTA,
+
+      dashBoxes = $('.dash-boxes'),
+
+      muxedData,
+      muxedName,
+      transmuxer,
+      video,
+      mediaSource,
+      logevent,
+      prepareSourceBuffer;
+
+    logevent = function(event) {
+      console.log(event.type);
+    };
+
+    saveTA = function(tarr, n) { var b = new Blob([tarr], {type: 'application/octet-binary'}); return window.saveAs(b, n);}
+
+    saveConfig = function () {
+      var inputs = [].slice.call(document.querySelectorAll('input:not([type=file])'));
+
+      inputs.forEach(function (element) {
+        localStorage.setItem(element.id,
+          JSON.stringify({
+          value: element.value,
+          checked: element.checked,
+          disabled: element.disabled
+        }));
+      });
+    };
+
+    restoreConfig = function () {
+      var inputs = [].slice.call(document.querySelectorAll('input:not([type=file])'));
+
+      inputs.forEach(function (element) {
+        var state;
+
+        state = JSON.parse(localStorage.getItem(element.id));
+        if (state) {
+          element.checked = state.checked;
+          element.value = state.value;
+          element.disabled = state.disabled;
+        }
+      });
+    };
+    document.addEventListener('DOMContentLoaded', restoreConfig);
+
+
+    prepareSourceBuffer = function(combined, outputType, callback) {
+      var
+        buffer,
+        codecs,
+        codecsArray,
+        resetTransmuxer = $('#reset-tranmsuxer').checked;
+
+      if (typeof combined === 'function') {
+        callback = combined;
+        combined = true;
+      }
+
+      // Our work here is done if the sourcebuffer has already been created
+      if (!resetTransmuxer && window.vjsBuffer) {
+        return callback();
+      }
+
+      video = document.createElement('video');
+      video.controls = true;
+      mediaSource = new MediaSource();
+      video.src = URL.createObjectURL(mediaSource);
+      window.vjsVideo = video;
+      window.vjsMediaSource = mediaSource;
+      $('#video-place').innerHTML = '';
+      $('#video-place').appendChild(video);
+
+      mediaSource.addEventListener('error', logevent);
+      mediaSource.addEventListener('opened', logevent);
+      mediaSource.addEventListener('closed', logevent);
+      mediaSource.addEventListener('sourceended', logevent);
+
+      codecs = $('#codecs');
+      codecsArray = codecs.value.split(',');
+
+      mediaSource.addEventListener('sourceopen', function () {
+        mediaSource.duration = 0;
+        if (combined) {
+          buffer = mediaSource.addSourceBuffer('video/mp4;codecs="' + codecs.value + '"');
+        } else if (outputType === 'video') {
+          buffer = mediaSource.addSourceBuffer('video/mp4;codecs="' + codecsArray[0] + '"');
+        } else if (outputType === 'audio') {
+          buffer = mediaSource.addSourceBuffer('audio/mp4;codecs="' + (codecsArray[1] ||codecsArray[0]) + '"');
+        }
+
+        buffer.addEventListener('updatestart', logevent);
+        buffer.addEventListener('updateend', logevent);
+        buffer.addEventListener('error', logevent);
+        window.vjsBuffer = buffer;
+
+        video.addEventListener('error', logevent);
+        video.addEventListener('error', function() {
+          document.getElementById('video-place').classList.add('error');
+        });
+
+        return callback();
+      });
+    };
+
+    m2ts.addEventListener('change', function() {
+      var reader = new FileReader();
+
+      // do nothing if no file was chosen
+      if (!this.files[0]) {
+        return;
+      }
+
+      reader.addEventListener('loadend', function() {
+
+        var segment = new Uint8Array(reader.result),
+            combined = document.querySelector('#combined-output').checked,
+            outputType = document.querySelector('input[name="output"]:checked').value,
+            resetTransmuxer = $('#reset-tranmsuxer').checked,
+            remuxedSegments = [],
+            parsedCaptions = [],
+            remuxedInitSegment = null,
+            remuxedBytesLength = 0,
+            createInitSegment = false,
+            bytes,
+            i, j;
+
+        if (resetTransmuxer || !transmuxer) {
+          createInitSegment = true;
+          if (combined) {
+              outputType = 'combined';
+              transmuxer = new muxjs.mp4.Transmuxer();
+          } else {
+              transmuxer = new muxjs.mp4.Transmuxer({remux: false});
+          }
+
+          transmuxer.on('data', function(event) {
+            if (event.type === outputType) {
+              remuxedSegments.push(event);
+              parsedCaptions = parsedCaptions.concat(event.captions);
+              remuxedBytesLength += event.data.byteLength;
+              remuxedInitSegment = event.initSegment;
+            }
+          });
+
+          transmuxer.on('done', function () {
+            var offset = 0;
+            if (createInitSegment) {
+              bytes = new Uint8Array(remuxedInitSegment.byteLength + remuxedBytesLength)
+              bytes.set(remuxedInitSegment, offset);
+              offset += remuxedInitSegment.byteLength;
+              createInitSegment = false;
+            } else {
+              bytes = new Uint8Array(remuxedBytesLength);
+            }
+
+            for (j = 0, i = offset; j < remuxedSegments.length; j++) {
+              bytes.set(remuxedSegments[j].data, i);
+              i += remuxedSegments[j].byteLength;
+            }
+            remuxedSegments = [];
+            remuxedBytesLength = 0;
+
+            vjsParsed = muxjs.mp4.tools.inspect(bytes);
+            console.log('transmuxed', vjsParsed);
+
+            // clear old box info
+            dashBoxes.innerHTML = JSON.stringify(parsedCaptions, null, 2);
+
+            if ($('#m2ts-active').checked) {
+              prepareSourceBuffer(combined, outputType, function () {
+                console.log('appending...');
+                window.vjsBuffer.appendBuffer(bytes);
+                video.play();
+              });
+            }
+          });
+        }
+
+        transmuxer.push(segment);
+        transmuxer.flush();
+      });
+
+      muxedName = this.files[0].name.replace('.ts', '.f4m');
+      reader.readAsArrayBuffer(this.files[0]);
+    }, false);
+
+    $('#dash-init').addEventListener('change', function() {
+      var reader = new FileReader();
+      var init = this.files[0];
+      var segment;
+
+      if (init === undefined) {
+        console.error('No init file was provided');
+        return;
+      }
+
+      reader.addEventListener('loadend', function() {
+        initResult = reader.result;
+      });
+      reader.readAsArrayBuffer(init);
+    }, false);
+
+    $('#dash-media').addEventListener('change', function() {
+      var segment = this.files[0];
+
+      if (segment === undefined) {
+        console.error('No media file was provided');
+        return;
+      }
+
+      // for segment
+      var segmentReader = new FileReader();
+
+      segmentReader.addEventListener('loadend', function() {
+        segmentResult = segmentReader.result;
+      });
+      segmentReader.readAsArrayBuffer(segment);
+
+    }, false);
+
+    $('#parse-dash').addEventListener('click', function() {
+      if (initResult === undefined || segmentResult === undefined) {
+        console.error('Either the init or media segment was not provided');
+        return;
+      }
+
+      var initBytes = new Uint8Array(initResult);
+      var segmentBytes = new Uint8Array(segmentResult);
+      var videoTrackIds = probe.videoTrackIds(initBytes);
+      var timescales = probe.timescale(initBytes);
+      var texifiedParsed;
+
+      captionParser.init();
+      dashParsed = captionParser.parse(segmentBytes, videoTrackIds, timescales);
+
+      dashBoxes.innerHTML = JSON.stringify(dashParsed, null, 2);
+      captionParser.reset();
+    });
+
+    $('#save-muxed').addEventListener('click', function () {
+      if (muxedData && muxedName) {
+        return saveTA(muxedData, muxedName);
+      }
+    });
+
+    $('#combined-output').addEventListener('change', function () {
+        Array.prototype.slice.call(document.querySelectorAll('[name="output"'))
+          .forEach(function (el) {
+            el.disabled = this.checked;
+          }, this);
+    });
+
+    [].slice.call(document.querySelectorAll('input')).forEach(function(el){
+      el.addEventListener('change', saveConfig);
+    });
+  </script>
+</body>
+</html>
