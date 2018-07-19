@@ -5,83 +5,13 @@ var
   m2ts = require('../lib/m2ts'),
   mp4 = require('../lib/mp4'),
   QUnit = require('qunit'),
+  seiNalUnitGenerator = require('./utils/sei-nal-unit-generator'),
+  makeSeiFromCaptionPacket = seiNalUnitGenerator.makeSeiFromCaptionPacket,
+  makeSeiFromMultipleCaptionPackets = seiNalUnitGenerator.makeSeiFromMultipleCaptionPackets,
+  characters = seiNalUnitGenerator.characters,
   sintelCaptions = require('./utils/sintel-captions'),
   mixed608708Captions = require('./utils/mixed-608-708-captions'),
   multiChannel608Captions = require('./utils/multi-channel-608-captions');
-
-// Create SEI nal-units from Caption packets
-var makeSeiFromCaptionPacket = function(caption) {
-  return {
-    pts: caption.pts,
-    dts: caption.dts,
-    nalUnitType: 'sei_rbsp',
-    escapedRBSP: new Uint8Array([
-      0x04, // payload_type === user_data_registered_itu_t_t35
-
-      0x0e, // payload_size
-
-      181, // itu_t_t35_country_code
-      0x00, 0x31, // itu_t_t35_provider_code
-      0x47, 0x41, 0x39, 0x34, // user_identifier, "GA94"
-      0x03, // user_data_type_code, 0x03 is cc_data
-
-      // 110 00001
-      0xc1, // process_cc_data, cc_count
-      0xff, // reserved
-      // 1111 1100
-      (0xfc | caption.type), // cc_valid, cc_type (608, field 1)
-      (caption.ccData & 0xff00) >> 8, // cc_data_1
-      caption.ccData & 0xff, // cc_data_2 without parity bit set
-
-      0xff // marker_bits
-    ])
-  };
-};
-
-// Create SEI nal-units from Caption packets
-var makeSeiFromMultipleCaptionPackets = function(captionHash) {
-  var pts = captionHash.pts,
-    dts = captionHash.dts,
-    captions = captionHash.captions;
-
-  var data = [];
-  captions.forEach(function(caption) {
-    data.push(0xfc | caption.type);
-    data.push((caption.ccData & 0xff00) >> 8);
-    data.push(caption.ccData & 0xff);
-  });
-
-  return {
-    pts: pts,
-    dts: dts,
-    nalUnitType: 'sei_rbsp',
-    escapedRBSP: new Uint8Array([
-      0x04, // payload_type === user_data_registered_itu_t_t35
-
-      (0x0b + (captions.length * 3)), // payload_size
-
-      181, // itu_t_t35_country_code
-      0x00, 0x31, // itu_t_t35_provider_code
-      0x47, 0x41, 0x39, 0x34, // user_identifier, "GA94"
-      0x03, // user_data_type_code, 0x03 is cc_data
-
-      // 110 00001
-      (0x6 << 5) | captions.length, // process_cc_data, cc_count
-      0xff // reserved
-    ].concat(data).concat([0xff /* marker bits */])
-    )
-  };
-};
-
-// Returns a ccData byte-pair for a two character string. That is,
-// it converts a string like 'hi' into the two-byte number that
-// would be parsed back as 'hi' when provided as ccData.
-var characters = function(text) {
-  if (text.length !== 2) {
-    throw new Error('ccdata must be specified two characters at a time');
-  }
-  return (text.charCodeAt(0) << 8) | text.charCodeAt(1);
-};
 
 QUnit.module('Caption Stream', {
   beforeEach: function() {
@@ -317,8 +247,8 @@ QUnit.test('drops duplicate segments', function() {
   packets = [
     {
       pts: 1000, dts: 1000, captions: [
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL (resume caption loading)
+        {ccData: 0x1420, type: 0 }, // RCL, duplicate as per spec
         {ccData: characters('te'), type: 0 },
         {ccData: characters('st'), type: 0 }
       ]
@@ -353,10 +283,10 @@ QUnit.test('drops duplicate segments', function() {
     },
     {
       pts: 4000, dts: 4000, captions: [
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x142f, type: 0 }
+        {ccData: 0x142f, type: 0 }, // EOC (end of caption), mark display start
+        {ccData: 0x142f, type: 0 }, // EOC, duplicate as per spec
+        {ccData: 0x142f, type: 0 }, // EOC, mark display end and flush
+        {ccData: 0x142f, type: 0 } // EOC, duplicate as per spec
       ]
     }
   ];
@@ -380,8 +310,8 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
   packets = [
     {
       pts: 1000, dts: 1000, captions: [
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL (resume caption loading)
+        {ccData: 0x1420, type: 0 }, // RCL, duplicate as per spec
         {ccData: characters('te'), type: 0 }
       ]
     },
@@ -427,13 +357,14 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
     },
     {
       pts: 4000, dts: 4000, captions: [
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x1420, type: 0 }
+        {ccData: 0x142f, type: 0 }, // EOC (end of caption)
+        // EOC not duplicated for robustness testing
+        {ccData: 0x1420, type: 0 } // RCL (resume caption loading)
       ]
     },
     {
       pts: 5000, dts: 5000, captions: [
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL, duplicated as per spec
         {ccData: characters(' a'), type: 0 },
         {ccData: characters('nd'), type: 0 }
       ]
@@ -458,7 +389,7 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
     },
     {
       pts: 5000, dts: 5000, captions: [
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL, duplicated as per spec
         {ccData: characters(' a'), type: 0 },
         {ccData: characters('nd'), type: 0 }
       ]
@@ -502,10 +433,10 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
     {
       pts: 8000, dts: 8000, captions: [
         {ccData: characters('e!'), type: 0 },
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x142f, type: 0 }
+        {ccData: 0x142f, type: 0 }, // EOC (end of caption), mark display start
+        {ccData: 0x142f, type: 0 }, // EOC, duplicated as per spec
+        {ccData: 0x142f, type: 0 } // EOC, mark display end and flush
+        // EOC not duplicated for robustness testing
       ]
     }
   ];
@@ -530,8 +461,8 @@ QUnit.test("doesn't ignore older segments if reset", function() {
   firstPackets = [
     {
       pts: 11000, dts: 11000, captions: [
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL (resume caption loading)
+        {ccData: 0x1420, type: 0 }, // RCL, duplicated as per spec
         {ccData: characters('te'), type: 0 }
       ]
     },
@@ -558,8 +489,8 @@ QUnit.test("doesn't ignore older segments if reset", function() {
   secondPackets = [
     {
       pts: 1000, dts: 1000, captions: [
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x1420, type: 0 },
+        {ccData: 0x1420, type: 0 }, // RCL (resume caption loading)
+        {ccData: 0x1420, type: 0 }, // RCL, duplicated as per spec
         {ccData: characters('af'), type: 0 }
       ]
     },
@@ -585,10 +516,10 @@ QUnit.test("doesn't ignore older segments if reset", function() {
     },
     {
       pts: 4000, dts: 4000, captions: [
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x142f, type: 0 },
-        {ccData: 0x1420, type: 0 },
-        {ccData: 0x142f, type: 0 }
+        {ccData: 0x142f, type: 0 }, // EOC (end of caption), mark display start
+        {ccData: 0x142f, type: 0 }, // EOC, duplicated as per spec
+        {ccData: 0x142f, type: 0 } // EOC, mark display end and flush
+        // EOC not duplicated for robustness testing
       ]
     }
   ];
@@ -624,28 +555,31 @@ QUnit.test('extracts all theoretical caption channels', function() {
     });
   });
 
+  // RU2 = roll-up, 2 rows
+  // CR = carriage return
   var packets = [
-    { pts: 1000, type: 0, ccData: 0x1425 },
-    { pts: 2000, type: 0, ccData: characters('1a') },
-    { pts: 3000, type: 0, ccData: 0x1c25 },
-    { pts: 4000, type: 1, ccData: 0x1525 },
-    { pts: 5000, type: 1, ccData: characters('3a') },
+    { pts: 1000, type: 0, ccData: 0x1425 }, // RU2 (sets CC1)
+    { pts: 2000, type: 0, ccData: characters('1a') }, // CC1
+    { pts: 3000, type: 0, ccData: 0x1c25 }, // RU2 (sets CC2)
+    { pts: 4000, type: 1, ccData: 0x1525 }, // RU2 (sets CC3)
+    { pts: 5000, type: 1, ccData: characters('3a') }, // CC3
     // this next one tests if active channel is tracked per-field
-    { pts: 6000, type: 0, ccData: characters('2a') },
-    { pts: 7000, type: 1, ccData: 0x1d25 },
-    { pts: 8000, type: 1, ccData: characters('4a') },
-    { pts: 9000, type: 1, ccData: characters('4b') },
-    { pts: 10000, type: 0, ccData: 0x142d },
-    { pts: 11000, type: 0, ccData: 0x1c2d },
-    { pts: 12000, type: 0, ccData: 0x1425 },
-    { pts: 13000, type: 0, ccData: characters('1b') },
-    { pts: 14000, type: 0, ccData: characters('1c') },
-    { pts: 15000, type: 0, ccData: 0x142d },
-    { pts: 16000, type: 1, ccData: 0x152d },
-    { pts: 17000, type: 1, ccData: 0x1d2d },
-    { pts: 18000, type: 0, ccData: 0x1c25 },
-    { pts: 19000, type: 0, ccData: characters('2b') },
-    { pts: 20000, type: 0, ccData: 0x1c2d }
+    // instead of globally
+    { pts: 6000, type: 0, ccData: characters('2a') }, // CC2
+    { pts: 7000, type: 1, ccData: 0x1d25 }, // RU2 (sets CC4)
+    { pts: 8000, type: 1, ccData: characters('4a') }, // CC4
+    { pts: 9000, type: 1, ccData: characters('4b') }, // CC4
+    { pts: 10000, type: 0, ccData: 0x142d }, // CR (sets + flushes CC1)
+    { pts: 11000, type: 0, ccData: 0x1c2d }, // CR (sets + flushes CC2)
+    { pts: 12000, type: 0, ccData: 0x1425 }, // RU2 (sets CC1)
+    { pts: 13000, type: 0, ccData: characters('1b') }, // CC1
+    { pts: 14000, type: 0, ccData: characters('1c') }, // CC1
+    { pts: 15000, type: 0, ccData: 0x142d }, // CR (sets + flushes CC1)
+    { pts: 16000, type: 1, ccData: 0x152d }, // CR (sets + flushes CC3)
+    { pts: 17000, type: 1, ccData: 0x1d2d }, // CR (sets + flushes CC4)
+    { pts: 18000, type: 0, ccData: 0x1c25 }, // RU2 (sets CC2)
+    { pts: 19000, type: 0, ccData: characters('2b') }, // CC2
+    { pts: 20000, type: 0, ccData: 0x1c2d } // CR (sets + flushes CC2)
   ];
 
   var seiNals = packets.map(makeSeiFromCaptionPacket);
@@ -671,38 +605,54 @@ QUnit.test('drops data until first command that sets activeChannel for a field',
   });
 
   var packets = [
+    // test that packets in same field and same data channel are dropped
+    // before a control code that sets the data channel
     { pts: 0 * 1000, ccData: characters('no'), type: 0 },
     { pts: 0 * 1000, ccData: characters('t '), type: 0 },
     { pts: 0 * 1000, ccData: characters('th'), type: 0 },
     { pts: 0 * 1000, ccData: characters('is'), type: 0 },
+    // EOC (end of caption), sets CC1
     { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    // RCL (resume caption loading)
     { pts: 1 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, if data wasn't dropped this would dispatch a caption
     { pts: 2 * 1000, ccData: 0x142f, type: 0 },
-    // RCL, resume caption loading
+    // RCL
     { pts: 3 * 1000, ccData: 0x1420, type: 0 },
-    { pts: 3 * 1000, ccData: 0x142e, type: 0 },
     { pts: 4 * 1000, ccData: characters('fi'), type: 0 },
     { pts: 4 * 1000, ccData: characters('el'), type: 0 },
     { pts: 4 * 1000, ccData: characters('d0'), type: 0 },
+    // EOC, mark display start
     { pts: 5 * 1000, ccData: 0x142f, type: 0 },
-    { pts: 5 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, duplicated as per spec
+    { pts: 5 * 1000, ccData: 0x142f, type: 0 },
+    // EOC, mark display end and flush
     { pts: 6 * 1000, ccData: 0x142f, type: 0 },
+    // EOC not duplicated cuz not necessary
+    // now switch to field 1 and test that packets in the same field
+    // but DIFFERENT data channel are dropped
     { pts: 7 * 1000, ccData: characters('or'), type: 1 },
     { pts: 7 * 1000, ccData: characters(' t'), type: 1 },
     { pts: 7 * 1000, ccData: characters('hi'), type: 1 },
     { pts: 7 * 1000, ccData: characters('s.'), type: 1 },
+    // EOC (end of caption, sets CC4)
     { pts: 8 * 1000, ccData: 0x1d2f, type: 1 },
+    // RCL (resume caption loading)
     { pts: 8 * 1000, ccData: 0x1d20, type: 1 },
+    // EOC, if data wasn't dropped this would dispatch a caption
     { pts: 9 * 1000, ccData: 0x1d2f, type: 1 },
-    // RCL, resume caption loading
+    // RCL
     { pts: 10 * 1000, ccData: 0x1d20, type: 1 },
-    { pts: 10 * 1000, ccData: 0x1d2e, type: 1 },
     { pts: 11 * 1000, ccData: characters('fi'), type: 1 },
     { pts: 11 * 1000, ccData: characters('el'), type: 1 },
     { pts: 11 * 1000, ccData: characters('d1'), type: 1 },
+    // EOC, mark display start
     { pts: 12 * 1000, ccData: 0x1d2f, type: 1 },
-    { pts: 12 * 1000, ccData: 0x1d20, type: 1 },
+    // EOC, duplicated as per spec
+    { pts: 12 * 1000, ccData: 0x1d2f, type: 1 },
+    // EOC, mark display end and flush
     { pts: 13 * 1000, ccData: 0x1d2f, type: 1 }
+    // EOC not duplicated cuz not necessary
   ];
 
   var seiNals = packets.map(makeSeiFromCaptionPacket);
@@ -721,26 +671,29 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
   captions = [];
 
   firstPackets = [
-    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    // RCL (resume caption loading), CC1
     { pts: 1 * 1000, ccData: 0x1420, type: 0 },
-    { pts: 2 * 1000, ccData: 0x142f, type: 0 },
-    // RCL, resume caption loading
-    { pts: 3 * 1000, ccData: 0x1420, type: 0 },
-    { pts: 3 * 1000, ccData: 0x142e, type: 0 },
+    { pts: 2 * 1000, ccData: characters('fi'), type: 0 },
+    { pts: 2 * 1000, ccData: characters('el'), type: 0 },
+    { pts: 2 * 1000, ccData: characters('d0'), type: 0 },
+    // EOC (end of caption), swap text to displayed memory
+    { pts: 3 * 1000, ccData: 0x142f, type: 0 },
     { pts: 4 * 1000, ccData: characters('fi'), type: 0 },
     { pts: 4 * 1000, ccData: characters('el'), type: 0 },
     { pts: 4 * 1000, ccData: characters('d0'), type: 0 },
-    { pts: 5 * 1000, ccData: 0x1d2f, type: 1 },
+    // RCL (resume caption loading), CC4
     { pts: 5 * 1000, ccData: 0x1d20, type: 1 },
-    { pts: 6 * 1000, ccData: 0x1d2f, type: 1 },
-    // RCL, resume caption loading
-    { pts: 7 * 1000, ccData: 0x1d20, type: 1 },
-    { pts: 7 * 1000, ccData: 0x1d2e, type: 1 },
+    { pts: 6 * 1000, ccData: characters('fi'), type: 1 },
+    { pts: 6 * 1000, ccData: characters('el'), type: 1 },
+    { pts: 6 * 1000, ccData: characters('d1'), type: 1 },
+    // EOC (end of caption), swap text to displayed memory
+    { pts: 7 * 1000, ccData: 0x1d2f, type: 1 },
     { pts: 8 * 1000, ccData: characters('fi'), type: 1 },
     { pts: 8 * 1000, ccData: characters('el'), type: 1 },
     { pts: 8 * 1000, ccData: characters('d1'), type: 1 }
   ];
   secondPackets = [
+    // following packets are dropped
     { pts: 9 * 1000, ccData: characters('no'), type: 0 },
     { pts: 9 * 1000, ccData: characters('t '), type: 0 },
     { pts: 9 * 1000, ccData: characters('th'), type: 0 },
@@ -749,14 +702,21 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
     { pts: 10 * 1000, ccData: characters(' t'), type: 1 },
     { pts: 10 * 1000, ccData: characters('hi'), type: 1 },
     { pts: 10 * 1000, ccData: characters('s.'), type: 1 },
+    // EOC (end of caption), sets CC1
     { pts: 11 * 1000, ccData: 0x142f, type: 0 },
+    // RCL (resume caption loading), CC1
     { pts: 11 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, sets CC4
     { pts: 12 * 1000, ccData: 0x1d2f, type: 1 },
+    // RCL, CC4
     { pts: 12 * 1000, ccData: 0x1d20, type: 1 },
+    // EOC, CC1, would dispatch caption if packets weren't ignored
     { pts: 13 * 1000, ccData: 0x142f, type: 0 },
-    // RCL , resume caption loading
+    // RCL, CC1
     { pts: 13 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, CC4, would dispatch caption if packets weren't ignored
     { pts: 14 * 1000, ccData: 0x1d2f, type: 1 },
+    // RCL, CC4
     { pts: 14 * 1000, ccData: 0x1d20, type: 1 },
     { pts: 18 * 1000, ccData: characters('bu'), type: 0 },
     { pts: 18 * 1000, ccData: characters('t '), type: 0 },
@@ -766,12 +726,20 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
     { pts: 19 * 1000, ccData: characters('d '), type: 1 },
     { pts: 19 * 1000, ccData: characters('th'), type: 1 },
     { pts: 19 * 1000, ccData: characters('is'), type: 1 },
+    // EOC (end of caption), CC1, mark caption 1 start
     { pts: 20 * 1000, ccData: 0x142f, type: 0 },
-    { pts: 20 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, CC1, duplicated as per spec
+    { pts: 20 * 1000, ccData: 0x142f, type: 0 },
+    // EOC, CC1, mark caption 1 end and dispatch
     { pts: 21 * 1000, ccData: 0x142f, type: 0 },
+    // No duplicate EOC cuz not necessary
+    // EOC, CC4, mark caption 2 start
     { pts: 22 * 1000, ccData: 0x1d2f, type: 1 },
-    { pts: 22 * 1000, ccData: 0x1d20, type: 1 },
+    // EOC, CC4, duplicated as per spec
+    { pts: 22 * 1000, ccData: 0x1d2f, type: 1 },
+    // EOC, CC4, mark caption 2 end and dispatch
     { pts: 23 * 1000, ccData: 0x1d2f, type: 1 }
+    // No duplicate EOC cuz not necessary
   ];
 
   seiNals1 = firstPackets.map(makeSeiFromCaptionPacket);
@@ -783,9 +751,27 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
 
   seiNals1.forEach(captionStream.push, captionStream);
   captionStream.flush();
-  QUnit.equal(captionStream.ccStreams_[0].nonDisplayed_[14], 'field0', 'yes');
-  QUnit.equal(captionStream.ccStreams_[3].nonDisplayed_[14], 'field1', 'yes');
+
+  QUnit.equal(captionStream.ccStreams_[0].nonDisplayed_[14], 'field0',
+    'there is data in non-displayed memory for field 0 before reset');
+  QUnit.equal(captionStream.ccStreams_[3].nonDisplayed_[14], 'field1',
+    'there is data in non-displayed memory for field 1 before reset');
+  QUnit.equal(captionStream.ccStreams_[0].displayed_[14], 'field0',
+    'there is data in displayed memory for field 0 before reset');
+  QUnit.equal(captionStream.ccStreams_[3].displayed_[14], 'field1',
+    'there is data in displayed memory for field 1 before reset');
+
   captionStream.reset();
+
+  QUnit.equal(captionStream.ccStreams_[0].nonDisplayed_[14], '',
+    'there is no data in non-displayed memory for field 0 after reset');
+  QUnit.equal(captionStream.ccStreams_[3].nonDisplayed_[14], '',
+    'there is no data in non-displayed memory for field 1 after reset');
+  QUnit.equal(captionStream.ccStreams_[0].displayed_[14], '',
+    'there is no data in displayed memory for field 0 after reset');
+  QUnit.equal(captionStream.ccStreams_[3].displayed_[14], '',
+    'there is no data in displayed memory for field 1 after reset');
+
   seiNals2.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
@@ -813,6 +799,49 @@ QUnit.test('ignores CEA708 captions', function() {
   // there is also bad data in the captions, but the null ascii character is removed
   QUnit.equal(captions[1].text, 'IT\'S NOT A THREAT TO ANYBODY.', 'parsed second caption correctly');
   QUnit.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN\nIF WE DON\'T HAVE TO.', 'parsed third caption correctly');
+});
+
+// Full character translation tests are below for Cea608Stream, they just only
+// test support for CC1. See those tests and the source code for more about the
+// mechanics of special and extended characters.
+QUnit.test('special and extended character codes work regardless of field and data channel', function() {
+  var packets, seiNals, captions = [];
+  packets = [
+    // RU2 (roll-up, 2 rows), CC2
+    { ccData: 0x1c25, type: 0 },
+    // ®
+    { ccData: 0x1930, type: 0 },
+    // CR (carriage return), CC2, flush caption
+    { ccData: 0x1c2d, type: 0 },
+    // RU2, CC3
+    { ccData: 0x1525, type: 1 },
+    // "
+    { ccData: 0x2200, type: 1 },
+    // «
+    { ccData: 0x123e, type: 1 },
+    // CR, CC3, flush caption
+    { ccData: 0x152d, type: 1 },
+    // RU2, CC4
+    { ccData: 0x1d25, type: 1 },
+    // "
+    { ccData: 0x2200, type: 1 },
+    // »
+    { ccData: 0x1a3f, type: 1 },
+    // CR, CC4, flush caption
+    { ccData: 0x1d2d, type: 1 }
+  ];
+
+  captionStream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  seiNals = packets.map(makeSeiFromCaptionPacket);
+  seiNals.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.deepEqual(captions[0].text, String.fromCharCode(0xae), 'CC2 special character correct');
+  QUnit.deepEqual(captions[1].text, String.fromCharCode(0xab), 'CC3 extended character correct');
+  QUnit.deepEqual(captions[2].text, String.fromCharCode(0xbb), 'CC4 extended character correct');
 });
 
 var cea608Stream;
@@ -860,12 +889,14 @@ QUnit.test('converts non-ASCII character codes to ASCII', function() {
         'translated non-standard characters');
 });
 
-QUnit.test('converts special character codes to ASCII', function() {
+QUnit.test('properly handles special character codes', function() {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
     { ccData: 0x1420, type: 0 },
     // Special characters as defined by CEA-608
+    // see the CHARACTER_TRANSLATION hash in lib/m2ts/caption-stream for the
+    // mapping table
     { ccData: 0x1130, type: 0 },
     { ccData: 0x1131, type: 0 },
     { ccData: 0x1132, type: 0 },
@@ -886,7 +917,7 @@ QUnit.test('converts special character codes to ASCII', function() {
     { pts: 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
     { ccData: 0x1420, type: 0 },
-    // EOC, End of Caption, clear the display
+    // EOC, End of Caption, CC1, clear the display
     { pts: 10 * 1000, ccData: 0x142f, type: 0 }
   ];
   captions = [];
@@ -902,7 +933,7 @@ QUnit.test('converts special character codes to ASCII', function() {
         'translated special characters');
 });
 
-QUnit.test('properly handles special and extended character codes', function() {
+QUnit.test('properly handles extended character codes', function() {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
@@ -910,6 +941,8 @@ QUnit.test('properly handles special and extended character codes', function() {
     // Extended characters are defined in CEA-608 as a standard character,
     // which is followed by an extended character, and the standard character
     // gets deleted.
+    // see the CHARACTER_TRANSLATION hash in lib/m2ts/caption-stream for the
+    // mapping table
     { ccData: 0x2200, type: 0 },
     { ccData: 0x123e, type: 0 },
     { ccData: 0x4c41, type: 0 },
@@ -1060,7 +1093,7 @@ QUnit.test('recognizes the Erase Displayed Memory command', function() {
   }, 'parsed the third caption');
 });
 
-QUnit.test('backspaces are applied to non-displayed memory', function() {
+QUnit.test('backspaces are applied to non-displayed memory for pop-on mode', function() {
   var captions = [], packets;
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1074,18 +1107,24 @@ QUnit.test('backspaces are applied to non-displayed memory', function() {
     // backspace
     { ccData: 0x1421, type: 0 },
     { ccData: characters('23'), type: 0 },
+    // PAC: row 13, no indent
+    { pts: 1 * 1000, ccData: 0x1370, type: 0 },
+    { pts: 1 * 1000, ccData: characters('32'), type: 0 },
+    // backspace
+    { pts: 2 * 1000, ccData: 0x1421, type: 0 },
+    { pts: 3 * 1000, ccData: characters('10'), type: 0 },
     // EOC, End of Caption
-    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    { pts: 4 * 1000, ccData: 0x142f, type: 0 },
     // Send another command so that the second EOC isn't ignored
     { ccData: 0x1420, type: 0 },
-    // EOC, End of Caption
-    { pts: 3 * 1000, ccData: 0x142f, type: 0 }
+    // EOC, End of Caption, flush caption
+    { pts: 5 * 1000, ccData: 0x142f, type: 0 }
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'detected a caption');
-  QUnit.equal(captions[0].text, '023', 'applied the backspace');
+  QUnit.equal(captions[0].text, '310\n\n023', 'applied the backspaces');
 });
 
 QUnit.test('backspaces on cleared memory are no-ops', function() {
@@ -1184,11 +1223,14 @@ QUnit.test('applies mid-row underline', function() {
   });
 
   var packets = [
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
     { ccData: characters('no'), type: 0 },
+    // mid-row, white underline
     { ccData: 0x1121, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1204,11 +1246,14 @@ QUnit.test('applies mid-row italics', function() {
   });
 
   var packets = [
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
     { ccData: characters('no'), type: 0 },
+    // mid-row, italics
     { ccData: 0x112e, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1224,12 +1269,14 @@ QUnit.test('applies mid-row italics underline', function() {
   });
 
   var packets = [
-    // RCL, resume caption loading
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
     { ccData: characters('no'), type: 0 },
+    // mid-row, italics underline
     { ccData: 0x112f, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1247,11 +1294,13 @@ QUnit.test('applies PAC underline', function() {
   });
 
   var packets = [
-    // RCL, resume caption loading
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
+    // PAC: row 15, white underline
     { ccData: 0x1461, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1267,11 +1316,13 @@ QUnit.test('applies PAC white italics', function() {
   });
 
   var packets = [
-    // RCL, resume caption loading
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
+    // PAC: row 15, white italics
     { ccData: 0x146e, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1287,11 +1338,13 @@ QUnit.test('applies PAC white italics underline', function() {
   });
 
   var packets = [
-    // RCL, resume caption loading
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
+    // PAC: row 15, white italics underline
     { ccData: 0x146f, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // CR (carriage return), dispatches caption
     { ccData: 0x142d, type: 0 }
   ];
 
@@ -1309,9 +1362,11 @@ QUnit.test('closes formatting at PAC row change', function() {
   var packets = [
     // RCL, resume caption loading
     { ccData: 0x1420, type: 0 },
+    // PAC: row 14, white italics underlime
     { ccData: 0x144f, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // PAC: row 15, indent 0
     { ccData: 0x1470, type: 0 },
     { ccData: characters('no'), type: 0 },
     // EOC, End of Caption
@@ -1336,6 +1391,7 @@ QUnit.test('closes formatting at EOC', function() {
   var packets = [
     // RCL, resume caption loading
     { ccData: 0x1420, type: 0 },
+    // PAC: row 15, white italics underline
     { ccData: 0x146f, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
@@ -1359,12 +1415,14 @@ QUnit.test('closes formatting at negating mid-row code', function() {
   });
 
   var packets = [
-    // RCL, resume caption loading
+    // RU2 (roll-up, 2 rows)
     { ccData: 0x1425, type: 0 },
     { ccData: characters('no'), type: 0 },
+    // mid-row: italics underline
     { ccData: 0x112f, type: 0 },
     { ccData: characters('ye'), type: 0 },
     { ccData: characters('s.'), type: 0 },
+    // mid-row: white
     { ccData: 0x1120, type: 0 },
     { ccData: characters('no'), type: 0 }
   ];
@@ -1536,6 +1594,125 @@ QUnit.test('the roll-up count can be changed on-the-fly', function() {
   QUnit.equal(captions.length, 0, 'cleared the caption');
 });
 
+QUnit.test('switching to roll-up from pop-on wipes memories and flushes captions', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    // RCL (resume caption loading)
+    { pts: 0 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 0 * 1000, ccData: characters('hi'), type: 0 },
+    // EOC (end of caption), mark 1st caption start
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    // RCL, resume caption loading
+    { pts: 1 * 1000, ccData: 0x1420, type: 0 },
+    { pts: 2 * 1000, ccData: characters('oh'), type: 0 },
+    // EOC, mark 2nd caption start and flush 1st caption
+    { pts: 2 * 1000, ccData: 0x142f, type: 0 },
+    // RU2 (roll-up, 2 rows), flush 2nd caption
+    { pts: 3 * 1000, ccData: 0x1425, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  var displayed = cea608Stream.displayed_.reduce(function(acc, val) {
+    acc += val;
+    return acc;
+  });
+  var nonDisplayed = cea608Stream.nonDisplayed_.reduce(function(acc, val) {
+    acc += val;
+    return acc;
+  });
+
+  QUnit.equal(captions.length, 2, 'both captions flushed');
+  QUnit.equal(displayed, '', 'displayed memory is wiped');
+  QUnit.equal(nonDisplayed, '', 'non-displayed memory is wiped');
+  QUnit.deepEqual(captions[0], {
+    startPts: 1000,
+    endPts: 2000,
+    text: 'hi',
+    stream: 'CC1'
+  }, 'first caption correct');
+  QUnit.deepEqual(captions[1], {
+    startPts: 2000,
+    endPts: 3000,
+    text: 'oh',
+    stream: 'CC1'
+  }, 'second caption correct');
+});
+
+QUnit.test('switching to roll-up from paint-on wipes memories and flushes captions', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    // RDC (resume direct captioning)
+    { pts: 0 * 1000, ccData: 0x1429, type: 0 },
+    { pts: 0 * 1000, ccData: characters('hi'), type: 0 },
+    // RU2 (roll-up, 2 rows), flush displayed caption
+    { pts: 1 * 1000, ccData: 0x1425, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  var displayed = cea608Stream.displayed_.reduce(function(acc, val) {
+    acc += val;
+    return acc;
+  });
+  var nonDisplayed = cea608Stream.nonDisplayed_.reduce(function(acc, val) {
+    acc += val;
+    return acc;
+  });
+
+  QUnit.equal(captions.length, 1, 'flushed caption');
+  QUnit.equal(displayed, '', 'displayed memory is wiped');
+  QUnit.equal(nonDisplayed, '', 'non-displayed memory is wiped');
+  QUnit.deepEqual(captions[0], {
+    startPts: 0,
+    endPts: 1000,
+    text: 'hi',
+    stream: 'CC1'
+  }, 'caption correct');
+});
+
+// NOTE: This should change to not wiping the display when caption
+// positioning is properly implemented
+QUnit.test('switching to paint-on from pop-on flushes display', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    // RCL (resume caption loading)
+    { pts: 0 * 1000, ccData: 0x1420, type: 0 },
+    // PAC: row 14, indent 0
+    { pts: 0 * 1000, ccData: 0x1450, type: 0 },
+    { pts: 0 * 1000, ccData: characters('hi'), type: 0 },
+    // EOC (end of caption), mark caption start
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    // RCL
+    { pts: 1 * 1000, ccData: 0x1420, type: 0 },
+    // RDC (resume direct captioning), flush caption
+    { pts: 2 * 1000, ccData: 0x1429, type: 0 },
+    // PAC: row 14, indent 0
+    { pts: 2 * 1000, ccData: 0x1450, type: 0 },
+    // TO1 (tab offset 1 column)
+    { pts: 2 * 1000, ccData: 0x1721, type: 0 },
+    { pts: 3 * 1000, ccData: characters('io'), type: 0 },
+    // EDM (erase displayed memory), flush paint-on caption
+    { pts: 4 * 1000, ccData: 0x142c, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 2, 'detected 2 captions');
+  QUnit.equal(captions[0].text, 'hi', 'pop-on caption received');
+  QUnit.equal(captions[0].startPts, 1000, 'proper start pts');
+  QUnit.equal(captions[0].endPts, 2000, 'proper end pts');
+  QUnit.equal(captions[1].text, 'io', 'paint-on caption received');
+  QUnit.equal(captions[1].startPts, 2000, 'proper start pts');
+  QUnit.equal(captions[1].endPts, 4000, 'proper end pts');
+});
+
 QUnit.test('backspaces are reflected in the generated captions', function() {
   var captions = [];
   cea608Stream.on('data', function(caption) {
@@ -1649,19 +1826,18 @@ QUnit.test('a second identical control code separated by only padding from the f
     },
     // backspace
     { ccData: 0x1421, type: 0 },
+    // padding
     { ccData: 0x0000, type: 0 },
     { ccData: 0x0000, type: 0 },
     { ccData: 0x0000, type: 0 },
     // backspace
     { pts: 2 * 1000, ccData: 0x1421, type: 0 }, // duplicate is ignored
-    // backspace
-    { ccData: 0x1421, type: 0 },
     // CR, carriage return
     { pts: 3 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
   QUnit.equal(captions.length, 1, 'caption emitted');
-  QUnit.equal(captions[0].text, '01', 'only two backspaces processed');
+  QUnit.equal(captions[0].text, '010', 'only one backspace processed');
 });
 
 QUnit.test('preamble address codes on same row are NOT converted into spaces', function() {
@@ -1703,19 +1879,29 @@ QUnit.test('preserves newlines from PACs in pop-on mode', function() {
   [
     // RCL, resume caption loading
     { ccData: 0x1420, type: 0 },
+    // ENM, erase non-displayed memory
     { ccData: 0x142e, type: 0 },
+    // PAC: row 12, indent 0
     { ccData: 0x1350, type: 0 },
+    // text: TEST
     { ccData: 0x5445, type: 0 },
     { ccData: 0x5354, type: 0 },
+    // PAC: row 14, indent 0
     { ccData: 0x1450, type: 0 },
+    // text: STRING
     { ccData: 0x5354, type: 0 },
     { ccData: 0x5249, type: 0 },
     { ccData: 0x4e47, type: 0 },
+    // PAC: row 15, indent 0
     { ccData: 0x1470, type: 0 },
+    // text: DATA
     { ccData: 0x4441, type: 0 },
     { ccData: 0x5441, type: 0 },
+    // EOC, end of caption
     { pts: 1 * 1000, ccData: 0x142f, type: 0 },
-    { pts: 1 * 1000, ccData: 0x1420, type: 0 },
+    // EOC, duplicated as per spec
+    { pts: 1 * 1000, ccData: 0x142f, type: 0 },
+    // EOC, dispatch caption
     { pts: 2 * 1000, ccData: 0x142f, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
@@ -1838,6 +2024,7 @@ QUnit.test('reset works', function() {
   });
   [ // RU2, roll-up captions 2 rows
     { pts: 0, ccData: 0x1425, type: 0 },
+    // mid-row: white underline
     { pts: 0, ccData: 0x1121, type: 0 },
     { pts: 0, ccData: characters('01'), type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
@@ -1862,6 +2049,325 @@ QUnit.test('reset works', function() {
 });
 
 
-QUnit.skip('paint-on display mode', function() {
-  QUnit.ok(false, 'not implemented');
+QUnit.test('paint-on mode', function() {
+  var packets, captions;
+  packets = [
+    // RDC, resume direct captioning, begin display
+    { pts: 1000, ccData: 0x1429, type: 0 },
+    { pts: 2000, ccData: characters('hi'), type: 0 },
+    // EDM, erase displayed memory. Finish display, flush caption
+    { pts: 3000, ccData: 0x142c, type: 0 }
+  ];
+  captions = [];
+
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  packets.forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 1, 'detected a caption');
+  QUnit.deepEqual(captions[0], {
+    startPts: 1000,
+    endPts: 3000,
+    text: 'hi',
+    stream: 'CC1'
+  }, 'parsed the caption');
+});
+
+QUnit.test('preserves newlines from PACs in paint-on mode', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    // RDC, resume direct captioning
+    { pts: 1000, ccData: 0x1429, type: 0 },
+    // PAC: row 12, indent 0
+    { pts: 1000, ccData: 0x1350, type: 0 },
+    // text: TEST
+    { pts: 2000, ccData: 0x5445, type: 0 },
+    { pts: 2000, ccData: 0x5354, type: 0 },
+    // PAC: row 14, indent 0
+    { pts: 3000, ccData: 0x1450, type: 0 },
+    // text: STRING
+    { pts: 3000, ccData: 0x5354, type: 0 },
+    { pts: 4000, ccData: 0x5249, type: 0 },
+    { pts: 4000, ccData: 0x4e47, type: 0 },
+    // PAC: row 15, indent 0
+    { pts: 5000, ccData: 0x1470, type: 0 },
+    // text: DATA
+    { pts: 5000, ccData: 0x4441, type: 0 },
+    { pts: 6000, ccData: 0x5441, type: 0 },
+    // EDM, erase displayed memory. Finish display, flush caption
+    { pts: 6000, ccData: 0x142c, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 1, 'caption emitted');
+  QUnit.equal(captions[0].text, 'TEST\n\nSTRING\nDATA', 'Position PACs were converted to newlines');
+});
+
+QUnit.test('backspaces are reflected in the generated captions (paint-on)', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [ // RDC, resume direct captioning
+    { ccData: 0x1429, type: 0 },
+    // '01', default row 15
+    { pts: 0 * 1000, ccData: characters('01'), type: 0 },
+    // backspace
+    { pts: 0 * 1000, ccData: 0x1421, type: 0 },
+    { pts: 1 * 1000, ccData: characters('23'), type: 0 },
+    // PAC: row 13, indent 0
+    { pts: 2 * 1000, ccData: 0x1370, type: 0 },
+    { pts: 2 * 1000, ccData: characters('32'), type: 0 },
+    // backspace
+    { pts: 3 * 1000, ccData: 0x1421, type: 0 },
+    { pts: 4 * 1000, ccData: characters('10'), type: 0 },
+    // EDM, erase displayed memory, flush caption
+    { pts: 5 * 1000, ccData: 0x142c, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 1, 'detected a caption');
+  QUnit.equal(captions[0].text, '310\n\n023', 'applied the backspaces');
+});
+
+QUnit.test('mix of all modes (extract from CNN)', function() {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    // RU2 (roll-up, 2 rows)
+    { pts: 6675, ccData: 0x1425, type: 0 },
+    // CR (carriange return), flush nothing
+    { pts: 6675, ccData: 0x142d, type: 0 },
+    // PAC: row 2, indent 0
+    { pts: 6675, ccData: 0x1170, type: 0 },
+    // text: YEAR.
+    { pts: 6676, ccData: 0x5945, type: 0 },
+    { pts: 6676, ccData: 0x4152, type: 0 },
+    { pts: 6676, ccData: 0x2e00, type: 0 },
+    // RU2 (roll-up, 2 rows)
+    { pts: 6677, ccData: 0x1425, type: 0 },
+    // CR (carriange return), flush 1 row
+    { pts: 6677, ccData: 0x142d, type: 0 },
+    // PAC: row 2, indent 0
+    { pts: 6677, ccData: 0x1170, type: 0 },
+    // text: GO TO CNNHEROS.COM.
+    { pts: 6677, ccData: 0x474f, type: 0 },
+    { pts: 6678, ccData: 0x2054, type: 0 },
+    { pts: 6678, ccData: 0x4f00, type: 0 },
+    { pts: 6678, ccData: 0x2043, type: 0 },
+    { pts: 6679, ccData: 0x4e4e, type: 0 },
+    { pts: 6679, ccData: 0x4845, type: 0 },
+    { pts: 6679, ccData: 0x524f, type: 0 },
+    { pts: 6680, ccData: 0x532e, type: 0 },
+    { pts: 6680, ccData: 0x434f, type: 0 },
+    { pts: 6680, ccData: 0x4d2e, type: 0 },
+    // EDM (erase displayed memory), flush 2 displayed roll-up rows
+    { pts: 6697, ccData: 0x142c, type: 0 },
+    // RDC (resume direct captioning), wipes memories, flushes nothing
+    { pts: 6749, ccData: 0x1429, type: 0 },
+    // PAC: row 1, indent 0
+    { pts: 6750, ccData: 0x1150, type: 0 },
+    // text: Did your Senator or Congressman
+    { pts: 6750, ccData: 0x4469, type: 0 },
+    { pts: 6750, ccData: 0x6420, type: 0 },
+    { pts: 6750, ccData: 0x796f, type: 0 },
+    { pts: 6751, ccData: 0x7572, type: 0 },
+    { pts: 6751, ccData: 0x2053, type: 0 },
+    { pts: 6751, ccData: 0x656e, type: 0 },
+    { pts: 6752, ccData: 0x6174, type: 0 },
+    { pts: 6752, ccData: 0x6f72, type: 0 },
+    { pts: 6752, ccData: 0x206f, type: 0 },
+    { pts: 6753, ccData: 0x7220, type: 0 },
+    { pts: 6753, ccData: 0x436f, type: 0 },
+    { pts: 6753, ccData: 0x6e67, type: 0 },
+    { pts: 6753, ccData: 0x7265, type: 0 },
+    { pts: 6754, ccData: 0x7373, type: 0 },
+    { pts: 6754, ccData: 0x6d61, type: 0 },
+    { pts: 6754, ccData: 0x6e00, type: 0 },
+    // PAC: row 2, indent 0
+    { pts: 6755, ccData: 0x1170, type: 0 },
+    // TO2 (tab offset 2 columns)
+    { pts: 6755, ccData: 0x1722, type: 0 },
+    // text: get elected by talking tough
+    { pts: 6755, ccData: 0x6765, type: 0 },
+    { pts: 6756, ccData: 0x7420, type: 0 },
+    { pts: 6756, ccData: 0x656c, type: 0 },
+    { pts: 6756, ccData: 0x6563, type: 0 },
+    { pts: 6756, ccData: 0x7465, type: 0 },
+    { pts: 6757, ccData: 0x6420, type: 0 },
+    { pts: 6757, ccData: 0x6279, type: 0 },
+    { pts: 6757, ccData: 0x2074, type: 0 },
+    { pts: 6758, ccData: 0x616c, type: 0 },
+    { pts: 6758, ccData: 0x6b69, type: 0 },
+    { pts: 6758, ccData: 0x6e67, type: 0 },
+    { pts: 6759, ccData: 0x2074, type: 0 },
+    { pts: 6759, ccData: 0x6f75, type: 0 },
+    { pts: 6759, ccData: 0x6768, type: 0 },
+    // RCL (resume caption loading)
+    { pts: 6759, ccData: 0x1420, type: 0 },
+    // PAC: row 1, indent 4
+    { pts: 6760, ccData: 0x1152, type: 0 },
+    // TO1 (tab offset 1 column)
+    { pts: 6760, ccData: 0x1721, type: 0 },
+    // text: on the national debt?
+    { pts: 6760, ccData: 0x6f6e, type: 0 },
+    { pts: 6761, ccData: 0x2074, type: 0 },
+    { pts: 6761, ccData: 0x6865, type: 0 },
+    { pts: 6761, ccData: 0x206e, type: 0 },
+    { pts: 6762, ccData: 0x6174, type: 0 },
+    { pts: 6762, ccData: 0x696f, type: 0 },
+    { pts: 6762, ccData: 0x6e61, type: 0 },
+    { pts: 6762, ccData: 0x6c20, type: 0 },
+    { pts: 6763, ccData: 0x6465, type: 0 },
+    { pts: 6763, ccData: 0x6274, type: 0 },
+    { pts: 6763, ccData: 0x3f00, type: 0 },
+    // RCL (resume caption loading)
+    { pts: 6781, ccData: 0x1420, type: 0 },
+    // EDM (erase displayed memory), flush paint-on caption
+    { pts: 6781, ccData: 0x142c, type: 0 },
+    // EOC (end of caption), mark pop-on caption 1 start
+    { pts: 6782, ccData: 0x142f, type: 0 },
+    // RCL (resume caption loading)
+    { pts: 6782, ccData: 0x1420, type: 0 },
+    // PAC: row 1, indent 4
+    { pts: 6782, ccData: 0x1152, type: 0 },
+    // TO2 (tab offset 2 columns)
+    { pts: 6783, ccData: 0x1722, type: 0 },
+    // text: Will they stay true
+    { pts: 6783, ccData: 0x5769, type: 0 },
+    { pts: 6783, ccData: 0x6c6c, type: 0 },
+    { pts: 6783, ccData: 0x2074, type: 0 },
+    { pts: 6784, ccData: 0x6865, type: 0 },
+    { pts: 6784, ccData: 0x7920, type: 0 },
+    { pts: 6784, ccData: 0x7374, type: 0 },
+    { pts: 6785, ccData: 0x6179, type: 0 },
+    { pts: 6785, ccData: 0x2074, type: 0 },
+    { pts: 6785, ccData: 0x7275, type: 0 },
+    { pts: 6786, ccData: 0x6500, type: 0 },
+    // PAC: row 2, indent 8
+    { pts: 6786, ccData: 0x1174, type: 0 },
+    // text: to their words?
+    { pts: 6786, ccData: 0x746f, type: 0 },
+    { pts: 6786, ccData: 0x2074, type: 0 },
+    { pts: 6787, ccData: 0x6865, type: 0 },
+    { pts: 6787, ccData: 0x6972, type: 0 },
+    { pts: 6787, ccData: 0x2077, type: 0 },
+    { pts: 6788, ccData: 0x6f72, type: 0 },
+    { pts: 6788, ccData: 0x6473, type: 0 },
+    { pts: 6788, ccData: 0x3f00, type: 0 },
+    // RCL (resume caption loading)
+    { pts: 6797, ccData: 0x1420, type: 0 },
+    // EDM (erase displayed memory), mark pop-on caption 1 end and flush
+    { pts: 6797, ccData: 0x142c, type: 0 },
+    // EOC (end of caption), mark pop-on caption 2 start, flush nothing
+    { pts: 6798, ccData: 0x142f, type: 0 },
+    // RCL
+    { pts: 6799, ccData: 0x1420, type: 0 },
+    // EOC, mark pop-on caption 2 end and flush
+    { pts: 6838, ccData: 0x142f, type: 0 },
+    // RU2 (roll-up, 2 rows), wipes memories
+    { pts: 6841, ccData: 0x1425, type: 0 },
+    // CR (carriage return), flush nothing
+    { pts: 6841, ccData: 0x142d, type: 0 },
+    // PAC: row 2, indent 0
+    { pts: 6841, ccData: 0x1170, type: 0 },
+    // text: NO MORE SPECULATION, NO MORE
+    { pts: 6841, ccData: 0x3e3e, type: 0 },
+    { pts: 6841, ccData: 0x3e00, type: 0 },
+    { pts: 6842, ccData: 0x204e, type: 0 },
+    { pts: 6842, ccData: 0x4f00, type: 0 },
+    { pts: 6842, ccData: 0x204d, type: 0 },
+    { pts: 6842, ccData: 0x4f52, type: 0 },
+    { pts: 6842, ccData: 0x4500, type: 0 },
+    { pts: 6842, ccData: 0x2000, type: 0 },
+    { pts: 6842, ccData: 0x5350, type: 0 },
+    { pts: 6843, ccData: 0x4543, type: 0 },
+    { pts: 6843, ccData: 0x554c, type: 0 },
+    { pts: 6843, ccData: 0x4154, type: 0 },
+    { pts: 6843, ccData: 0x494f, type: 0 },
+    { pts: 6843, ccData: 0x4e2c, type: 0 },
+    { pts: 6843, ccData: 0x204e, type: 0 },
+    { pts: 6843, ccData: 0x4f00, type: 0 },
+    { pts: 6843, ccData: 0x204d, type: 0 },
+    { pts: 6844, ccData: 0x4f52, type: 0 },
+    { pts: 6844, ccData: 0x4500, type: 0 },
+    // RU2 (roll-up, two rows)
+    { pts: 6844, ccData: 0x1425, type: 0 },
+    // CR (carriage return), flush 1 roll-up row
+    { pts: 6844, ccData: 0x142d, type: 0 },
+    // PAC: row 2, indent 0
+    { pts: 6844, ccData: 0x1170, type: 0 },
+    // text: RUMORS OR GUESSING GAMES.
+    { pts: 6844, ccData: 0x5255, type: 0 },
+    { pts: 6844, ccData: 0x4d4f, type: 0 },
+    { pts: 6844, ccData: 0x5253, type: 0 },
+    { pts: 6844, ccData: 0x204f, type: 0 },
+    { pts: 6845, ccData: 0x5200, type: 0 },
+    { pts: 6845, ccData: 0x2047, type: 0 },
+    { pts: 6845, ccData: 0x5545, type: 0 },
+    { pts: 6845, ccData: 0x5353, type: 0 },
+    { pts: 6845, ccData: 0x494e, type: 0 },
+    { pts: 6845, ccData: 0x4700, type: 0 },
+    { pts: 6845, ccData: 0x2047, type: 0 },
+    { pts: 6845, ccData: 0x414d, type: 0 },
+    { pts: 6845, ccData: 0x4553, type: 0 },
+    { pts: 6845, ccData: 0x2e00, type: 0 },
+    // RU2 (roll-up, 2 rows)
+    { pts: 6846, ccData: 0x1425, type: 0 },
+    // CR (carriage return), flush 2 roll-up rows
+    { pts: 6846, ccData: 0x142d, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  QUnit.equal(captions.length, 7, 'detected 7 captions of varying types');
+  QUnit.deepEqual(captions[0], {
+    startPts: 6675,
+    endPts: 6677,
+    text: 'YEAR.',
+    stream: 'CC1'
+  }, 'parsed the 1st roll-up caption');
+  QUnit.deepEqual(captions[1], {
+    startPts: 6677,
+    endPts: 6697,
+    text: 'YEAR.\nGO TO CNNHEROS.COM.',
+    stream: 'CC1'
+  }, 'parsed the 2nd roll-up caption');
+  QUnit.deepEqual(captions[2], {
+    startPts: 6749,
+    endPts: 6781,
+    text: 'Did your Senator or Congressman\nget elected by talking tough',
+    stream: 'CC1'
+  }, 'parsed the paint-on caption');
+  QUnit.deepEqual(captions[3], {
+    startPts: 6782,
+    endPts: 6797,
+    text: 'on the national debt?',
+    stream: 'CC1'
+  }, 'parsed the 1st pop-on caption');
+  QUnit.deepEqual(captions[4], {
+    startPts: 6798,
+    endPts: 6838,
+    text: 'Will they stay true\nto their words?',
+    stream: 'CC1'
+  }, 'parsed the 2nd pop-on caption');
+  QUnit.deepEqual(captions[5], {
+    startPts: 6841,
+    endPts: 6844,
+    text: '>>> NO MORE SPECULATION, NO MORE',
+    stream: 'CC1'
+  }, 'parsed the 3rd roll-up caption');
+  QUnit.deepEqual(captions[6], {
+    startPts: 6844,
+    endPts: 6846,
+    text: '>>> NO MORE SPECULATION, NO MORE\nRUMORS OR GUESSING GAMES.',
+    stream: 'CC1'
+  }, 'parsed the 4th roll-up caption');
+
 });
