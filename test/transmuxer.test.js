@@ -4089,24 +4089,6 @@ QUnit.test('emits done event when no audio data is present', function() {
 });
 
 QUnit.module('AAC Stream');
-QUnit.test('parses correct ID3 tag size', function() {
-  var packetStream = new Uint8Array(10),
-    aacStream = new AacStream(),
-    parser = aacStream.parseId3TagSize;
-
-  packetStream[9] = 63;
-  QUnit.equal(parser(packetStream, 0), 73, 'ParseID3 correctly parsed a header without a footer');
-});
-
-QUnit.test('parses correct ADTS Frame size', function() {
-  var packetStream = new Uint8Array(6),
-    aacStream = new AacStream(),
-    parser = aacStream.parseAdtsSize;
-  packetStream[3] = 128;
-  packetStream[4] = 29;
-  packetStream[5] = 255;
-  QUnit.equal(parser(packetStream, 0), 239, 'ParseADTS correctly parsed framesize');
-});
 
 QUnit.test('emits data after receiving push', function() {
 
