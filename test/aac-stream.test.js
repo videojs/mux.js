@@ -4,35 +4,10 @@ var
   aacStream,
   AacStream = require('../lib/aac'),
   QUnit = require('qunit'),
+  utils = require('./utils'),
   createId3Header,
   createId3FrameHeader,
-  createAdtsHeader,
-  binaryStringToArrayOfBytes,
-  leftPad;
-
-binaryStringToArrayOfBytes = function(string) {
-  var
-    array = [],
-    arrayIndex = 0,
-    stringIndex = 0;
-
-  while (stringIndex < string.length) {
-    array[arrayIndex] = parseInt(string.slice(stringIndex, stringIndex + 8), 2);
-
-    arrayIndex++;
-    // next byte
-    stringIndex += 8;
-  }
-
-  return array;
-};
-
-leftPad = function(string, targetLength) {
-  if (string.length >= targetLength) {
-    return string;
-  }
-  return new Array(targetLength - string.length + 1).join('0') + string;
-};
+  createAdtsHeader;
 
 createId3Header = function(tagSize) {
   var header = [];
@@ -81,7 +56,7 @@ createId3FrameHeader = function() {
 createAdtsHeader = function(frameLength) {
   // Header consists of 7 or 9 bytes (without or with CRC).
   // see: https://wiki.multimedia.cx/index.php/ADTS
-  return binaryStringToArrayOfBytes(''.concat(
+  return utils.binaryStringToArrayOfBytes(''.concat(
     // 12 bits for syncword (0xFFF)
     '111111111111',
     // 1 bit MPEG version
@@ -103,7 +78,7 @@ createAdtsHeader = function(frameLength) {
     // 2 bit (copright bits)
     '00',
     // 13 bit frame length (includes header length)
-    leftPad(frameLength.toString(2), 13),
+    utils.leftPad(frameLength.toString(2), 13),
     // 11 bit buffer fullness
     '11111111111',
     // 2 bit number of AAC frames minus 1
