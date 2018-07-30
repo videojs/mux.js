@@ -4,10 +4,37 @@ var
   aacStream,
   AacStream = require('../lib/aac'),
   QUnit = require('qunit'),
-  id3Header,
-  id3FrameHeader;
+  createId3Header,
+  createId3FrameHeader,
+  createAdtsHeader,
+  binaryStringToArrayOfBytes,
+  leftPad;
 
-id3Header = function(tagSize) {
+binaryStringToArrayOfBytes = function(string) {
+  var
+    array = [],
+    arrayIndex = 0,
+    stringIndex = 0;
+
+  while (stringIndex < string.length) {
+    array[arrayIndex] = parseInt(string.slice(stringIndex, stringIndex + 8), 2);
+
+    arrayIndex++;
+    // next byte
+    stringIndex += 8;
+  }
+
+  return array;
+};
+
+leftPad = function(string, targetLength) {
+  if (string.length >= targetLength) {
+    return string;
+  }
+  return new Array(targetLength - string.length + 1).join('0') + string;
+};
+
+createId3Header = function(tagSize) {
   var header = [];
 
   header[0] = 'I'.charCodeAt(0);
@@ -31,7 +58,7 @@ id3Header = function(tagSize) {
   return header;
 };
 
-id3FrameHeader = function() {
+createId3FrameHeader = function() {
   var header = [];
 
   // four byte frame ID, XYZ are experimental
@@ -51,6 +78,40 @@ id3FrameHeader = function() {
   return header;
 };
 
+createAdtsHeader = function(frameLength) {
+  // Header consists of 7 or 9 bytes (without or with CRC).
+  // see: https://wiki.multimedia.cx/index.php/ADTS
+  return binaryStringToArrayOfBytes(''.concat(
+    // 12 bits for syncword (0xFFF)
+    '111111111111',
+    // 1 bit MPEG version
+    '0',
+    // 2 bit layer (always 0)
+    '00',
+    // 1 bit protection absent (1 for no CRC)
+    '1',
+    // 2 bit profile
+    '10',
+    // 4 bit sampling frequency index
+    '0110',
+    // 1 bit private bit
+    '0',
+    // 3 bit channel config
+    '100',
+    // 2 bit (ignore)
+    '00',
+    // 2 bit (copright bits)
+    '00',
+    // 13 bit frame length (includes header length)
+    leftPad(frameLength.toString(2), 13),
+    // 11 bit buffer fullness
+    '11111111111',
+    // 2 bit number of AAC frames minus 1
+    '00'
+    // 16 bit CRC (if present)
+  ));
+};
+
 QUnit.module('AAC Stream', {
   beforeEach: function() {
     aacStream = new AacStream();
@@ -61,8 +122,8 @@ QUnit.test('parses ID3 tag', function() {
   var
     id3Count = 0,
     adtsCount = 0,
-    frameHeader = id3FrameHeader(),
-    id3Tag = id3Header(frameHeader.length).concat(frameHeader);
+    frameHeader = createId3FrameHeader(),
+    id3Tag = createId3Header(frameHeader.length).concat(frameHeader);
 
   aacStream.on('data', function(frame) {
     if (frame.type === 'timed-metadata') {
@@ -82,8 +143,8 @@ QUnit.test('parses two ID3 tags in sequence', function() {
   var
     id3Count = 0,
     adtsCount = 0,
-    frameHeader = id3FrameHeader(),
-    id3Tag = id3Header(frameHeader.length).concat(frameHeader);
+    frameHeader = createId3FrameHeader(),
+    id3Tag = createId3Header(frameHeader.length).concat(frameHeader);
 
   aacStream.on('data', function(frame) {
     if (frame.type === 'timed-metadata') {
@@ -103,8 +164,8 @@ QUnit.test('does not parse second ID3 tag if it\'s incomplete', function() {
   var
     id3Count = 0,
     adtsCount = 0,
-    frameHeader = id3FrameHeader(),
-    id3Tag = id3Header(frameHeader.length).concat(frameHeader);
+    frameHeader = createId3FrameHeader(),
+    id3Tag = createId3Header(frameHeader.length).concat(frameHeader);
 
   aacStream.on('data', function(frame) {
     if (frame.type === 'timed-metadata') {
@@ -120,9 +181,58 @@ QUnit.test('does not parse second ID3 tag if it\'s incomplete', function() {
   QUnit.equal(id3Count, 1, 'one id3 chunk');
 });
 
-// TODO: test for misaligned stream check (not on ADTS header syncword)
-// TODO: test for when frame size is less than everything, but byteIndex + frame size is
-//       greater than everything
+QUnit.test('handles misaligned adts header', function() {
+  var
+    id3Count = 0,
+    adtsCount = 0,
+    // fake adts frame
+    adtsFrame = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    packetStream = createAdtsHeader(adtsFrame.length).concat(adtsFrame);
+
+  aacStream.on('data', function(frame) {
+    if (frame.type === 'timed-metadata') {
+      id3Count += 1;
+    } else if (frame.type === 'audio') {
+      adtsCount += 1;
+    }
+  });
+
+  // misalign by two bytes specific to a bug related to detecting sync bytes
+  // (where we were only properly checking the second byte)
+  aacStream.push(new Uint8Array([0x01, 0xf0].concat(packetStream)));
+
+  QUnit.equal(adtsCount, 1, 'one adts frames');
+  QUnit.equal(id3Count, 0, 'no id3 chunk');
+});
+
+QUnit.test('handles incomplete adts frame after id3 frame', function() {
+  var
+    id3Count = 0,
+    adtsCount = 0,
+    id3FrameHeader = createId3FrameHeader(),
+    id3Tag = createId3Header(id3FrameHeader.length).concat(id3FrameHeader),
+    // in this case:
+    //   id3 tag = 20 bytes
+    //   adts header = 7 bytes
+    //   total = 27 bytes
+    // report the ADTS frame size as 20 bytes
+    adtsHeader = createAdtsHeader(20),
+    // no adts frame, stream was cut off
+    packetStream = id3Tag.concat(adtsHeader);
+
+  aacStream.on('data', function(frame) {
+    if (frame.type === 'timed-metadata') {
+      id3Count += 1;
+    } else if (frame.type === 'audio') {
+      adtsCount += 1;
+    }
+  });
+
+  aacStream.push(new Uint8Array(packetStream));
+
+  QUnit.equal(adtsCount, 0, 'no adts frame');
+  QUnit.equal(id3Count, 1, 'one id3 chunk');
+});
 
 QUnit.test('parses correct ID3 tag size', function() {
   var
