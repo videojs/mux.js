@@ -20,7 +20,7 @@
 
   `ffmpeg -i output.mp4 -acodec copy -vcodec copy output.flv`
 
-- Use [libcaption][libcaption] to embed the captions into the flv:
+- Use [libcaption][] to embed the captions into the flv:
 
   `flv+srt output.flv captions.srt with-captions.flv`
 
@@ -28,7 +28,7 @@
 
   `ffmpeg -i with-captions.flv -acodec copy -vcodec copy with-captions.mp4`
 
-- Use [Bento4](#bento4) to convert the file into a FMP4 file:
+- Use [Bento4][bento4] to convert the file into a FMP4 file:
 
   `bento4 mp4fragment with-captions.mp4 \
     --verbosity 3 \
