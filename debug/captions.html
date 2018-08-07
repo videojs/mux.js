@@ -72,6 +72,10 @@
                 <label><input id="reset-tranmsuxer" type=checkbox name=reset checked value="reset">&nbsp;Recreate the Transmuxer &amp; MediaSource for each file open?
                 </label>
               </div>
+              <div>
+                <label><input id="partial-transmuxer" type=checkbox name=partial value="partial"> Use Partial Transmuxer?
+                </label>
+              </div>
             </fieldset>
             <fieldset>
               <legend>DASH Input</legend>
@@ -265,6 +269,7 @@
             combined = document.querySelector('#combined-output').checked,
             outputType = document.querySelector('input[name="output"]:checked').value,
             resetTransmuxer = $('#reset-tranmsuxer').checked,
+            partial = $('#partial-transmuxer').checked,
             remuxedSegments = [],
             parsedCaptions = [],
             remuxedInitSegment = null,
@@ -276,19 +281,30 @@
         if (resetTransmuxer || !transmuxer) {
           createInitSegment = true;
           if (combined) {
-              outputType = 'combined';
-              transmuxer = new muxjs.mp4.Transmuxer();
-          } else {
-              transmuxer = new muxjs.mp4.Transmuxer({remux: false});
+            outputType = 'combined';
+            transmuxer = new muxjs.mp4.Transmuxer();
+          } else if (!partial) {
+            transmuxer = new muxjs.mp4.Transmuxer({remux: false});
+          } else if (partial) {
+            transmuxer = new muxjs.partial.Transmuxer({remux: false});
           }
 
           transmuxer.on('data', function(event) {
             if (event.type === outputType) {
               remuxedSegments.push(event);
-              parsedCaptions = parsedCaptions.concat(event.captions);
-              remuxedBytesLength += event.data.byteLength;
-              remuxedInitSegment = event.initSegment;
+              if (!partial) {
+                remuxedBytesLength += event.data.byteLength;
+                remuxedInitSegment = event.initSegment;
+                parsedCaptions = parsedCaptions.concat(event.captions);
+              } else {
+                remuxedBytesLength += event.data.boxes.byteLength;
+                remuxedInitSegment = event.data.track.initSegment;
+              }
             }
+          });
+
+          transmuxer.on('captionInfo', function(captionInfo) {
+            parsedCaptions = parsedCaptions.concat(captionInfo.captions);
           });
 
           transmuxer.on('done', function () {
@@ -303,8 +319,16 @@
             }
 
             for (j = 0, i = offset; j < remuxedSegments.length; j++) {
-              bytes.set(remuxedSegments[j].data, i);
-              i += remuxedSegments[j].byteLength;
+              var boxData;
+
+              if (!partial) {
+                boxData = remuxedSegments[j].data;
+              } else {
+                boxData = remuxedSegments[j].data.boxes;
+              }
+
+              bytes.set(boxData, i);
+              i += boxData.byteLength;
             }
             remuxedSegments = [];
             remuxedBytesLength = 0;
