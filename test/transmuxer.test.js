@@ -2,7 +2,6 @@
 
 var mp2t = require('../lib/m2ts'),
     codecs = require('../lib/codecs'),
-    aac = require('../lib/aac'),
     flv = require('../lib/flv'),
     id3Generator = require('./utils/id3-generator'),
     mp4 = require('../lib/mp4'),
@@ -20,7 +19,6 @@ var mp2t = require('../lib/m2ts'),
     elementaryStream,
     TimestampRolloverStream = mp2t.TimestampRolloverStream,
     timestampRolloverStream,
-    AacStream = aac,
     H264Stream = codecs.h264.H264Stream,
     h264Stream,
 
@@ -4086,88 +4084,4 @@ QUnit.test('emits done event when no audio data is present', function() {
   QUnit.equal(segments[0].tags.audioTags.length, 0, 'generated no audio tags');
   QUnit.equal(segments[0].tags.videoTags.length, 2, 'generated two video tags');
   QUnit.ok(done, 'emitted done event even though no audio data was given');
-});
-
-QUnit.module('AAC Stream');
-
-QUnit.test('emits data after receiving push', function() {
-
-  var array = new Uint8Array(109),
-    aacStream,
-    count = 0;
-  aacStream = new AacStream();
-
-  array[0] = 255;
-  array[1] = 241;
-  array[2] = 92;
-  array[3] = 128;
-  array[4] = 13;
-  array[5] = 191;
-  array[6] = 252;
-  array[7] = 33;
-  array[8] = 32;
-  array[9] = 3;
-  array[10] = 64;
-  array[11] = 104;
-  array[12] = 27;
-  array[13] = 212;
-  aacStream.setTimestamp(90);
-  aacStream.on('data', function(frame) {
-    if (frame.pts === 90 && frame.dts === 90) {
-      count += 1;
-    }
-  });
-  aacStream.push(array);
-  QUnit.equal(count, 1);
-});
-
-QUnit.test('continues parsing after corrupted stream', function() {
-
-  var array = new Uint8Array(10000),
-    aacStream,
-    adtsCount = 0,
-    id3Count = 0;
-  aacStream = new AacStream();
-  // an ID3 frame
-  array[0] = 73;
-  array[1] = 68;
-  array[2] = 51;
-  array[3] = 4;
-  array[4] = 0;
-  array[5] = 0;
-  array[6] = 0;
-  array[7] = 0;
-  array[8] = 0;
-  array[9] = 63;
-  array[10] = 80;
-  array[11] = 82;
-  array[12] = 73;
-  array[13] = 86;
-
-  // an atds frame
-  array[1020] = 255;
-  array[1021] = 241;
-  array[1022] = 92;
-  array[1023] = 128;
-  array[1024] = 13;
-  array[1025] = 191;
-  array[1026] = 252;
-  array[1027] = 33;
-  array[1028] = 32;
-  array[1029] = 3;
-  array[1030] = 64;
-  array[1031] = 104;
-  array[1032] = 27;
-  array[1033] = 212;
-
-  aacStream.on('data', function(frame) {
-    if (frame.type === 'timed-metadata') {
-      id3Count += 1;
-    } else if (frame.type === 'audio') {
-      adtsCount += 1;
-    }
-  });
-  aacStream.push(array);
-  QUnit.equal(adtsCount, 1);
-  QUnit.equal(id3Count, 1);
 });
