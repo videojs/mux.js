@@ -2,10 +2,16 @@
 
 var
   QUnit = require('qunit'),
-  inspect = require('../lib/tools/ts-inspector.js').inspect,
+  tsInspector = require('../lib/tools/ts-inspector.js'),
+  StreamTypes = require('../lib/m2ts/stream-types.js'),
   tsSegment = require('./utils/test-segment.js'),
   tsNoAudioSegment = require('./utils/test-no-audio-segment.js'),
   aacSegment = require('./utils/test-aac-segment.js'),
+  utils = require('./utils'),
+  inspect = tsInspector.inspect,
+  parseAudioPes_ = tsInspector.parseAudioPes_,
+  packetize = utils.packetize,
+  audioPes = utils.audioPes,
   PES_TIMESCALE = 90000;
 
 QUnit.module('TS Inspector');
@@ -166,3 +172,33 @@ QUnit.test('can parse ts segment with no audio muxed in', function() {
     'parses ts segment without audio timing data');
 });
 
+QUnit.test('can parse audio PES when it\'s the only packet in a stream', function() {
+  var
+    pts = 90000,
+    pmt = {
+      // fake pmt pid that doesn't clash with the audio pid
+      pid: 0x10,
+      table: {
+        // pid copied over from default of audioPes function
+        0x12: StreamTypes.ADTS_STREAM_TYPE
+      }
+    },
+    result = { audio: [] };
+
+  parseAudioPes_(packetize(audioPes([0x00], true, pts)), pmt, result);
+
+  // note that both the first and last packet timings are the same, as there's only one
+  // packet to parse
+  QUnit.deepEqual(
+    result.audio,
+    [{
+      dts: pts,
+      pts: pts,
+      type: 'audio'
+    }, {
+      dts: pts,
+      pts: pts,
+      type: 'audio'
+    }],
+    'parses audio pes for timing info');
+});
