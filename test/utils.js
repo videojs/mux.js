@@ -11,7 +11,10 @@ var
   videoPes,
   adtsFrame,
   audioPes,
-  timedMetadataPes;
+  timedMetadataPes,
+  binaryStringToArrayOfBytes,
+  leftPad;
+
 
 PMT = [
   0x47, // sync byte
@@ -284,6 +287,30 @@ timedMetadataPes = function(data) {
   return transportPacket(0x13, id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01)));
 };
 
+binaryStringToArrayOfBytes = function(string) {
+  var
+    array = [],
+    arrayIndex = 0,
+    stringIndex = 0;
+
+  while (stringIndex < string.length) {
+    array[arrayIndex] = parseInt(string.slice(stringIndex, stringIndex + 8), 2);
+
+    arrayIndex++;
+    // next byte
+    stringIndex += 8;
+  }
+
+  return array;
+};
+
+leftPad = function(string, targetLength) {
+  if (string.length >= targetLength) {
+    return string;
+  }
+  return new Array(targetLength - string.length + 1).join('0') + string;
+};
+
 module.exports = {
   PMT: PMT,
   PAT: PAT,
@@ -294,5 +321,7 @@ module.exports = {
   videoPes: videoPes,
   adtsFrame: adtsFrame,
   audioPes: audioPes,
-  timedMetadataPes: timedMetadataPes
+  timedMetadataPes: timedMetadataPes,
+  binaryStringToArrayOfBytes: binaryStringToArrayOfBytes,
+  leftPad: leftPad
 };
