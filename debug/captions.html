@@ -303,8 +303,8 @@
             }
           });
 
-          transmuxer.on('captionInfo', function(captionInfo) {
-            parsedCaptions = parsedCaptions.concat(captionInfo.captions);
+          transmuxer.on('caption', function(caption) {
+            parsedCaptions = parsedCaptions.concat(caption);
           });
 
           transmuxer.on('done', function () {
@@ -338,6 +338,7 @@
 
             // clear old box info
             dashBoxes.innerHTML = JSON.stringify(parsedCaptions, null, 2);
+            console.log('captions', parsedCaptions);
 
             if ($('#m2ts-active').checked) {
               prepareSourceBuffer(combined, outputType, function () {
