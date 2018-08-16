@@ -15,6 +15,6 @@ You may want to confirm the SEI NAL units are constructed according to the CEA-6
 
 **I am getting the wrong times for only some captions, other captions are correct**
 
-If your content includes B-frames, there is an existing [issue](https://github.com/videojs/mux.js/issues/214) to fix this problem. We recommend that you ensure that your content starts with keyframes, to allow proper caption timing.
+If your content includes B-frames, there is an existing [issue](https://github.com/videojs/mux.js/issues/214) to fix this problem. We recommend that you ensure that all the segments in your source start with keyframes, to allow proper caption timing.
 
 [caption-parsing]: /docs/troubleshooting.md#608/708-caption-parsing
