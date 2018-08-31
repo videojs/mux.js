@@ -295,7 +295,6 @@
               if (!partial) {
                 remuxedBytesLength += event.data.byteLength;
                 remuxedInitSegment = event.initSegment;
-                parsedCaptions = parsedCaptions.concat(event.captions);
               } else {
                 remuxedBytesLength += event.data.boxes.byteLength;
                 remuxedInitSegment = event.data.track.initSegment;
@@ -319,13 +318,9 @@
             }
 
             for (j = 0, i = offset; j < remuxedSegments.length; j++) {
-              var boxData;
-
-              if (!partial) {
-                boxData = remuxedSegments[j].data;
-              } else {
-                boxData = remuxedSegments[j].data.boxes;
-              }
+              var boxData = partial ?
+                 boxData = remuxedSegments[j].data.boxes :
+                 boxData = remuxedSegments[j].data;
 
               bytes.set(boxData, i);
               i += boxData.byteLength;
@@ -408,6 +403,7 @@
       dashParsed = captionParser.parse(segmentBytes, videoTrackIds, timescales);
 
       dashBoxes.innerHTML = JSON.stringify(dashParsed, null, 2);
+      console.log('captions', dashParsed.captions);
       captionParser.reset();
     });
 
