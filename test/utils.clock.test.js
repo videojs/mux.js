@@ -161,3 +161,21 @@ QUnit.test('converts from video timestamp to audio timestamp', function() {
               4410,
               'converts video timestamp to audio timestamp');
 });
+
+QUnit.test('converts from metadata timestamp to seconds', function() {
+  QUnit.equal(clock.metadataTsToSeconds(90000, 90000, false),
+              0,
+              'converts metadata timestamp to seconds and adjusts by timelineStartPts');
+
+  QUnit.equal(clock.metadataTsToSeconds(270000, 90000, false),
+              2,
+              'converts metadata timestamp to seconds and adjusts by timelineStartPts');
+
+  QUnit.equal(clock.metadataTsToSeconds(90000, 90000, true),
+              1,
+              'converts metadata timestamp to seconds while keeping original timestamps');
+
+  QUnit.equal(clock.metadataTsToSeconds(180000, 0, true),
+              2,
+              'converts metadata timestamp to seconds while keeping original timestamps');
+});
