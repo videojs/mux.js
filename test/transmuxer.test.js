@@ -3050,6 +3050,130 @@ QUnit.test('can specify that we want to generate separate audio and video segmen
   QUnit.equal('mdat', boxes[1].type, 'generated a mdat box');
 });
 
+QUnit.test("doesn't adjust caption and ID3 times when configured to adjust timestamps", function() {
+  var transmuxer = new Transmuxer({ keepOriginalTimestamps: false });
+
+  var
+    segments = [],
+    captions = [];
+
+  transmuxer.on('data', function(segment) {
+    captions = captions.concat(segment.captions);
+    segments.push(segment);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true,
+    hasAudio: true
+  })));
+
+  transmuxer.push(packetize(audioPes([
+    0x19, 0x47
+  ], true, 90000)));
+  transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter_rbsp
+  ], true, 90000)));
+  transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+  ], true, 90002)));
+  transmuxer.push(packetize(videoPes([
+    0x07, // seq_parameter_set_rbsp
+    0x27, 0x42, 0xe0, 0x0b,
+    0xa9, 0x18, 0x60, 0x9d,
+    0x80, 0x53, 0x06, 0x01,
+    0x06, 0xb6, 0xc2, 0xb5,
+    0xef, 0x7c, 0x04
+  ], false, 90002)));
+  transmuxer.push(packetize(videoPes([
+      0x06, // sei_rbsp
+      0x04, 0x29, 0xb5, 0x00,
+      0x31, 0x47, 0x41, 0x39,
+      0x34, 0x03, 0x52, 0xff,
+      0xfc, 0x94, 0xae, 0xfc,
+      0x94, 0x20, 0xfc, 0x91,
+      0x40, 0xfc, 0xb0, 0xb0,
+      0xfc, 0xba, 0xb0, 0xfc,
+      0xb0, 0xba, 0xfc, 0xb0,
+      0xb0, 0xfc, 0x94, 0x2f,
+      0xfc, 0x94, 0x2f, 0xfc,
+      0x94, 0x2f, 0xff, 0x80,
+      0x00 // has an extra End Of Caption, so start and end times will be the same
+  ], true, 90002)));
+  transmuxer.push(packetize(videoPes([
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
+  ], true, 90004)));
+  transmuxer.flush();
+
+  QUnit.equal(segments.length, 1, 'generated a combined video and audio segment');
+  QUnit.equal(segments[0].type, 'combined', 'combined is the segment type');
+  QUnit.equal(captions.length, 1, 'got one caption');
+  QUnit.equal(captions[0].startPts, 90004, 'original pts value intact');
+  QUnit.equal(captions[0].startTime, (90004 - 90002) / 90e3, 'caption start time are based on original timeline');
+  QUnit.equal(captions[0].endTime, (90004 - 90002) / 90e3, 'caption end time are based on original timeline');
+});
+
+QUnit.test("doesn't adjust caption and ID3 times when configured to keep original timestamps", function() {
+  var transmuxer = new Transmuxer({ keepOriginalTimestamps: true });
+
+  var
+    segments = [],
+    captions = [];
+
+  transmuxer.on('data', function(segment) {
+    captions = captions.concat(segment.captions);
+    segments.push(segment);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true,
+    hasAudio: true
+  })));
+
+  transmuxer.push(packetize(audioPes([
+    0x19, 0x47
+  ], true, 90000)));
+  transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter_rbsp
+  ], true, 90000)));
+  transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+  ], true, 90002)));
+  transmuxer.push(packetize(videoPes([
+    0x07, // seq_parameter_set_rbsp
+    0x27, 0x42, 0xe0, 0x0b,
+    0xa9, 0x18, 0x60, 0x9d,
+    0x80, 0x53, 0x06, 0x01,
+    0x06, 0xb6, 0xc2, 0xb5,
+    0xef, 0x7c, 0x04
+  ], false, 90002)));
+  transmuxer.push(packetize(videoPes([
+      0x06, // sei_rbsp
+      0x04, 0x29, 0xb5, 0x00,
+      0x31, 0x47, 0x41, 0x39,
+      0x34, 0x03, 0x52, 0xff,
+      0xfc, 0x94, 0xae, 0xfc,
+      0x94, 0x20, 0xfc, 0x91,
+      0x40, 0xfc, 0xb0, 0xb0,
+      0xfc, 0xba, 0xb0, 0xfc,
+      0xb0, 0xba, 0xfc, 0xb0,
+      0xb0, 0xfc, 0x94, 0x2f,
+      0xfc, 0x94, 0x2f, 0xfc,
+      0x94, 0x2f, 0xff, 0x80,
+      0x00 // has an extra End Of Caption, so start and end times will be the same
+  ], true, 90002)));
+  transmuxer.push(packetize(videoPes([
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
+  ], true, 90004)));
+  transmuxer.flush();
+
+  QUnit.equal(segments.length, 1, 'generated a combined video and audio segment');
+  QUnit.equal(segments[0].type, 'combined', 'combined is the segment type');
+  QUnit.equal(captions.length, 1, 'got one caption');
+  QUnit.equal(captions[0].startPts, 90004, 'original pts value intact');
+  QUnit.equal(captions[0].startTime, 90004 / 90e3, 'caption start time are based on original timeline');
+  QUnit.equal(captions[0].endTime, 90004 / 90e3, 'caption end time are based on original timeline');
+});
+
 QUnit.module('MP4 - Transmuxer', {
   setup: function() {
     transmuxer = new Transmuxer();
