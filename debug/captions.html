@@ -346,7 +346,11 @@
         }
 
         transmuxer.push(segment);
-        transmuxer.flush();
+        if (!partial) {
+          transmuxer.flush();
+        } else {
+          transmuxer.partialFlush();
+        }
       });
 
       muxedName = this.files[0].name.replace('.ts', '.f4m');
