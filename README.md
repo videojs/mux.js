@@ -58,3 +58,6 @@ require() whatever you need. If you'd like to package up a
 distribution to include separately, run `npm run build`. See the
 package.json for other handy scripts if you're thinking about
 contributing.
+
+## Collaborator
+If you are a collaborator, we have a guide on how to [release](https://github.com/videojs/mux.js/blob/master/COLLABORATOR_GUIDE.md#releasing) the project.
