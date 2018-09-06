@@ -56,6 +56,7 @@
                   <input type="file" id="m2ts">
                 </label>
                 <button id="save-muxed" type="button">Save Transmuxer Output</button>
+                <button id="clear-muxed" type="button">Clear Selection</button>
               </div>
               <div>
                 <label><input id="combined-output" type=checkbox name=combined checked value="combined">&nbsp;Remux output into a single output?
@@ -97,7 +98,13 @@
                   <input type="file" id="dash-media">
                 </label>
               </div>
+              <div>
+                <label>
+                  <input type="checkbox" id="dash-partial"> Is this partial data?
+                </label>
+              </div>
               <button id="parse-dash" type="button">Parse Captions</button>
+              <button id="clear-dash" type="button">Clear Selections</button>
             </fieldset>
             <div>
               <label>
@@ -139,6 +146,9 @@
       $ = document.querySelector.bind(document),
       inputs = $('#inputs'),
       m2ts = $('#m2ts'),
+      dashInit = $('#dash-init'),
+      dashMedia = $('#dash-media'),
+      parseDash = $('#parse-dash'),
       captionParser = new muxjs.mp4.CaptionParser(),
       probe = muxjs.mp4.probe,
 
@@ -162,7 +172,11 @@
       prepareSourceBuffer;
 
     logevent = function(event) {
-      console.log(event.type);
+      if (event.type === 'error') {
+        console.error(event.type, event.target.error ? event.target.error : '');
+      } else {
+        console.log(event.type);
+      }
     };
 
     saveTA = function(tarr, n) { var b = new Blob([tarr], {type: 'application/octet-binary'}); return window.saveAs(b, n);}
@@ -257,26 +271,89 @@
 
     m2ts.addEventListener('change', function() {
       var reader = new FileReader();
+      var remuxedSegments = [];
+      var parsedCaptions = [];
+      var remuxedInitSegment = null;
+      var remuxedBytesLength = 0;
+      var createInitSegment = false;
+      var bytes;
+
+      var combined = document.querySelector('#combined-output').checked;
+      var outputType = document.querySelector('input[name="output"]:checked').value;
+      var resetTransmuxer = $('#reset-tranmsuxer').checked;
+      var partial = $('#partial-transmuxer').checked;
 
       // do nothing if no file was chosen
       if (!this.files[0]) {
         return;
       }
 
-      reader.addEventListener('loadend', function() {
+      var onData = function(event) {
+        if (event.type === outputType) {
+          remuxedSegments.push(event);
 
-        var segment = new Uint8Array(reader.result),
-            combined = document.querySelector('#combined-output').checked,
-            outputType = document.querySelector('input[name="output"]:checked').value,
-            resetTransmuxer = $('#reset-tranmsuxer').checked,
-            partial = $('#partial-transmuxer').checked,
-            remuxedSegments = [],
-            parsedCaptions = [],
-            remuxedInitSegment = null,
-            remuxedBytesLength = 0,
-            createInitSegment = false,
-            bytes,
-            i, j;
+          if (!partial) {
+            remuxedBytesLength += event.data.byteLength;
+            remuxedInitSegment = event.initSegment;
+          } else {
+            remuxedBytesLength += event.data.boxes.byteLength;
+            remuxedInitSegment = event.data.track.initSegment;
+          }
+        }
+      };
+
+      var onDone = function (source) {
+        var offset = 0;
+
+        if (source && !source.toLowerCase().includes(outputType)) {
+          return;
+        }
+
+        console.log('done');
+
+        if (createInitSegment) {
+          bytes = new Uint8Array(remuxedInitSegment.byteLength + remuxedBytesLength)
+          bytes.set(remuxedInitSegment, offset);
+          offset += remuxedInitSegment.byteLength;
+          createInitSegment = false;
+        } else {
+          bytes = new Uint8Array(remuxedBytesLength);
+        }
+
+        var i;
+        for (var j = 0, i = offset; j < remuxedSegments.length; j++) {
+          var boxData = partial ?
+             boxData = remuxedSegments[j].data.boxes :
+             boxData = remuxedSegments[j].data;
+
+          bytes.set(boxData, i);
+          i += boxData.byteLength;
+        }
+        remuxedSegments = [];
+        remuxedBytesLength = 0;
+
+        vjsParsed = muxjs.mp4.tools.inspect(bytes);
+        console.log('transmuxed', vjsParsed);
+
+        // clear old box info
+        dashBoxes.innerHTML = JSON.stringify(parsedCaptions, null, 2);
+        console.log('captions', parsedCaptions);
+
+        if ($('#m2ts-active').checked) {
+          prepareSourceBuffer(combined, outputType, function () {
+            console.log('appending...');
+            window.vjsBuffer.appendBuffer(bytes);
+            video.play();
+          });
+        }
+      };
+
+      var onCaption = function(caption) {
+        parsedCaptions = parsedCaptions.concat(caption);
+      };
+
+      reader.addEventListener('loadend', function() {
+        var segment = new Uint8Array(reader.result);
 
         if (resetTransmuxer || !transmuxer) {
           createInitSegment = true;
@@ -289,75 +366,29 @@
             transmuxer = new muxjs.partial.Transmuxer({remux: false});
           }
 
-          transmuxer.on('data', function(event) {
-            if (event.type === outputType) {
-              remuxedSegments.push(event);
-              if (!partial) {
-                remuxedBytesLength += event.data.byteLength;
-                remuxedInitSegment = event.initSegment;
-              } else {
-                remuxedBytesLength += event.data.boxes.byteLength;
-                remuxedInitSegment = event.data.track.initSegment;
-              }
-            }
-          });
+          transmuxer.on('data', onData);
 
-          transmuxer.on('caption', function(caption) {
-            parsedCaptions = parsedCaptions.concat(caption);
-          });
+          transmuxer.on('caption', onCaption);
 
-          transmuxer.on('done', function () {
-            var offset = 0;
-            if (createInitSegment) {
-              bytes = new Uint8Array(remuxedInitSegment.byteLength + remuxedBytesLength)
-              bytes.set(remuxedInitSegment, offset);
-              offset += remuxedInitSegment.byteLength;
-              createInitSegment = false;
-            } else {
-              bytes = new Uint8Array(remuxedBytesLength);
-            }
-
-            for (j = 0, i = offset; j < remuxedSegments.length; j++) {
-              var boxData = partial ?
-                 boxData = remuxedSegments[j].data.boxes :
-                 boxData = remuxedSegments[j].data;
-
-              bytes.set(boxData, i);
-              i += boxData.byteLength;
-            }
-            remuxedSegments = [];
-            remuxedBytesLength = 0;
-
-            vjsParsed = muxjs.mp4.tools.inspect(bytes);
-            console.log('transmuxed', vjsParsed);
-
-            // clear old box info
-            dashBoxes.innerHTML = JSON.stringify(parsedCaptions, null, 2);
-            console.log('captions', parsedCaptions);
-
-            if ($('#m2ts-active').checked) {
-              prepareSourceBuffer(combined, outputType, function () {
-                console.log('appending...');
-                window.vjsBuffer.appendBuffer(bytes);
-                video.play();
-              });
-            }
-          });
+          transmuxer.on('done', onDone);
+          if (partial) {
+            transmuxer.on('partialdone', onDone);
+          }
         }
 
         transmuxer.push(segment);
-        if (!partial) {
-          transmuxer.flush();
-        } else {
+        if (partial) {
           transmuxer.partialFlush();
+        } else {
+          transmuxer.flush();
         }
-      });
+      }.bind(this));
 
       muxedName = this.files[0].name.replace('.ts', '.f4m');
       reader.readAsArrayBuffer(this.files[0]);
     }, false);
 
-    $('#dash-init').addEventListener('change', function() {
+    dashInit.addEventListener('change', function() {
       var reader = new FileReader();
       var init = this.files[0];
       var segment;
@@ -373,7 +404,7 @@
       reader.readAsArrayBuffer(init);
     }, false);
 
-    $('#dash-media').addEventListener('change', function() {
+    dashMedia.addEventListener('change', function() {
       var segment = this.files[0];
 
       if (segment === undefined) {
@@ -391,7 +422,7 @@
 
     }, false);
 
-    $('#parse-dash').addEventListener('click', function() {
+    parseDash.addEventListener('click', function() {
       if (initResult === undefined || segmentResult === undefined) {
         console.error('Either the init or media segment was not provided');
         return;
@@ -402,8 +433,9 @@
       var videoTrackIds = probe.videoTrackIds(initBytes);
       var timescales = probe.timescale(initBytes);
       var texifiedParsed;
+      var partialDash = $('#dash-partial').value;
 
-      captionParser.init();
+      captionParser.init({ isPartial: partialDash });
       dashParsed = captionParser.parse(segmentBytes, videoTrackIds, timescales);
 
       dashBoxes.innerHTML = JSON.stringify(dashParsed, null, 2);
@@ -415,6 +447,17 @@
       if (muxedData && muxedName) {
         return saveTA(muxedData, muxedName);
       }
+    });
+
+    $('#clear-muxed').addEventListener('click', function() {
+      muxedData = undefined;
+      muxedName = undefined;
+      m2ts.value = "";
+    });
+
+    $('#clear-dash').addEventListener('click', function() {
+      dashInit.value = "";
+      dashMedia.value = "";
     });
 
     $('#combined-output').addEventListener('change', function () {
