@@ -309,8 +309,6 @@
           return;
         }
 
-        console.log('done');
-
         if (createInitSegment) {
           bytes = new Uint8Array(remuxedInitSegment.byteLength + remuxedBytesLength)
           bytes.set(remuxedInitSegment, offset);
@@ -320,11 +318,10 @@
           bytes = new Uint8Array(remuxedBytesLength);
         }
 
-        var i;
         for (var j = 0, i = offset; j < remuxedSegments.length; j++) {
           var boxData = partial ?
-             boxData = remuxedSegments[j].data.boxes :
-             boxData = remuxedSegments[j].data;
+            remuxedSegments[j].data.boxes :
+            remuxedSegments[j].data;
 
           bytes.set(boxData, i);
           i += boxData.byteLength;
