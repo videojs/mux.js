@@ -3,8 +3,6 @@
 
 Lightweight utilities for inspecting and manipulating video container formats.
 
-Lead Maintainer: Jon-Carlos Rivera [@imbcmdth](https://github.com/imbcmdth)
-
 Maintenance Status: Stable
 
 ## Diagram
