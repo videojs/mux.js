@@ -63,7 +63,7 @@
     "dist/"
   ],
   "devDependencies": {
-    "browserify": "^12.0.1",
+    "browserify": "^16.2.3",
     "browserify-shim": "^3.8.12",
     "bundle-collapser": "^1.2.1",
     "eslint": "^2.10.2",
