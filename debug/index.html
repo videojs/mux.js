@@ -356,7 +356,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
               prepareSourceBuffer(combined, outputType, function () {
                 console.log('appending...');
                 window.vjsBuffer.appendBuffer(bytes);
-                video.play();
+                // video.play();
               });
             }
           });
@@ -379,7 +379,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
         if ($('#working-active').checked) {
           prepareSourceBuffer(function() {
             window.vjsBuffer.appendBuffer(bytes);
-            video.play();
+            // video.play();
           });
         }
 
