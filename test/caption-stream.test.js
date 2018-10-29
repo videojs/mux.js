@@ -896,7 +896,7 @@ QUnit.only('number of roll up rows takes precedence over base row command', func
   captionStream.flush();
 
   QUnit.deepEqual(captions[0].text, '-', 'RU2 caption is correct');
-  QUnit.deepEqual(captions[1].text, 'so', 'RU3 caption is correct');
+  QUnit.deepEqual(captions[1].text, '-\nso', 'RU3 caption is correct');
 });
 
 var cea608Stream;
