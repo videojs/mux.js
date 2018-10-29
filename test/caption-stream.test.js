@@ -844,6 +844,61 @@ QUnit.test('special and extended character codes work regardless of field and da
   QUnit.deepEqual(captions[2].text, String.fromCharCode(0xbb), 'CC4 extended character correct');
 });
 
+QUnit.only('number of roll up rows takes precedence over base row command', function(assert) {
+  var captions = [];
+  var packets = [
+    // RCL
+    { type: 0, ccData: 0x1420 },
+    // RCL
+    { type: 0, ccData: 0x1420 },
+    // EDM
+    { type: 0, ccData: 0x142c },
+    // EDM
+    { type: 0, ccData: 0x142c },
+    // RU2, CC1
+    { type: 0, ccData: 0x1425 },
+    // RU2, CC1
+    { type: 0, ccData: 0x1425 },
+    // PAC: row 1
+    { type: 0, ccData: 0x1170 },
+    // PAC: row 1
+    { type: 0, ccData: 0x1170 },
+    // -
+    { type: 0, ccData: 0x2d00 },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // RU3, CC1
+    { type: 0, ccData: 0x1426 },
+    // RU3, CC1
+    { type: 0, ccData: 0x1426 },
+    // PAC, row 11
+    { type: 0, ccData: 0x13d0 },
+    // PAC, row 11
+    { type: 0, ccData: 0x13d0 },
+    // so
+    { type: 0, ccData: 0x736f },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // CR
+    { type: 0, ccData: 0x14ad }
+  ];
+  var seis;
+
+  captionStream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  seis = packets.map(makeSeiFromCaptionPacket);
+
+  seis.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.deepEqual(captions[0].text, '-', 'RU2 caption is correct');
+  QUnit.deepEqual(captions[1].text, 'so', 'RU3 caption is correct');
+});
+
 var cea608Stream;
 
 QUnit.module('CEA 608 Stream', {
