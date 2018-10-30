@@ -844,7 +844,7 @@ QUnit.test('special and extended character codes work regardless of field and da
   QUnit.deepEqual(captions[2].text, String.fromCharCode(0xbb), 'CC4 extended character correct');
 });
 
-QUnit.only('number of roll up rows takes precedence over base row command', function(assert) {
+QUnit.test('number of roll up rows takes precedence over base row command', function(assert) {
   var captions = [];
   var packets = [
     // RCL
@@ -2425,4 +2425,39 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     stream: 'CC1'
   }, 'parsed the 4th roll-up caption');
 
+});
+
+QUnit.test('Cea608Stream will log errors, not throw an exception', function(assert) {
+  var result;
+  var originalConsole = window.console.log;
+  var logs = [];
+
+  window.console.log = function(msg) {
+    logs.push(msg);
+  };
+
+  cea608Stream.displayed_[0] = undefined;
+  cea608Stream.displayed_[1] = null;
+
+  try {
+    cea608Stream.flushDisplayed();
+    result = true;
+  } catch (e) {
+    result = false;
+  }
+
+  QUnit.ok(
+    result,
+    'the function does not throw an exception'
+  );
+  QUnit.deepEqual(
+    logs,
+    [
+      'Skipping malformed caption.',
+      'Skipping malformed caption.'
+    ],
+    'warnings were logged to the console'
+  );
+
+  window.console.log = originalConsole;
 });
