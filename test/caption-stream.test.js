@@ -855,11 +855,11 @@ QUnit.test('number of roll up rows takes precedence over base row command', func
     { type: 0, ccData: 0x142c },
     // EDM
     { type: 0, ccData: 0x142c },
-    // RU2, CC1
+    // RU2 (roll-up, 2 rows), CC1
     { type: 0, ccData: 0x1425 },
     // RU2, CC1
     { type: 0, ccData: 0x1425 },
-    // PAC: row 1
+    // PAC: row 1 (sets base row to row 1)
     { type: 0, ccData: 0x1170 },
     // PAC: row 1
     { type: 0, ccData: 0x1170 },
@@ -869,7 +869,7 @@ QUnit.test('number of roll up rows takes precedence over base row command', func
     { type: 0, ccData: 0x14ad },
     // CR
     { type: 0, ccData: 0x14ad },
-    // RU3, CC1
+    // RU3 (roll-up, 3 rows), CC1
     { type: 0, ccData: 0x1426 },
     // RU3, CC1
     { type: 0, ccData: 0x1426 },
@@ -2429,15 +2429,15 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
 
 QUnit.test('Cea608Stream will log errors, not throw an exception', function(assert) {
   var result;
-  var originalConsole = window.console.log;
+  var originalConsole = window.console.error;
   var logs = [];
 
-  window.console.log = function(msg) {
+  window.console.error = function(msg) {
     logs.push(msg);
   };
 
+  // this will force an exception to happen in flushDisplayed
   cea608Stream.displayed_[0] = undefined;
-  cea608Stream.displayed_[1] = null;
 
   try {
     cea608Stream.flushDisplayed();
@@ -2453,11 +2453,10 @@ QUnit.test('Cea608Stream will log errors, not throw an exception', function(asse
   QUnit.deepEqual(
     logs,
     [
-      'Skipping malformed caption.',
       'Skipping malformed caption.'
     ],
     'warnings were logged to the console'
   );
 
-  window.console.log = originalConsole;
+  window.console.error = originalConsole;
 });
