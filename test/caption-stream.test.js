@@ -847,14 +847,7 @@ QUnit.test('special and extended character codes work regardless of field and da
 QUnit.test('number of roll up rows takes precedence over base row command', function(assert) {
   var captions = [];
   var packets = [
-    // RCL
-    { type: 0, ccData: 0x1420 },
-    // RCL
-    { type: 0, ccData: 0x1420 },
-    // EDM
-    { type: 0, ccData: 0x142c },
-    // EDM
-    { type: 0, ccData: 0x142c },
+
     // RU2 (roll-up, 2 rows), CC1
     { type: 0, ccData: 0x1425 },
     // RU2, CC1
@@ -897,6 +890,24 @@ QUnit.test('number of roll up rows takes precedence over base row command', func
 
   QUnit.deepEqual(captions[0].text, '-', 'RU2 caption is correct');
   QUnit.deepEqual(captions[1].text, '-\nso', 'RU3 caption is correct');
+
+  packets = [
+    // switching from row 11 to 0
+    // PAC: row 0 (sets base row to row 0)
+    { type: 0, ccData: 0x1140 },
+    // PAC: row 0
+    { type: 0, ccData: 0x1140 },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // CR
+    { type: 0, ccData: 0x14ad }
+  ];
+
+  seis = packets.map(makeSeiFromCaptionPacket);
+  seis.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.deepEqual(captions[2].text, '-\nso', 'RU3 caption is correct');
 });
 
 var cea608Stream;
