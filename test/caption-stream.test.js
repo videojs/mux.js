@@ -844,6 +844,72 @@ QUnit.test('special and extended character codes work regardless of field and da
   QUnit.deepEqual(captions[2].text, String.fromCharCode(0xbb), 'CC4 extended character correct');
 });
 
+QUnit.test('number of roll up rows takes precedence over base row command', function(assert) {
+  var captions = [];
+  var packets = [
+
+    // RU2 (roll-up, 2 rows), CC1
+    { type: 0, ccData: 0x1425 },
+    // RU2, CC1
+    { type: 0, ccData: 0x1425 },
+    // PAC: row 1 (sets base row to row 1)
+    { type: 0, ccData: 0x1170 },
+    // PAC: row 1
+    { type: 0, ccData: 0x1170 },
+    // -
+    { type: 0, ccData: 0x2d00 },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // RU3 (roll-up, 3 rows), CC1
+    { type: 0, ccData: 0x1426 },
+    // RU3, CC1
+    { type: 0, ccData: 0x1426 },
+    // PAC, row 11
+    { type: 0, ccData: 0x13d0 },
+    // PAC, row 11
+    { type: 0, ccData: 0x13d0 },
+    // so
+    { type: 0, ccData: 0x736f },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // CR
+    { type: 0, ccData: 0x14ad }
+  ];
+  var seis;
+
+  captionStream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  seis = packets.map(makeSeiFromCaptionPacket);
+
+  seis.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.deepEqual(captions[0].text, '-', 'RU2 caption is correct');
+  QUnit.deepEqual(captions[1].text, '-\nso', 'RU3 caption is correct');
+
+  packets = [
+    // switching from row 11 to 0
+    // PAC: row 0 (sets base row to row 0)
+    { type: 0, ccData: 0x1140 },
+    // PAC: row 0
+    { type: 0, ccData: 0x1140 },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // CR
+    { type: 0, ccData: 0x14ad }
+  ];
+
+  seis = packets.map(makeSeiFromCaptionPacket);
+  seis.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.deepEqual(captions[2].text, '-\nso', 'RU3 caption is correct');
+});
+
 var cea608Stream;
 
 QUnit.module('CEA 608 Stream', {
@@ -2370,4 +2436,38 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     stream: 'CC1'
   }, 'parsed the 4th roll-up caption');
 
+});
+
+QUnit.test('Cea608Stream will log errors, not throw an exception', function(assert) {
+  var result;
+  var originalConsole = window.console.error;
+  var logs = [];
+
+  window.console.error = function(msg) {
+    logs.push(msg);
+  };
+
+  // this will force an exception to happen in flushDisplayed
+  cea608Stream.displayed_[0] = undefined;
+
+  try {
+    cea608Stream.flushDisplayed();
+    result = true;
+  } catch (e) {
+    result = false;
+  }
+
+  QUnit.ok(
+    result,
+    'the function does not throw an exception'
+  );
+  QUnit.deepEqual(
+    logs,
+    [
+      'Skipping malformed caption.'
+    ],
+    'warnings were logged to the console'
+  );
+
+  window.console.error = originalConsole;
 });
