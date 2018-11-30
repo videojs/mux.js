@@ -71,7 +71,7 @@
     "in-publish": "^2.0.0",
     "jshint": "^2.9.1-rc2",
     "karma": "^0.13.9",
-    "karma-browserify": "^4.4.2",
+    "karma-browserify": "^6.0.0",
     "karma-chrome-launcher": "^2.2.0",
     "karma-firefox-launcher": "^1.1.0",
     "karma-qunit": "^0.1.5",
