@@ -10,7 +10,7 @@ captions exist in many videos today that were originally encoded for
 broadcast and they are also a standard method used to provide captions
 for live events. In-band HLS captions follow the CEA-708 standard.
 
-In this project, in-band captions are parsed using a [CaptionStream][caption-stream]. For MPEG2-TS sources, the CaptionStream is used as part of the [Transmuxer TS Pipeline][#transmuxer]. For ISOBMFF sources, the CaptionStream is used as part of the [MP4 CaptionParser][mp4-caption-parser].
+In this project, in-band captions are parsed using a [CaptionStream][caption-stream]. For MPEG2-TS sources, the CaptionStream is used as part of the [Transmuxer TS Pipeline][transmuxer]. For ISOBMFF sources, the CaptionStream is used as part of the [MP4 CaptionParser][mp4-caption-parser].
 
 ## Is my stream CEA-608/CEA-708 compatible?
 
