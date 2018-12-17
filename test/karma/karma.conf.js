@@ -61,18 +61,7 @@ module.exports = function(config) {
     // enable / disable watching file and executing tests whenever any file changes
     autoWatch: false,
 
-    // start these browsers
-    // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    // TODO: This should include firefox for env.TRAVIS. It is currently turned off
-    //       because of https://github.com/travis-ci/travis-ci/issues/8242 When this issue
-    //       is resolved, this should be updated to include firefox
-    customLaunchers: {
-      ChromeHeadlessNoSandbox: {
-        base: 'ChromeHeadless',
-        flags: ['--no-sandbox']
-      }
-    },
-    browsers: ['ChromeHeadlessNoSandbox', 'FirefoxHeadless'],
+    browsers: ['Chrome', 'Firefox'],
 
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
