@@ -10,6 +10,7 @@ var mp2t = require('../lib/m2ts'),
     testMiddlePatPMT = require('./utils/test-middle-pat-pmt'),
     mp4AudioProperties = require('../lib/mp4/transmuxer').AUDIO_PROPERTIES,
     mp4VideoProperties = require('../lib/mp4/transmuxer').VIDEO_PROPERTIES,
+    generateVideoTimingInfo = require('../lib/mp4/transmuxer').generateVideoTimingInfo,
     clock = require('../lib/utils/clock'),
     utils = require('./utils'),
     TransportPacketStream = mp2t.TransportPacketStream,
@@ -1936,6 +1937,52 @@ QUnit.test('do not subtract the first frame\'s compositionTimeOffset from baseMe
   QUnit.equal(tfdt.baseMediaDecodeTime, 140, 'calculated baseMediaDecodeTime');
 });
 
+QUnit.test('video segment stream triggers timingInfo with timing info', function() {
+  var timingInfoArr = [];
+
+  videoSegmentStream.on('timingInfo', function(timingInfo) {
+    timingInfoArr.push(timingInfo);
+  });
+
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 50,
+    pts: 60
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: 50,
+    pts: 60
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 100,
+    pts: 110
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 150,
+    pts: 160
+  });
+  videoSegmentStream.flush();
+
+  QUnit.equal(timingInfoArr.length, 1, 'triggered timingInfo once');
+  QUnit.deepEqual(timingInfoArr[0], {
+    start: {
+      dts: 50,
+      pts: 60
+    },
+    end: {
+      dts: 200,
+      pts: 210
+    }
+  }, 'triggered correct timing info');
+});
+
 QUnit.test('aignGopsAtStart_ filters gops appropriately', function() {
   var gopsToAlignWith, gops, actual, expected;
 
@@ -2360,6 +2407,67 @@ QUnit.test('alignGopsAtEnd_ filters gops appropriately', function() {
   QUnit.deepEqual(actual, expected,
     'some gops trimmed, alignment candidates contained between gops,' +
     'match with an alignment candidate');
+});
+
+QUnit.test('generateVideoTimingInfo generates correct timing info object', function() {
+  var
+    firstFrame = {
+      dts: 12,
+      pts: 14,
+      duration: 3
+    },
+    lastFrame = {
+      dts: 120,
+      pts: 140,
+      duration: 4
+    },
+    startPts = 10;
+
+  QUnit.deepEqual(generateVideoTimingInfo(firstFrame, lastFrame, startPts), {
+    start: {
+      dts: 12,
+      pts: 14
+    },
+    end: {
+      dts: 124,
+      pts: 144
+    }
+  }, 'generated correct timing info object');
+});
+
+QUnit.test('generateVideoTimingInfo accounts for prepended GOPs', function() {
+  var
+    firstFrame = {
+      dts: 12,
+      pts: 14,
+      duration: 3
+    },
+    lastFrame = {
+      dts: 120,
+      pts: 140,
+      duration: 4
+    },
+    startPts = 10,
+    prependedGops = [{
+      pts: 4
+    }, {
+      pts: 8
+    }];
+
+  QUnit.deepEqual(
+    generateVideoTimingInfo(firstFrame, lastFrame, startPts, prependedGops),
+    {
+      start: {
+        dts: 12,
+        pts: 14
+      },
+      end: {
+        dts: 124,
+        pts: 144
+      },
+      prependedGopDuration: 6
+    },
+    'included prepended GOP duration in timing info');
 });
 
 QUnit.module('ADTS Stream', {
@@ -3221,6 +3329,43 @@ QUnit.test('generates a video init segment', function() {
   boxes = mp4.tools.inspect(segments[0].initSegment);
   QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
   QUnit.equal('moov', boxes[1].type, 'generated a moov box');
+});
+
+QUnit.test('transmuxer triggers video timing info event on flush', function() {
+  var videoTimingInfoArr = [];
+
+  transmuxer.on('videoTimingInfo', function(videoTimingInfo) {
+    videoTimingInfoArr.push(videoTimingInfo);
+  });
+
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true
+  })));
+
+  transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+    0x07, // seq_parameter_set_rbsp
+    0x27, 0x42, 0xe0, 0x0b,
+    0xa9, 0x18, 0x60, 0x9d,
+    0x80, 0x53, 0x06, 0x01,
+    0x06, 0xb6, 0xc2, 0xb5,
+    0xef, 0x7c, 0x04
+  ], false)));
+  transmuxer.push(packetize(videoPes([
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
+  ], true)));
+
+  QUnit.equal(videoTimingInfoArr.length, 0, 'has not triggered video timing info');
+
+  transmuxer.flush();
+
+  QUnit.equal(videoTimingInfoArr.length, 1, 'triggered video timing info');
 });
 
 QUnit.test('generates an audio init segment', function() {
