@@ -8,9 +8,10 @@ var mp2t = require('../lib/m2ts'),
     QUnit = require('qunit'),
     testSegment = require('./utils/test-segment'),
     testMiddlePatPMT = require('./utils/test-middle-pat-pmt'),
-    mp4AudioProperties = require('../lib/mp4/transmuxer').AUDIO_PROPERTIES,
-    mp4VideoProperties = require('../lib/mp4/transmuxer').VIDEO_PROPERTIES,
-    generateVideoTimingInfo = require('../lib/mp4/transmuxer').generateVideoTimingInfo,
+    mp4Transmuxer = require('../lib/mp4/transmuxer'),
+    mp4AudioProperties = mp4Transmuxer.AUDIO_PROPERTIES,
+    mp4VideoProperties = mp4Transmuxer.VIDEO_PROPERTIES,
+    generateVideoSegmentTimingInfo = mp4Transmuxer.generateVideoSegmentTimingInfo,
     clock = require('../lib/utils/clock'),
     utils = require('./utils'),
     TransportPacketStream = mp2t.TransportPacketStream,
@@ -1937,11 +1938,12 @@ QUnit.test('do not subtract the first frame\'s compositionTimeOffset from baseMe
   QUnit.equal(tfdt.baseMediaDecodeTime, 140, 'calculated baseMediaDecodeTime');
 });
 
-QUnit.test('video segment stream triggers timingInfo with timing info', function() {
-  var timingInfoArr = [];
+QUnit.test('video segment stream triggers segmentTimingInfo with timing info',
+function() {
+  var segmentTimingInfoArr = [];
 
-  videoSegmentStream.on('timingInfo', function(timingInfo) {
-    timingInfoArr.push(timingInfo);
+  videoSegmentStream.on('segmentTimingInfo', function(segmentTimingInfo) {
+    segmentTimingInfoArr.push(segmentTimingInfo);
   });
 
   videoSegmentStream.push({
@@ -1970,8 +1972,8 @@ QUnit.test('video segment stream triggers timingInfo with timing info', function
   });
   videoSegmentStream.flush();
 
-  QUnit.equal(timingInfoArr.length, 1, 'triggered timingInfo once');
-  QUnit.deepEqual(timingInfoArr[0], {
+  QUnit.equal(segmentTimingInfoArr.length, 1, 'triggered segmentTimingInfo once');
+  QUnit.deepEqual(segmentTimingInfoArr[0], {
     start: {
       dts: 50,
       pts: 60
@@ -1980,7 +1982,7 @@ QUnit.test('video segment stream triggers timingInfo with timing info', function
       dts: 200,
       pts: 210
     }
-  }, 'triggered correct timing info');
+  }, 'triggered correct segment timing info');
 });
 
 QUnit.test('aignGopsAtStart_ filters gops appropriately', function() {
@@ -2409,7 +2411,8 @@ QUnit.test('alignGopsAtEnd_ filters gops appropriately', function() {
     'match with an alignment candidate');
 });
 
-QUnit.test('generateVideoTimingInfo generates correct timing info object', function() {
+QUnit.test('generateVideoSegmentTimingInfo generates correct timing info object',
+function() {
   var
     firstFrame = {
       dts: 12,
@@ -2421,21 +2424,29 @@ QUnit.test('generateVideoTimingInfo generates correct timing info object', funct
       pts: 140,
       duration: 4
     },
-    startPts = 10;
+    // should have no impact as there wasn't any prepended content
+    originalSegmentStartPts = 10;
 
-  QUnit.deepEqual(generateVideoTimingInfo(firstFrame, lastFrame, startPts), {
-    start: {
-      dts: 12,
-      pts: 14
-    },
-    end: {
-      dts: 124,
-      pts: 144
-    }
-  }, 'generated correct timing info object');
+  QUnit.deepEqual(
+    generateVideoSegmentTimingInfo(
+      firstFrame.dts,
+      firstFrame.pts,
+      lastFrame.dts + lastFrame.duration,
+      lastFrame.pts + lastFrame.duration,
+      originalSegmentStartPts
+    ), {
+      start: {
+        dts: 12,
+        pts: 14
+      },
+      end: {
+        dts: 124,
+        pts: 144
+      }
+    }, 'generated correct timing info object');
 });
 
-QUnit.test('generateVideoTimingInfo accounts for prepended GOPs', function() {
+QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', function() {
   var
     firstFrame = {
       dts: 12,
@@ -2447,7 +2458,8 @@ QUnit.test('generateVideoTimingInfo accounts for prepended GOPs', function() {
       pts: 140,
       duration: 4
     },
-    startPts = 10,
+    originalSegmentStartPts = 10,
+    // two GOPs were prepended
     prependedGops = [{
       pts: 4
     }, {
@@ -2455,8 +2467,14 @@ QUnit.test('generateVideoTimingInfo accounts for prepended GOPs', function() {
     }];
 
   QUnit.deepEqual(
-    generateVideoTimingInfo(firstFrame, lastFrame, startPts, prependedGops),
-    {
+    generateVideoSegmentTimingInfo(
+      firstFrame.dts,
+      firstFrame.pts,
+      lastFrame.dts + lastFrame.duration,
+      lastFrame.pts + lastFrame.duration,
+      originalSegmentStartPts,
+      prependedGops
+    ), {
       start: {
         dts: 12,
         pts: 14
@@ -2465,9 +2483,11 @@ QUnit.test('generateVideoTimingInfo accounts for prepended GOPs', function() {
         dts: 124,
         pts: 144
       },
-      prependedGopDuration: 6
+      // original segment start - new segment start (first prepended GOP)
+      // = 10 - 4 = 6
+      prependedContentDuration: 6
     },
-    'included prepended GOP duration in timing info');
+    'included prepended content duration in timing info');
 });
 
 QUnit.module('ADTS Stream', {
@@ -3332,10 +3352,10 @@ QUnit.test('generates a video init segment', function() {
 });
 
 QUnit.test('transmuxer triggers video timing info event on flush', function() {
-  var videoTimingInfoArr = [];
+  var videoSegmentTimingInfoArr = [];
 
-  transmuxer.on('videoTimingInfo', function(videoTimingInfo) {
-    videoTimingInfoArr.push(videoTimingInfo);
+  transmuxer.on('videoSegmentTimingInfo', function(videoSegmentTimingInfo) {
+    videoSegmentTimingInfoArr.push(videoSegmentTimingInfo);
   });
 
   transmuxer.push(packetize(PAT));
@@ -3361,11 +3381,15 @@ QUnit.test('transmuxer triggers video timing info event on flush', function() {
       0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
   ], true)));
 
-  QUnit.equal(videoTimingInfoArr.length, 0, 'has not triggered video timing info');
+  QUnit.equal(
+    videoSegmentTimingInfoArr.length,
+    0,
+    'has not triggered videoSegmentTimingInfo'
+  );
 
   transmuxer.flush();
 
-  QUnit.equal(videoTimingInfoArr.length, 1, 'triggered video timing info');
+  QUnit.equal(videoSegmentTimingInfoArr.length, 1, 'triggered videoSegmentTimingInfo');
 });
 
 QUnit.test('generates an audio init segment', function() {
