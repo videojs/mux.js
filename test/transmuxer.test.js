@@ -1981,7 +1981,8 @@ function() {
     end: {
       dts: 200,
       pts: 210
-    }
+    },
+    prependedContentDuration: 0
   }, 'triggered correct segment timing info');
 });
 
@@ -2424,8 +2425,7 @@ function() {
       pts: 140,
       duration: 4
     },
-    // should have no impact as there wasn't any prepended content
-    originalSegmentStartPts = 10;
+    prependedContentDuration = 0;
 
   QUnit.deepEqual(
     generateVideoSegmentTimingInfo(
@@ -2433,7 +2433,7 @@ function() {
       firstFrame.pts,
       lastFrame.dts + lastFrame.duration,
       lastFrame.pts + lastFrame.duration,
-      originalSegmentStartPts
+      prependedContentDuration
     ), {
       start: {
         dts: 12,
@@ -2442,7 +2442,8 @@ function() {
       end: {
         dts: 124,
         pts: 144
-      }
+      },
+      prependedContentDuration: 0
     }, 'generated correct timing info object');
 });
 
@@ -2458,13 +2459,7 @@ QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', functio
       pts: 140,
       duration: 4
     },
-    originalSegmentStartPts = 10,
-    // two GOPs were prepended
-    prependedGops = [{
-      pts: 4
-    }, {
-      pts: 8
-    }];
+    prependedContentDuration = 7;
 
   QUnit.deepEqual(
     generateVideoSegmentTimingInfo(
@@ -2472,8 +2467,7 @@ QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', functio
       firstFrame.pts,
       lastFrame.dts + lastFrame.duration,
       lastFrame.pts + lastFrame.duration,
-      originalSegmentStartPts,
-      prependedGops
+      prependedContentDuration
     ), {
       start: {
         dts: 12,
@@ -2483,9 +2477,7 @@ QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', functio
         dts: 124,
         pts: 144
       },
-      // original segment start - new segment start (first prepended GOP)
-      // = 10 - 4 = 6
-      prependedContentDuration: 6
+      prependedContentDuration: 7
     },
     'included prepended content duration in timing info');
 });
