@@ -1940,7 +1940,13 @@ QUnit.test('do not subtract the first frame\'s compositionTimeOffset from baseMe
 
 QUnit.test('video segment stream triggers segmentTimingInfo with timing info',
 function() {
-  var segmentTimingInfoArr = [];
+  var
+    segmentTimingInfoArr = [],
+    baseMediaDecodeTime = 40,
+    startingDts = 50,
+    startingPts = 60,
+    lastFrameStartDts = 150,
+    lastFrameStartPts = 160;
 
   videoSegmentStream.on('segmentTimingInfo', function(segmentTimingInfo) {
     segmentTimingInfoArr.push(segmentTimingInfo);
@@ -1949,14 +1955,14 @@ function() {
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
-    dts: 50,
-    pts: 60
+    dts: startingDts,
+    pts: startingPts
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
-    dts: 50,
-    pts: 60
+    dts: startingDts,
+    pts: startingPts
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
@@ -1967,22 +1973,32 @@ function() {
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
-    dts: 150,
-    pts: 160
+    dts: lastFrameStartDts,
+    pts: lastFrameStartPts
   });
   videoSegmentStream.flush();
 
   QUnit.equal(segmentTimingInfoArr.length, 1, 'triggered segmentTimingInfo once');
+  QUnit.equal(
+    baseMediaDecodeTime,
+    segmentTimingInfoArr[0].baseMediaDecodeTime,
+    'set baseMediaDecodeTime'
+  );
   QUnit.deepEqual(segmentTimingInfoArr[0], {
     start: {
-      dts: 50,
-      pts: 60
+      dts: baseMediaDecodeTime,
+      pts: baseMediaDecodeTime + startingPts - startingDts
     },
     end: {
-      dts: 200,
-      pts: 210
+      // because no duration is provided in this test, the duration will instead be based
+      // on the previous frame, which will be the start of this frame minus the end of the
+      // last frame, or 150 - 100 = 50, which gets added to lastFrameStartDts - startDts =
+      // 150 - 50 = 100
+      dts: baseMediaDecodeTime + 100 + 50,
+      pts: baseMediaDecodeTime + 100 + 50
     },
-    prependedContentDuration: 0
+    prependedContentDuration: 0,
+    baseMediaDecodeTime: baseMediaDecodeTime
   }, 'triggered correct segment timing info');
 });
 
@@ -2425,10 +2441,12 @@ function() {
       pts: 140,
       duration: 4
     },
+    baseMediaDecodeTime = 20,
     prependedContentDuration = 0;
 
   QUnit.deepEqual(
     generateVideoSegmentTimingInfo(
+      baseMediaDecodeTime,
       firstFrame.dts,
       firstFrame.pts,
       lastFrame.dts + lastFrame.duration,
@@ -2436,14 +2454,15 @@ function() {
       prependedContentDuration
     ), {
       start: {
-        dts: 12,
-        pts: 14
+        dts: baseMediaDecodeTime,
+        pts: baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
       },
       end: {
-        dts: 124,
-        pts: 144
+        dts: baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        pts: baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
       },
-      prependedContentDuration: 0
+      prependedContentDuration: 0,
+      baseMediaDecodeTime: baseMediaDecodeTime
     }, 'generated correct timing info object');
 });
 
@@ -2459,10 +2478,12 @@ QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', functio
       pts: 140,
       duration: 4
     },
+    baseMediaDecodeTime = 20,
     prependedContentDuration = 7;
 
   QUnit.deepEqual(
     generateVideoSegmentTimingInfo(
+      baseMediaDecodeTime,
       firstFrame.dts,
       firstFrame.pts,
       lastFrame.dts + lastFrame.duration,
@@ -2470,14 +2491,15 @@ QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', functio
       prependedContentDuration
     ), {
       start: {
-        dts: 12,
-        pts: 14
+        dts: baseMediaDecodeTime,
+        pts: baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
       },
       end: {
-        dts: 124,
-        pts: 144
+        dts: baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        pts: baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
       },
-      prependedContentDuration: 7
+      prependedContentDuration: 7,
+      baseMediaDecodeTime: baseMediaDecodeTime
     },
     'included prepended content duration in timing info');
 });
