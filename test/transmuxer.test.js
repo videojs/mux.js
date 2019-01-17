@@ -1986,16 +1986,19 @@ function() {
   );
   QUnit.deepEqual(segmentTimingInfoArr[0], {
     start: {
-      dts: baseMediaDecodeTime,
-      pts: baseMediaDecodeTime + startingPts - startingDts
+      // baseMediaDecodeTime
+      dts: 40,
+      // baseMediaDecodeTime + startingPts - startingDts
+      pts: 40 + 60 - 50
     },
     end: {
       // because no duration is provided in this test, the duration will instead be based
       // on the previous frame, which will be the start of this frame minus the end of the
       // last frame, or 150 - 100 = 50, which gets added to lastFrameStartDts - startDts =
       // 150 - 50 = 100
-      dts: baseMediaDecodeTime + 100 + 50,
-      pts: baseMediaDecodeTime + 100 + 50
+      // + baseMediaDecodeTime
+      dts: 40 + 100 + 50,
+      pts: 40 + 100 + 50
     },
     prependedContentDuration: 0,
     baseMediaDecodeTime: baseMediaDecodeTime
@@ -2454,12 +2457,16 @@ function() {
       prependedContentDuration
     ), {
       start: {
-        dts: baseMediaDecodeTime,
-        pts: baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        // baseMediaDecodeTime,
+        dts: 20,
+        // baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        pts: 20 + 14 - 12
       },
       end: {
-        dts: baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
-        pts: baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        // baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        dts: 20 + 120 + 4 - 12,
+        // baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        pts: 20 + 140 + 4 - 14
       },
       prependedContentDuration: 0,
       baseMediaDecodeTime: baseMediaDecodeTime
