@@ -2498,15 +2498,61 @@ QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', functio
       prependedContentDuration
     ), {
       start: {
-        dts: baseMediaDecodeTime,
-        pts: baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        // baseMediaDecodeTime,
+        dts: 20,
+        // baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        pts: 20 + 14 - 12
       },
       end: {
-        dts: baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
-        pts: baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        // baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        dts: 20 + 120 + 4 - 12,
+        // baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        pts: 20 + 140 + 4 - 14
       },
       prependedContentDuration: 7,
-      baseMediaDecodeTime: baseMediaDecodeTime
+      baseMediaDecodeTime: 20
+    },
+    'included prepended content duration in timing info');
+});
+
+QUnit.test('generateVideoSegmentTimingInfo handles GOPS where pts is < dts', function() {
+  var
+    firstFrame = {
+      dts: 14,
+      pts: 12,
+      duration: 3
+    },
+    lastFrame = {
+      dts: 140,
+      pts: 120,
+      duration: 4
+    },
+    baseMediaDecodeTime = 20,
+    prependedContentDuration = 7;
+
+  QUnit.deepEqual(
+    generateVideoSegmentTimingInfo(
+      baseMediaDecodeTime,
+      firstFrame.dts,
+      firstFrame.pts,
+      lastFrame.dts + lastFrame.duration,
+      lastFrame.pts + lastFrame.duration,
+      prependedContentDuration
+    ), {
+      start: {
+        // baseMediaDecodeTime,
+        dts: 20,
+        // baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        pts: 20 + 12 - 14
+      },
+      end: {
+        // baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        dts: 20 + 140 + 4 - 14,
+        // baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        pts: 20 + 120 + 4 - 12
+      },
+      prependedContentDuration: 7,
+      baseMediaDecodeTime: 20
     },
     'included prepended content duration in timing info');
 });
