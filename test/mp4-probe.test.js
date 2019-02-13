@@ -15,6 +15,7 @@ var
   moovWithoutTkhd,
   moofWithTfdt,
   multiMoof,
+  multiMoofWithZero,
   v1boxes;
 
 QUnit.module('MP4 Probe');
@@ -41,6 +42,15 @@ test('reads the base decode time from a tfdt', function() {
   }, new Uint8Array(moofWithTfdt)),
         0x01020304 / 2,
         'calculated base decode time');
+});
+
+test('returns the earliest base decode time with zero 0', function() {
+    equal(probe.startTime({
+            4: 2,
+            6: 1
+        }, new Uint8Array(multiMoofWithZero)),
+        0x00,
+        'returned 0');
 });
 
 test('returns the earliest base decode time', function() {
@@ -187,3 +197,26 @@ v1boxes =
               0x00, 0x00, 0x00, // flags
               0x00, 0x00, 0x00, 0x01,
               0x01, 0x02, 0x03, 0x04))); // baseMediaDecodeTime
+
+multiMoofWithZero =
+    box('moof',
+        box('mfhd',
+            0x00, // version
+            0x00, 0x00, 0x00, // flags
+            0x00, 0x00, 0x00, 0x04), // sequence_number
+        box('traf',
+            box('tfhd',
+                0x00, // version
+                0x00, 0x00, 0x3b, // flags
+                0x00, 0x00, 0x00, 0x04, // track_ID = 4
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x01, // base_data_offset
+                0x00, 0x00, 0x00, 0x02, // sample_description_index
+                0x00, 0x00, 0x00, 0x03, // default_sample_duration,
+                0x00, 0x00, 0x00, 0x04, // default_sample_size
+                0x00, 0x00, 0x00, 0x05),
+            box('tfdt',
+                0x00, // version
+                0x00, 0x00, 0x00, // flags
+                0x00, 0x00, 0x00, 0x00))) // baseMediaDecodeTime
+        .concat(moofWithTfdt);
