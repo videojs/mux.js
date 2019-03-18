@@ -1940,7 +1940,13 @@ QUnit.test('do not subtract the first frame\'s compositionTimeOffset from baseMe
 
 QUnit.test('video segment stream triggers segmentTimingInfo with timing info',
 function() {
-  var segmentTimingInfoArr = [];
+  var
+    segmentTimingInfoArr = [],
+    baseMediaDecodeTime = 40,
+    startingDts = 50,
+    startingPts = 60,
+    lastFrameStartDts = 150,
+    lastFrameStartPts = 160;
 
   videoSegmentStream.on('segmentTimingInfo', function(segmentTimingInfo) {
     segmentTimingInfoArr.push(segmentTimingInfo);
@@ -1949,14 +1955,14 @@ function() {
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
-    dts: 50,
-    pts: 60
+    dts: startingDts,
+    pts: startingPts
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
-    dts: 50,
-    pts: 60
+    dts: startingDts,
+    pts: startingPts
   });
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
@@ -1967,22 +1973,35 @@ function() {
   videoSegmentStream.push({
     data: new Uint8Array([0x09, 0x01]),
     nalUnitType: 'access_unit_delimiter_rbsp',
-    dts: 150,
-    pts: 160
+    dts: lastFrameStartDts,
+    pts: lastFrameStartPts
   });
   videoSegmentStream.flush();
 
   QUnit.equal(segmentTimingInfoArr.length, 1, 'triggered segmentTimingInfo once');
+  QUnit.equal(
+    baseMediaDecodeTime,
+    segmentTimingInfoArr[0].baseMediaDecodeTime,
+    'set baseMediaDecodeTime'
+  );
   QUnit.deepEqual(segmentTimingInfoArr[0], {
     start: {
-      dts: 50,
-      pts: 60
+      // baseMediaDecodeTime
+      dts: 40,
+      // baseMediaDecodeTime + startingPts - startingDts
+      pts: 40 + 60 - 50
     },
     end: {
-      dts: 200,
-      pts: 210
+      // because no duration is provided in this test, the duration will instead be based
+      // on the previous frame, which will be the start of this frame minus the end of the
+      // last frame, or 150 - 100 = 50, which gets added to lastFrameStartDts - startDts =
+      // 150 - 50 = 100
+      // + baseMediaDecodeTime
+      dts: 40 + 100 + 50,
+      pts: 40 + 100 + 50
     },
-    prependedContentDuration: 0
+    prependedContentDuration: 0,
+    baseMediaDecodeTime: baseMediaDecodeTime
   }, 'triggered correct segment timing info');
 });
 
@@ -2425,10 +2444,12 @@ function() {
       pts: 140,
       duration: 4
     },
+    baseMediaDecodeTime = 20,
     prependedContentDuration = 0;
 
   QUnit.deepEqual(
     generateVideoSegmentTimingInfo(
+      baseMediaDecodeTime,
       firstFrame.dts,
       firstFrame.pts,
       lastFrame.dts + lastFrame.duration,
@@ -2436,14 +2457,19 @@ function() {
       prependedContentDuration
     ), {
       start: {
-        dts: 12,
-        pts: 14
+        // baseMediaDecodeTime,
+        dts: 20,
+        // baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        pts: 20 + 14 - 12
       },
       end: {
-        dts: 124,
-        pts: 144
+        // baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        dts: 20 + 120 + 4 - 12,
+        // baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        pts: 20 + 140 + 4 - 14
       },
-      prependedContentDuration: 0
+      prependedContentDuration: 0,
+      baseMediaDecodeTime: baseMediaDecodeTime
     }, 'generated correct timing info object');
 });
 
@@ -2459,10 +2485,12 @@ QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', functio
       pts: 140,
       duration: 4
     },
+    baseMediaDecodeTime = 20,
     prependedContentDuration = 7;
 
   QUnit.deepEqual(
     generateVideoSegmentTimingInfo(
+      baseMediaDecodeTime,
       firstFrame.dts,
       firstFrame.pts,
       lastFrame.dts + lastFrame.duration,
@@ -2470,14 +2498,61 @@ QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', functio
       prependedContentDuration
     ), {
       start: {
-        dts: 12,
-        pts: 14
+        // baseMediaDecodeTime,
+        dts: 20,
+        // baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        pts: 20 + 14 - 12
       },
       end: {
-        dts: 124,
-        pts: 144
+        // baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        dts: 20 + 120 + 4 - 12,
+        // baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        pts: 20 + 140 + 4 - 14
       },
-      prependedContentDuration: 7
+      prependedContentDuration: 7,
+      baseMediaDecodeTime: 20
+    },
+    'included prepended content duration in timing info');
+});
+
+QUnit.test('generateVideoSegmentTimingInfo handles GOPS where pts is < dts', function() {
+  var
+    firstFrame = {
+      dts: 14,
+      pts: 12,
+      duration: 3
+    },
+    lastFrame = {
+      dts: 140,
+      pts: 120,
+      duration: 4
+    },
+    baseMediaDecodeTime = 20,
+    prependedContentDuration = 7;
+
+  QUnit.deepEqual(
+    generateVideoSegmentTimingInfo(
+      baseMediaDecodeTime,
+      firstFrame.dts,
+      firstFrame.pts,
+      lastFrame.dts + lastFrame.duration,
+      lastFrame.pts + lastFrame.duration,
+      prependedContentDuration
+    ), {
+      start: {
+        // baseMediaDecodeTime,
+        dts: 20,
+        // baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        pts: 20 + 12 - 14
+      },
+      end: {
+        // baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        dts: 20 + 140 + 4 - 14,
+        // baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        pts: 20 + 120 + 4 - 12
+      },
+      prependedContentDuration: 7,
+      baseMediaDecodeTime: 20
     },
     'included prepended content duration in timing info');
 });
