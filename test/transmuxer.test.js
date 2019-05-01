@@ -8,8 +8,10 @@ var mp2t = require('../lib/m2ts'),
     QUnit = require('qunit'),
     testSegment = require('./utils/test-segment'),
     testMiddlePatPMT = require('./utils/test-middle-pat-pmt'),
-    mp4AudioProperties = require('../lib/mp4/transmuxer').AUDIO_PROPERTIES,
-    mp4VideoProperties = require('../lib/mp4/transmuxer').VIDEO_PROPERTIES,
+    mp4Transmuxer = require('../lib/mp4/transmuxer'),
+    mp4AudioProperties = mp4Transmuxer.AUDIO_PROPERTIES,
+    mp4VideoProperties = mp4Transmuxer.VIDEO_PROPERTIES,
+    generateVideoSegmentTimingInfo = mp4Transmuxer.generateVideoSegmentTimingInfo,
     clock = require('../lib/utils/clock'),
     utils = require('./utils'),
     TransportPacketStream = mp2t.TransportPacketStream,
@@ -1936,6 +1938,73 @@ QUnit.test('do not subtract the first frame\'s compositionTimeOffset from baseMe
   QUnit.equal(tfdt.baseMediaDecodeTime, 140, 'calculated baseMediaDecodeTime');
 });
 
+QUnit.test('video segment stream triggers segmentTimingInfo with timing info',
+function() {
+  var
+    segmentTimingInfoArr = [],
+    baseMediaDecodeTime = 40,
+    startingDts = 50,
+    startingPts = 60,
+    lastFrameStartDts = 150,
+    lastFrameStartPts = 160;
+
+  videoSegmentStream.on('segmentTimingInfo', function(segmentTimingInfo) {
+    segmentTimingInfoArr.push(segmentTimingInfo);
+  });
+
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: startingDts,
+    pts: startingPts
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'slice_layer_without_partitioning_rbsp_idr',
+    dts: startingDts,
+    pts: startingPts
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: 100,
+    pts: 110
+  });
+  videoSegmentStream.push({
+    data: new Uint8Array([0x09, 0x01]),
+    nalUnitType: 'access_unit_delimiter_rbsp',
+    dts: lastFrameStartDts,
+    pts: lastFrameStartPts
+  });
+  videoSegmentStream.flush();
+
+  QUnit.equal(segmentTimingInfoArr.length, 1, 'triggered segmentTimingInfo once');
+  QUnit.equal(
+    baseMediaDecodeTime,
+    segmentTimingInfoArr[0].baseMediaDecodeTime,
+    'set baseMediaDecodeTime'
+  );
+  QUnit.deepEqual(segmentTimingInfoArr[0], {
+    start: {
+      // baseMediaDecodeTime
+      dts: 40,
+      // baseMediaDecodeTime + startingPts - startingDts
+      pts: 40 + 60 - 50
+    },
+    end: {
+      // because no duration is provided in this test, the duration will instead be based
+      // on the previous frame, which will be the start of this frame minus the end of the
+      // last frame, or 150 - 100 = 50, which gets added to lastFrameStartDts - startDts =
+      // 150 - 50 = 100
+      // + baseMediaDecodeTime
+      dts: 40 + 100 + 50,
+      pts: 40 + 100 + 50
+    },
+    prependedContentDuration: 0,
+    baseMediaDecodeTime: baseMediaDecodeTime
+  }, 'triggered correct segment timing info');
+});
+
 QUnit.test('aignGopsAtStart_ filters gops appropriately', function() {
   var gopsToAlignWith, gops, actual, expected;
 
@@ -2360,6 +2429,132 @@ QUnit.test('alignGopsAtEnd_ filters gops appropriately', function() {
   QUnit.deepEqual(actual, expected,
     'some gops trimmed, alignment candidates contained between gops,' +
     'match with an alignment candidate');
+});
+
+QUnit.test('generateVideoSegmentTimingInfo generates correct timing info object',
+function() {
+  var
+    firstFrame = {
+      dts: 12,
+      pts: 14,
+      duration: 3
+    },
+    lastFrame = {
+      dts: 120,
+      pts: 140,
+      duration: 4
+    },
+    baseMediaDecodeTime = 20,
+    prependedContentDuration = 0;
+
+  QUnit.deepEqual(
+    generateVideoSegmentTimingInfo(
+      baseMediaDecodeTime,
+      firstFrame.dts,
+      firstFrame.pts,
+      lastFrame.dts + lastFrame.duration,
+      lastFrame.pts + lastFrame.duration,
+      prependedContentDuration
+    ), {
+      start: {
+        // baseMediaDecodeTime,
+        dts: 20,
+        // baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        pts: 20 + 14 - 12
+      },
+      end: {
+        // baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        dts: 20 + 120 + 4 - 12,
+        // baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        pts: 20 + 140 + 4 - 14
+      },
+      prependedContentDuration: 0,
+      baseMediaDecodeTime: baseMediaDecodeTime
+    }, 'generated correct timing info object');
+});
+
+QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', function() {
+  var
+    firstFrame = {
+      dts: 12,
+      pts: 14,
+      duration: 3
+    },
+    lastFrame = {
+      dts: 120,
+      pts: 140,
+      duration: 4
+    },
+    baseMediaDecodeTime = 20,
+    prependedContentDuration = 7;
+
+  QUnit.deepEqual(
+    generateVideoSegmentTimingInfo(
+      baseMediaDecodeTime,
+      firstFrame.dts,
+      firstFrame.pts,
+      lastFrame.dts + lastFrame.duration,
+      lastFrame.pts + lastFrame.duration,
+      prependedContentDuration
+    ), {
+      start: {
+        // baseMediaDecodeTime,
+        dts: 20,
+        // baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        pts: 20 + 14 - 12
+      },
+      end: {
+        // baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        dts: 20 + 120 + 4 - 12,
+        // baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        pts: 20 + 140 + 4 - 14
+      },
+      prependedContentDuration: 7,
+      baseMediaDecodeTime: 20
+    },
+    'included prepended content duration in timing info');
+});
+
+QUnit.test('generateVideoSegmentTimingInfo handles GOPS where pts is < dts', function() {
+  var
+    firstFrame = {
+      dts: 14,
+      pts: 12,
+      duration: 3
+    },
+    lastFrame = {
+      dts: 140,
+      pts: 120,
+      duration: 4
+    },
+    baseMediaDecodeTime = 20,
+    prependedContentDuration = 7;
+
+  QUnit.deepEqual(
+    generateVideoSegmentTimingInfo(
+      baseMediaDecodeTime,
+      firstFrame.dts,
+      firstFrame.pts,
+      lastFrame.dts + lastFrame.duration,
+      lastFrame.pts + lastFrame.duration,
+      prependedContentDuration
+    ), {
+      start: {
+        // baseMediaDecodeTime,
+        dts: 20,
+        // baseMediaDecodeTime + firstFrame.pts - firstFrame.dts
+        pts: 20 + 12 - 14
+      },
+      end: {
+        // baseMediaDecodeTime + lastFrame.dts + lastFrame.duration - firstFrame.dts,
+        dts: 20 + 140 + 4 - 14,
+        // baseMediaDecodeTime + lastFrame.pts + lastFrame.duration - firstFrame.pts
+        pts: 20 + 120 + 4 - 12
+      },
+      prependedContentDuration: 7,
+      baseMediaDecodeTime: 20
+    },
+    'included prepended content duration in timing info');
 });
 
 QUnit.module('ADTS Stream', {
@@ -3221,6 +3416,47 @@ QUnit.test('generates a video init segment', function() {
   boxes = mp4.tools.inspect(segments[0].initSegment);
   QUnit.equal('ftyp', boxes[0].type, 'generated an ftyp box');
   QUnit.equal('moov', boxes[1].type, 'generated a moov box');
+});
+
+QUnit.test('transmuxer triggers video timing info event on flush', function() {
+  var videoSegmentTimingInfoArr = [];
+
+  transmuxer.on('videoSegmentTimingInfo', function(videoSegmentTimingInfo) {
+    videoSegmentTimingInfoArr.push(videoSegmentTimingInfo);
+  });
+
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true
+  })));
+
+  transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+    0x07, // seq_parameter_set_rbsp
+    0x27, 0x42, 0xe0, 0x0b,
+    0xa9, 0x18, 0x60, 0x9d,
+    0x80, 0x53, 0x06, 0x01,
+    0x06, 0xb6, 0xc2, 0xb5,
+    0xef, 0x7c, 0x04
+  ], false)));
+  transmuxer.push(packetize(videoPes([
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
+  ], true)));
+
+  QUnit.equal(
+    videoSegmentTimingInfoArr.length,
+    0,
+    'has not triggered videoSegmentTimingInfo'
+  );
+
+  transmuxer.flush();
+
+  QUnit.equal(videoSegmentTimingInfoArr.length, 1, 'triggered videoSegmentTimingInfo');
 });
 
 QUnit.test('generates an audio init segment', function() {

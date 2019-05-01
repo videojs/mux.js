@@ -801,6 +801,73 @@ QUnit.test('ignores CEA708 captions', function() {
   QUnit.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN\nIF WE DON\'T HAVE TO.', 'parsed third caption correctly');
 });
 
+QUnit.test('ignores XDS and Text packets', function() {
+  var captions = [];
+
+  captionStream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    // RCL, resume caption loading, CC3
+    { pts: 1000, ccData: 0x1520, type: 1 },
+    { pts: 2000, ccData: characters('hi'), type: 1 },
+    // EOC, End of Caption
+    { pts: 3000, ccData: 0x152f, type: 1 },
+    // Send another command so that the second EOC isn't ignored
+    { pts: 3000, ccData: 0x152f, type: 1 },
+    // EOC, End of Caption
+    { pts: 4000, ccData: 0x152f, type: 1 },
+    // ENM, Erase Non-Displayed Memory
+    { pts: 4000, ccData: 0x152e, type: 1 },
+    // RCL, resume caption loading, CC1
+    { pts: 5000, ccData: 0x1420, type: 0 }
+  ].map(makeSeiFromCaptionPacket).forEach(captionStream.push, captionStream);
+  captionStream.flush();
+  QUnit.equal(captionStream.activeCea608Channel_[0], 0, 'field 1: CC1 is active');
+  QUnit.equal(captionStream.activeCea608Channel_[1], 0, 'field 2: CC3 is active');
+
+  [
+    // TR, text restart, CC1
+    { pts: 5000, ccData: 0x142a, type: 0 },
+    { pts: 6000, ccData: characters('tx'), type: 0 }
+  ].map(makeSeiFromCaptionPacket).forEach(captionStream.push, captionStream);
+  captionStream.flush();
+  QUnit.equal(captionStream.activeCea608Channel_[0], null, 'field 1: disabled');
+  QUnit.equal(captionStream.activeCea608Channel_[1], 0, 'field 2: CC3 is active');
+
+  [
+    // EOC, End of Caption
+    { pts: 7000, ccData: 0x142f, type: 0 },
+    // Send another command so that the second EOC isn't ignored
+    { pts: 7000, ccData: 0x142f, type: 0 },
+    // EOC, End of Caption
+    { pts: 8000, ccData: 0x142f, type: 0 },
+    // RCL, resume caption loading, CC3
+    { pts: 9000, ccData: 0x1520, type: 1 },
+    // XDS start, "current" class, program identification number type
+    { pts: 10000, ccData: 0x0101, type: 1 },
+    { pts: 11000, ccData: characters('oh'), type: 1 },
+    // XDS end
+    { pts: 12000, ccData: 0x0f00, type: 1 }
+  ].map(makeSeiFromCaptionPacket).forEach(captionStream.push, captionStream);
+  captionStream.flush();
+  QUnit.equal(captionStream.activeCea608Channel_[0], 0, 'field 1: CC1 is active');
+  QUnit.equal(captionStream.activeCea608Channel_[1], null, 'field 2: disabled');
+
+  [
+    // EOC, End of Caption
+    { pts: 13000, ccData: 0x152f, type: 1 },
+    // Send another command so that the second EOC isn't ignored
+    { pts: 13000, ccData: 0x152f, type: 1 }
+  ].map(makeSeiFromCaptionPacket).forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.equal(captions.length, 1, 'only parsed real caption');
+  QUnit.equal(captions[0].text, 'hi', 'caption is correct');
+
+});
+
 // Full character translation tests are below for Cea608Stream, they just only
 // test support for CC1. See those tests and the source code for more about the
 // mechanics of special and extended characters.
@@ -842,6 +909,72 @@ QUnit.test('special and extended character codes work regardless of field and da
   QUnit.deepEqual(captions[0].text, String.fromCharCode(0xae), 'CC2 special character correct');
   QUnit.deepEqual(captions[1].text, String.fromCharCode(0xab), 'CC3 extended character correct');
   QUnit.deepEqual(captions[2].text, String.fromCharCode(0xbb), 'CC4 extended character correct');
+});
+
+QUnit.test('number of roll up rows takes precedence over base row command', function(assert) {
+  var captions = [];
+  var packets = [
+
+    // RU2 (roll-up, 2 rows), CC1
+    { type: 0, ccData: 0x1425 },
+    // RU2, CC1
+    { type: 0, ccData: 0x1425 },
+    // PAC: row 1 (sets base row to row 1)
+    { type: 0, ccData: 0x1170 },
+    // PAC: row 1
+    { type: 0, ccData: 0x1170 },
+    // -
+    { type: 0, ccData: 0x2d00 },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // RU3 (roll-up, 3 rows), CC1
+    { type: 0, ccData: 0x1426 },
+    // RU3, CC1
+    { type: 0, ccData: 0x1426 },
+    // PAC, row 11
+    { type: 0, ccData: 0x13d0 },
+    // PAC, row 11
+    { type: 0, ccData: 0x13d0 },
+    // so
+    { type: 0, ccData: 0x736f },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // CR
+    { type: 0, ccData: 0x14ad }
+  ];
+  var seis;
+
+  captionStream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  seis = packets.map(makeSeiFromCaptionPacket);
+
+  seis.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.deepEqual(captions[0].text, '-', 'RU2 caption is correct');
+  QUnit.deepEqual(captions[1].text, '-\nso', 'RU3 caption is correct');
+
+  packets = [
+    // switching from row 11 to 0
+    // PAC: row 0 (sets base row to row 0)
+    { type: 0, ccData: 0x1140 },
+    // PAC: row 0
+    { type: 0, ccData: 0x1140 },
+    // CR
+    { type: 0, ccData: 0x14ad },
+    // CR
+    { type: 0, ccData: 0x14ad }
+  ];
+
+  seis = packets.map(makeSeiFromCaptionPacket);
+  seis.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  QUnit.deepEqual(captions[2].text, '-\nso', 'RU3 caption is correct');
 });
 
 var cea608Stream;
@@ -2370,4 +2503,38 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     stream: 'CC1'
   }, 'parsed the 4th roll-up caption');
 
+});
+
+QUnit.test('Cea608Stream will log errors, not throw an exception', function(assert) {
+  var result;
+  var originalConsole = window.console.error;
+  var logs = [];
+
+  window.console.error = function(msg) {
+    logs.push(msg);
+  };
+
+  // this will force an exception to happen in flushDisplayed
+  cea608Stream.displayed_[0] = undefined;
+
+  try {
+    cea608Stream.flushDisplayed();
+    result = true;
+  } catch (e) {
+    result = false;
+  }
+
+  QUnit.ok(
+    result,
+    'the function does not throw an exception'
+  );
+  QUnit.deepEqual(
+    logs,
+    [
+      'Skipping malformed caption.'
+    ],
+    'warnings were logged to the console'
+  );
+
+  window.console.error = originalConsole;
 });
