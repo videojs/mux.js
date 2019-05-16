@@ -22,7 +22,7 @@ For a basic fMP4 to be valid it needs to have the following boxes.
 
 Every fMP4 stream needs to start with an ftyp and moov box which is then followed by many moof and mdat pairs. 
 
-This is important to understand as when you append your first segment to Media Source Extensions this segment will need to start with an ftyp and moov followed by a moof and mdat. 
+This is important to understand as when you append your first segment to Media Source Extensions that this segment will need to start with an ftyp and moov followed by a moof and mdat. 
 
 If you would like to see a clearer representation of your fMP4 you can use the muxjs.mp4.tools.inspect() method.
 
@@ -34,7 +34,7 @@ Lets look at a very basic representation of what needs to happen the first time 
 
 ```js
 // Create your transmuxer:
-//  initOptions is optional and can be omitted at this time.  
+//  initOptions is optional and can be omitted at this time.
 var transmuxer = new muxjs.mp4.Transmuxer(initOptions);
 
 // Create an event listener which will be triggered after the transmuxer processes data: 
@@ -57,8 +57,8 @@ transmuxer.on('data', function (segment) {
   sourceBuffer.appendBuffer(data);
 });
 
-// When you push your starting MPEG-TS file it will case the code above to run.
-// It is important to define your event listener above where you call the push method.
+// When you push your starting MPEG-TS segment it will cause the 'data' event listener above to run.
+// It is important to push after your event listener has been defined.
 transmuxer.push(transportStreamSegment);
 transmuxer.flush();
 ```
@@ -66,7 +66,7 @@ transmuxer.flush();
 Above we are adding in the initSegment (ftyp/moov) to our data array before appending to the MSE Source Buffer.
 This is required for the first part of data we append to the MSE Source Buffer but we will omit the initSegment for our remaining chunks (moof/mdat)'s of video we are going to append to our Source Buffer. 
 
-In the case of appending additional segments we would just need to do the following on our event listener anonymous function.
+In the case of appending additional segments after your first segment we will just need to use the following event listener anonymous function.
 
 ```js
 transmuxer.on('data', function(segment){
@@ -83,7 +83,7 @@ Here we put all of this together in a very basic example player.
   </head>
   <body>
     <video controls width="80%"></video>
-    <script src="https://github.com/videojs/mux.js/releases/download/v5.1.2/mux.js"></script>
+    <script src="https://github.com/videojs/mux.js/releases/latest/download/mux.js"></script>
     <script>
       // Create array of TS files to play
       segments = [
@@ -128,16 +128,19 @@ Here we put all of this together in a very basic example player.
       }
 
       function appendNextSegment(){
+        // reset the 'data' event listener to just append (moof/mdat) boxes to the Source Buffer
         transmuxer.off('data');
         transmuxer.on('data', (segment) =>{
           sourceBuffer.appendBuffer(new Uint8Array(segment.data));
         })
 
         if (segments.length == 0){
+          // notify MSE that we have no more segments to append.
           mediaSource.endOfStream();
         }
 
         segments.forEach((segment) => {
+          // fetch the next segment from the segments array and pass it into the transmuxer.push method
           fetch(segments.shift()).then((response)=>{
             return response.arrayBuffer();
           }).then((response)=>{
@@ -146,11 +149,11 @@ Here we put all of this together in a very basic example player.
           })
         })
       }
-
     </script>
   </body>
 </html>
 ```
+*NOTE: This player is only for example and should not be used in production.*
 
 ### Metadata
 The transmuxer can also parse out supplementary video data like timed ID3 metadata and CEA-608 captions.
@@ -162,7 +165,7 @@ transmuxer.on('data', function (segment) {
   segment.metadata.frames.forEach(function(frame) {
     metadataTextTrack.addCue(new VTTCue(time, time, frame.value));
   });
-  // create a VTTCue for all the parsed CEA-608 captions:
+  // create a VTTCue for all the parsed CEA-608 captions:>
   segment.captions.forEach(function(cue) {
     captionTextTrack.addCue(new VTTCue(cue.startTime, cue.endTime, cue.text));
   });
