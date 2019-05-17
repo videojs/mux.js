@@ -211,9 +211,11 @@ QUnit.test('can parse a version 0 mdhd', function() {
 QUnit.test('can parse a moov', function() {
   var data = mp4Helpers.sampleMoov;
 
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)), [{
+  QUnit.dump.maxDepth = 100;
+  var result = QUnit.dump.parse(mp4.tools.inspect(new Uint8Array(data)));
+  var expected = QUnit.dump.parse([{
     type: 'moov',
-    size: 469,
+    size: 981,
     boxes: [{
       type: 'mvhd',
       version: 1,
@@ -229,7 +231,7 @@ QUnit.test('can parse a moov', function() {
       nextTrackId: 2
     }, {
       type: 'trak',
-      size: 341,
+      size: 439,
       boxes: [{
         type: 'tkhd',
         flags: new Uint8Array([0, 0, 0]),
@@ -247,7 +249,7 @@ QUnit.test('can parse a moov', function() {
         height: 150
       }, {
         type: 'mdia',
-        size: 229,
+        size: 327,
         boxes: [{
           type: 'mdhd',
           version: 1,
@@ -267,7 +269,7 @@ QUnit.test('can parse a moov', function() {
           size: 37
         }, {
           type: 'minf',
-          size: 140,
+          size: 238,
           boxes: [{
             type: 'dinf',
             size: 36,
@@ -285,13 +287,164 @@ QUnit.test('can parse a moov', function() {
             }]
           }, {
             type: 'stbl',
-            size: 96,
+            size: 194,
             boxes: [{
               type: 'stsd',
-              size: 16,
+              size: 114,
               version: 1,
               flags: new Uint8Array([0, 0, 0]),
-              sampleDescriptions: []
+              sampleDescriptions: [{
+                config: [
+                  {
+                    avcLevelIndication: 13,
+                    avcProfileIndication: 77,
+                    configurationVersion: 0,
+                    lengthSizeMinusOne: 0,
+                    pps: [],
+                    profileCompatibility: 64,
+                    size: 0,
+                    sps: [],
+                    type: 'avcC'
+                  }
+                ],
+                dataReferenceIndex: 0,
+                depth: 0,
+                frameCount: 0,
+                height: 0,
+                horizresolution: 0,
+                size: 98,
+                type: 'avc1',
+                vertresolution: 0,
+                width: 0
+              }
+              ]
+            }, {
+              type: 'stts',
+              size: 24,
+              version: 1,
+              flags: new Uint8Array([0, 0, 0]),
+              timeToSamples: [{
+                sampleCount: 1,
+                sampleDelta: 1
+              }]
+            }, {
+              type: 'stsc',
+              version: 1,
+              flags: new Uint8Array([0, 0, 0]),
+              sampleToChunks: [{
+                firstChunk: 2,
+                samplesPerChunk: 3,
+                sampleDescriptionIndex: 1
+              }],
+              size: 28
+            }, {
+              type: 'stco',
+              size: 20,
+              version: 1,
+              flags: new Uint8Array([0, 0, 0]),
+              chunkOffsets: [1]
+            }]
+          }]
+        }]
+      }]
+    }, {
+      type: 'trak',
+      size: 414,
+      boxes: [{
+        type: 'tkhd',
+        flags: new Uint8Array([0, 0, 0]),
+        version: 1,
+        creationTime: new Date(2000 - 2082844800000),
+        modificationTime: new Date(3000 - 2082844800000),
+        size: 104,
+        trackId: 2,
+        duration: 600,
+        layer: 0,
+        alternateGroup: 0,
+        volume: 0,
+        matrix: new Uint32Array(unityMatrix),
+        width: 300,
+        height: 150
+      }, {
+        type: 'mdia',
+        size: 302,
+        boxes: [{
+          type: 'mdhd',
+          version: 1,
+          flags: new Uint8Array([0, 0, 0]),
+          creationTime: new Date(2000 - 2082844800000),
+          modificationTime: new Date(3000 - 2082844800000),
+          timescale: 90e3,
+          duration: 600,
+          language: 'eng',
+          size: 44
+        }, {
+          type: 'hdlr',
+          version: 1,
+          flags: new Uint8Array([0, 0, 0]),
+          handlerType: 'soun',
+          name: 'one',
+          size: 37
+        }, {
+          type: 'minf',
+          size: 213,
+          boxes: [{
+            type: 'dinf',
+            size: 36,
+            boxes: [{
+              type: 'dref',
+              size: 28,
+              version: 1,
+              flags: new Uint8Array([0, 0, 0]),
+              dataReferences: [{
+                type: 'url ',
+                size: 12,
+                version: 0,
+                flags: new Uint8Array([0, 0, 1])
+              }]
+            }]
+          }, {
+            type: 'stbl',
+            size: 169,
+            boxes: [{
+              type: 'stsd',
+              size: 89,
+              version: 1,
+              flags: new Uint8Array([0, 0, 0]),
+              sampleDescriptions: [{
+                channelcount: 0,
+                dataReferenceIndex: 0,
+                samplerate: 0,
+                samplesize: 0,
+                size: 73,
+                streamDescriptor: {
+                  decoderConfig: {
+                    avgBitrate: 0,
+                    bufferSize: 0,
+                    decoderConfigDescriptor: {
+                      audioObjectType: 0,
+                      channelConfiguration: 0,
+                      length: 0,
+                      samplingFrequencyIndex: 0,
+                      tag: 0
+                    },
+                    maxBitrate: 0,
+                    objectProfileIndication: 64,
+                    streamType: 2
+                  },
+                  esId: 0,
+                  flags: {
+                    0: 0,
+                    1: 0,
+                    2: 0
+                  },
+                  size: 0,
+                  streamPriority: 0,
+                  type: 'esds',
+                  version: 0
+                },
+                type: 'mp4a'
+              }]
             }, {
               type: 'stts',
               size: 24,
@@ -322,7 +475,8 @@ QUnit.test('can parse a moov', function() {
         }]
       }]
     }]
-  }], 'parsed a moov');
+  }]);
+  QUnit.equal(result, expected, 'can parse moov');
 });
 
 QUnit.test('can parse an mvex', function() {

@@ -23,8 +23,24 @@ test('reads the timescale from an mdhd', function() {
   // sampleMoov has a base timescale of 1000 with an override to 90kHz
   // in the mdhd
   deepEqual(probe.timescale(new Uint8Array(mp4Helpers.sampleMoov)), {
-    1: 90e3
+    1: 90e3,
+    2: 90e3
   }, 'found the timescale');
+});
+
+test('reads tracks', function() {
+  var tracks = probe.tracks(new Uint8Array(mp4Helpers.sampleMoov));
+
+  equal(tracks.length, 2, 'two tracks');
+  equal(tracks[0].codec, 'avc1.4d400d', 'codec is correct');
+  equal(tracks[0].id, 1, 'id is correct');
+  equal(tracks[0].type, 'video', 'type is correct');
+  equal(tracks[0].timescale, 90e3, 'timescale is correct');
+
+  equal(tracks[1].codec, 'mp4a.40.2', 'codec is correct');
+  equal(tracks[1].id, 2, 'id is correct');
+  equal(tracks[1].type, 'audio', 'type is correct');
+  equal(tracks[1].timescale, 90e3, 'timescale is correct');
 });
 
 test('returns null if the tkhd is missing', function() {
@@ -35,7 +51,7 @@ test('returns null if the mdhd is missing', function() {
   equal(probe.timescale(new Uint8Array(moovWithoutMdhd)), null, 'indicated missing info');
 });
 
-test('reads the base decode time from a tfdt', function() {
+test('startTime reads the base decode time from a tfdt', function() {
   equal(probe.startTime({
     4: 2
   }, new Uint8Array(moofWithTfdt)),
@@ -43,7 +59,7 @@ test('reads the base decode time from a tfdt', function() {
         'calculated base decode time');
 });
 
-test('returns the earliest base decode time', function() {
+test('startTime returns the earliest base decode time', function() {
   equal(probe.startTime({
     4: 2,
     6: 1
@@ -52,7 +68,7 @@ test('returns the earliest base decode time', function() {
         'returned the earlier time');
 });
 
-test('parses 64-bit base decode times', function() {
+test('startTime parses 64-bit base decode times', function() {
   equal(probe.startTime({
     4: 3
   }, new Uint8Array(v1boxes)),
