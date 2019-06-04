@@ -816,7 +816,8 @@ QUnit.test('properly parses seq_parameter_set_rbsp nal units', function() {
       levelIdc: 30,
       profileCompatibility: 192,
       width: 720,
-      height: 404
+      height: 404,
+      sarRatio: undefined
     };
 
   h264Stream.on('data', function(event) {
@@ -839,7 +840,7 @@ QUnit.test('properly parses seq_parameter_set_rbsp nal units', function() {
   });
 
   QUnit.ok(data, 'generated a data event');
-  QUnit.equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified an sequence parameter set');
+  QUnit.equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified a sequence parameter set');
   QUnit.deepEqual(data.escapedRBSP, expectedRBSP, 'properly removed Emulation Prevention Bytes from the RBSP');
 
   QUnit.deepEqual(data.config, expectedConfig, 'parsed the sps');
@@ -853,7 +854,8 @@ QUnit.test('Properly parses seq_parameter_set VUI nal unit', function() {
       levelIdc: 30,
       profileCompatibility: 192,
       width: 64,
-      height: 16
+      height: 16,
+      sarRatio: [65528, 16384]
     };
 
   h264Stream.on('data', function(event) {
@@ -875,7 +877,106 @@ QUnit.test('Properly parses seq_parameter_set VUI nal unit', function() {
   });
 
   QUnit.ok(data, 'generated a data event');
-  QUnit.equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified an sequence parameter set');
+  QUnit.equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified a sequence parameter set');
+  QUnit.deepEqual(data.config, expectedConfig, 'parsed the sps');
+});
+
+QUnit.test('Properly parses seq_parameter_set nal unit with defined sarRatio', function() {
+  var
+    data,
+    expectedConfig = {
+      profileIdc: 77,
+      levelIdc: 21,
+      profileCompatibility: 64,
+      width: 640,
+      height: 480,
+      sarRatio: [20, 11]
+    };
+
+  h264Stream.on('data', function(event) {
+    data = event;
+  });
+
+  h264Stream.push({
+    type: 'video',
+    data: new Uint8Array([
+      0x00, 0x00, 0x00, 0x01,
+      0x67, 0x4d, 0x40, 0x15,
+      0xec, 0xa0, 0xb0, 0x7b,
+      0x60, 0xe2, 0x00, 0x00,
+      0x07, 0xd2, 0x00, 0x01,
+      0xd4, 0xc0, 0x1e, 0x2c,
+      0x5b, 0x2c, 0x00, 0x00,
+      0x01
+    ])
+  });
+
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified a sequence parameter set');
+  QUnit.deepEqual(data.config, expectedConfig, 'parsed the sps');
+});
+
+QUnit.test('Properly parses seq_parameter_set nal unit with extended sarRatio', function() {
+  var
+    data,
+    expectedConfig = {
+      profileIdc: 77,
+      levelIdc: 21,
+      profileCompatibility: 64,
+      width: 403,
+      height: 480,
+      sarRatio: [8, 7]
+    };
+
+  h264Stream.on('data', function(event) {
+    data = event;
+  });
+
+  h264Stream.push({
+    type: 'video',
+    data: new Uint8Array([
+      0x00, 0x00, 0x00, 0x01,
+      0x67, 0x4d, 0x40, 0x15,
+      0xec, 0xa0, 0xb0, 0x7b,
+      0x7F, 0xe0, 0x01, 0x00,
+      0x00, 0xf0, 0x00, 0x00,
+      0x00, 0x01
+    ])
+  });
+
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified a sequence parameter set');
+  QUnit.deepEqual(data.config, expectedConfig, 'parsed the sps');
+});
+
+QUnit.test('Properly parses seq_parameter_set nal unit without VUI', function() {
+  var
+    data,
+    expectedConfig = {
+      profileIdc: 77,
+      levelIdc: 21,
+      profileCompatibility: 64,
+      width: 352,
+      height: 480,
+      sarRatio: undefined
+    };
+
+  h264Stream.on('data', function(event) {
+    data = event;
+  });
+
+  h264Stream.push({
+    type: 'video',
+    data: new Uint8Array([
+      0x00, 0x00, 0x00, 0x01,
+      0x67, 0x4d, 0x40, 0x15,
+      0xec, 0xa0, 0xb0, 0x7b,
+      0x02, 0x00, 0x00, 0x01
+    ])
+  });
+
+  QUnit.ok(data, 'generated a data event');
+  QUnit.equal(data.nalUnitType, 'seq_parameter_set_rbsp', 'identified a sequence parameter set');
   QUnit.deepEqual(data.config, expectedConfig, 'parsed the sps');
 });
 
@@ -3395,7 +3496,7 @@ QUnit.test('generates a video init segment', function() {
     0x07, // seq_parameter_set_rbsp
     0x27, 0x42, 0xe0, 0x0b,
     0xa9, 0x18, 0x60, 0x9d,
-    0x80, 0x53, 0x06, 0x01,
+    0x87, 0x53, 0x06, 0x01,
     0x06, 0xb6, 0xc2, 0xb5,
     0xef, 0x7c, 0x04
   ], false)));

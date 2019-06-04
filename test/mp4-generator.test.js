@@ -193,7 +193,7 @@ validateStsd = function(stsd, expected) {
 validateVideoSample = function(sample) {
   QUnit.deepEqual(sample, {
     type: 'avc1',
-    size: 136,
+    size: 152,
     dataReferenceIndex: 1,
     width: 600,
     height: 300,
@@ -223,6 +223,10 @@ validateVideoSample = function(sample) {
       bufferSizeDB: 1875072,
       maxBitrate: 3000000,
       avgBitrate: 3000000
+    }, {
+      type: 'pasp',
+      size: 16,
+      data: new Uint8Array([0, 0, 0, 1, 0, 0, 0, 1])
     }]
   }, 'generated a video sample');
 };
@@ -299,6 +303,7 @@ QUnit.test('generates a video moov', function() {
       profileIdc: 3,
       levelIdc: 5,
       profileCompatibility: 7,
+      sarRatio: [1, 1],
       sps: [new Uint8Array([0, 1, 2]), new Uint8Array([3, 4, 5])],
       pps: [new Uint8Array([6, 7, 8])]
     }]);

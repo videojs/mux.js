@@ -560,15 +560,18 @@ QUnit.test('can parse a video stsd', function() {
                      box('btrt',
                         0x00, 0x00, 0x00, 0x00, // bufferSizeDB
                         0x00, 0x00, 0x00, 0x01, // maxBitrate
-                        0x00, 0x00, 0x00, 0x01))); // avgBitrate
+                        0x00, 0x00, 0x00, 0x01), // avgBitrate
+                     box('pasp',
+                        0x00, 0x00, 0x00, 0x01, // hSpacing
+                        0x00, 0x00, 0x00, 0x01))); // vSpacing
   QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)), [{
     type: 'stsd',
-    size: 147,
+    size: 163,
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
     sampleDescriptions: [{
       type: 'avc1',
-      size: 131,
+      size: 147,
       dataReferenceIndex: 1,
       width: 300,
       height: 150,
@@ -593,6 +596,10 @@ QUnit.test('can parse a video stsd', function() {
         bufferSizeDB: 0,
         maxBitrate: 1,
         avgBitrate: 1
+      }, {
+        type: 'pasp',
+        size: 16,
+        data: new Uint8Array([0, 0, 0, 1, 0, 0, 0, 1])
       }]
     }]
   }]);
