@@ -364,6 +364,7 @@ mp4fragment --track audio --fragment-duration 11000 movie-audio.mp4 movie-audio.
 
         transmuxer.push(segment);
         transmuxer.flush();
+        transmuxer.endTimeline();
       });
 
       muxedName = this.files[0].name.replace('.ts', '.f4m');

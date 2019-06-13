@@ -30,7 +30,7 @@ var mp2t = require('../lib/m2ts'),
     AudioSegmentStream = mp4.AudioSegmentStream,
     audioSegmentStream,
 
-    AdtsStream = codecs.adts,
+    AdtsStream = codecs.Adts,
     adtsStream,
     Transmuxer = mp4.Transmuxer,
     FlvTransmuxer = flv.Transmuxer,
@@ -3245,7 +3245,7 @@ QUnit.test('can specify that we want to generate separate audio and video segmen
   QUnit.equal('mdat', boxes[1].type, 'generated a mdat box');
 });
 
-QUnit.test("doesn't adjust caption and ID3 times when configured to adjust timestamps", function() {
+QUnit.test('adjusts caption and ID3 times when configured to adjust timestamps', function() {
   var transmuxer = new Transmuxer({ keepOriginalTimestamps: false });
 
   var
