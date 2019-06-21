@@ -3738,7 +3738,7 @@ validateTrackFragment = function(track, segment, metadata, type) {
 QUnit.test('parses an example mp2t file and generates combined media segments', function() {
   var
     segments = [],
-    i, j, boxes, mfhd, trackType = 'video', trackId = 256, baseOffset = 0, initSegment;
+    i, j, boxes, mfhd, trackType = 'audio', trackId = 257, baseOffset = 0, initSegment;
 
   transmuxer.on('data', function(segment) {
     if (segment.type === 'combined') {
@@ -3780,15 +3780,16 @@ QUnit.test('parses an example mp2t file and generates combined media segments', 
       }
 
       validateTrackFragment(boxes[i].boxes[1], segments[0].data, {
-        trackId: trackId++,
+        trackId: trackId,
         width: 388,
         height: 300,
         baseOffset: baseOffset,
         mdatOffset: boxes[i].size
       }, trackType);
 
+      trackId--;
       baseOffset = 0;
-      trackType = 'audio';
+      trackType = 'video';
     }
   }
 });
