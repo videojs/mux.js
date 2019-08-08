@@ -13,11 +13,7 @@ import Stream from '../utils/stream.js';
 import CaptionStream from './caption-stream';
 import StreamTypes from './stream-types';
 import {TimestampRolloverStream} from './timestamp-rollover-stream';
-import m2tsStreamTypes from './stream-types.js';
 import MetadataStream from './metadata-stream.js';
-
-// object types
-var TransportPacketStream, TransportParseStream, ElementaryStream;
 
 // constants
 var
@@ -28,7 +24,7 @@ var
  * Splits an incoming stream of binary data into MPEG-2 Transport
  * Stream packets.
  */
-TransportPacketStream = function() {
+export var TransportPacketStream = function() {
   var
     buffer = new Uint8Array(MP2T_PACKET_LENGTH),
     bytesInBuffer = 0;
@@ -114,7 +110,7 @@ TransportPacketStream.prototype = new Stream();
  * Accepts an MP2T TransportPacketStream and emits data events with parsed
  * forms of the individual transport stream packets.
  */
-TransportParseStream = function() {
+export var TransportParseStream = function() {
   var parsePsi, parsePat, parsePmt, self;
   TransportParseStream.prototype.init.call(this);
   self = this;
@@ -293,7 +289,7 @@ TransportParseStream.STREAM_TYPES  = {
  * packets plus relevant metadata that has been extracted from the
  * container.
  */
-ElementaryStream = function() {
+export var ElementaryStream = function() {
   var
     self = this,
     // PES packet fragments
@@ -424,7 +420,6 @@ ElementaryStream = function() {
 
         switch (data.streamType) {
         case StreamTypes.H264_STREAM_TYPE:
-        case m2tsStreamTypes.H264_STREAM_TYPE:
           stream = video;
           streamType = 'video';
           break;

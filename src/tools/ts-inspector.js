@@ -77,7 +77,7 @@ var parsePsi_ = function(bytes, pmt) {
  * walks through the segment data from the start and end to get timing information
  * for the first and last audio pes packets
  */
-var parseAudioPes_ = function(bytes, pmt, result) {
+export var parseAudioPes_ = function(bytes, pmt, result) {
   var
     startIndex = 0,
     endIndex = MP2T_PACKET_LENGTH,
@@ -499,7 +499,7 @@ var inspectTs_ = function(bytes) {
  *  timestamps for rollover. This value must be in 90khz clock.
  * @return {Object} Object containing start and end frame timing info of segment.
  */
-var inspect = function(bytes, baseTimestamp) {
+export var inspect = function(bytes, baseTimestamp) {
   var isAacData = probe.aac.isLikelyAacData(bytes);
 
   var result;

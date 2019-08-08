@@ -17,8 +17,8 @@
 // payload type field to indicate how they are to be
 // interpreted. CEAS-708 caption content is always transmitted with
 // payload type 0x04.
-var USER_DATA_REGISTERED_ITU_T_T35 = 4,
-    RBSP_TRAILING_BITS = 128;
+export var USER_DATA_REGISTERED_ITU_T_T35 = 4;
+var RBSP_TRAILING_BITS = 128;
 
 /**
   * Parse a supplemental enhancement information (SEI) NAL unit.
@@ -28,7 +28,7 @@ var USER_DATA_REGISTERED_ITU_T_T35 = 4,
   * @return {object} the parsed SEI payload
   * @see Rec. ITU-T H.264, 7.3.2.3.1
   */
-var parseSei = function(bytes) {
+export var parseSei = function(bytes) {
   var
     i = 0,
     result = {
@@ -78,7 +78,7 @@ var parseSei = function(bytes) {
 };
 
 // see ANSI/SCTE 128-1 (2013), section 8.1
-var parseUserData = function(sei) {
+export var parseUserData = function(sei) {
   // itu_t_t35_contry_code must be 181 (United States) for
   // captions
   if (sei.payload[0] !== 181) {
@@ -109,7 +109,7 @@ var parseUserData = function(sei) {
 };
 
 // see CEA-708-D, section 4.4
-var parseCaptionPackets = function(pts, userData) {
+export var parseCaptionPackets = function(pts, userData) {
   var results = [], i, count, offset, data;
 
   // if this is just filler, return immediately
@@ -135,7 +135,7 @@ var parseCaptionPackets = function(pts, userData) {
   return results;
 };
 
-var discardEmulationPreventionBytes = function(data) {
+export var discardEmulationPreventionBytes = function(data) {
     var
       length = data.byteLength,
       emulationPreventionBytesPositions = [],

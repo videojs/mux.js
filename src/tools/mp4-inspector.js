@@ -837,6 +837,14 @@ textifyMp4 = function(inspectedMp4, depth) {
   }).join('\n');
 };
 
+export const inspect = inspectMp4;
+export const textify = textifyMp4;
+export const parseTfdt = parse.tfdt;
+export const parseHdlr = parse.hdlr;
+export const parseTfhd = parse.tfhd;
+export const parseTrun = parse.trun;
+export const parseSidx = parse.sidx;
+
 export default {
   inspect: inspectMp4,
   textify: textifyMp4,

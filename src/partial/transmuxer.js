@@ -1,13 +1,16 @@
 import Stream from '../utils/stream.js';
-import m2ts from '../m2ts/m2ts.js';
-import codecs from '../codecs/index.js';
+import AdtsStream from '../codecs/adts.js';
+import {H264Stream} from '../codecs/h264';
 import AudioSegmentStream from './audio-segment-stream.js';
 import VideoSegmentStream from './video-segment-stream.js';
-import trackInfo from '../mp4/track-decode-info.js';
+import {clearDtsInfo} from '../mp4/track-decode-info.js';
 import {isLikelyAacData} from '../aac/utils';
-import AdtsStream from '../codecs/adts';
 import AacStream from '../aac/index';
-import clock from '../utils/clock';
+import {metadataTsToSeconds, videoTsToSeconds} from '../utils/clock';
+import {CaptionStream} from '../m2ts/caption-stream.js';
+import MetadataStream from '../m2ts/metadata-stream.js';
+import {TimestampRolloverStream} from '../m2ts/timestamp-rollover-stream.js';
+import {ElementaryStream, TransportPacketStream, TransportParseStream} from '../m2ts/m2ts.js';
 
 var createPipeline = function(object) {
   object.prototype = new Stream();
@@ -24,16 +27,16 @@ var tsPipeline = function(options) {
         audio: null,
         video: null
       },
-      packet: new m2ts.TransportPacketStream(),
-      parse: new m2ts.TransportParseStream(),
-      elementary: new m2ts.ElementaryStream(),
-      videoRollover: new m2ts.TimestampRolloverStream('video'),
-      audioRollover: new m2ts.TimestampRolloverStream('audio'),
-      adts: new codecs.Adts(),
-      h264: new codecs.h264.H264Stream(),
-      captionStream: new m2ts.CaptionStream(),
-      metadataStream: new m2ts.MetadataStream(),
-      timedMetadataRollover: new m2ts.TimestampRolloverStream('timed-metadata')
+      packet: new TransportPacketStream(),
+      parse: new TransportParseStream(),
+      elementary: new ElementaryStream(),
+      videoRollover: new TimestampRolloverStream('video'),
+      audioRollover: new TimestampRolloverStream('audio'),
+      adts: new AdtsStream(),
+      h264: new H264Stream(),
+      captionStream: new CaptionStream(),
+      metadataStream: new MetadataStream(),
+      timedMetadataRollover: new TimestampRolloverStream('timed-metadata')
   };
 
   pipeline.headOfPipeline = pipeline.packet;
@@ -147,8 +150,8 @@ var tsPipeline = function(options) {
 
     // Translate caption PTS times into second offsets into the
     // video timeline for the segment
-    caption.startTime = clock.metadataTsToSeconds(caption.startPts, timelineStartPts, options.keepOriginalTimestamps);
-    caption.endTime = clock.metadataTsToSeconds(caption.endPts, timelineStartPts, options.keepOriginalTimestamps);
+    caption.startTime = metadataTsToSeconds(caption.startPts, timelineStartPts, options.keepOriginalTimestamps);
+    caption.endTime = metadataTsToSeconds(caption.endPts, timelineStartPts, options.keepOriginalTimestamps);
 
     pipeline.trigger('caption', caption);
   });
@@ -167,10 +170,10 @@ var aacPipeline = function(options) {
     tracks: {
       audio: null
     },
-    metadataStream: new m2ts.MetadataStream(),
+    metadataStream: new MetadataStream(),
     aacStream: new AacStream(),
-    audioRollover: new m2ts.TimestampRolloverStream('audio'),
-    timedMetadataRollover: new m2ts.TimestampRolloverStream('timed-metadata'),
+    audioRollover: new TimestampRolloverStream('audio'),
+    timedMetadataRollover: new TimestampRolloverStream('timed-metadata'),
     adtsStream: new AdtsStream(true)
   };
 
@@ -249,7 +252,7 @@ var setupPipelineListeners = function(pipeline, transmuxer) {
     // add this to every single emitted segment even though it's only needed for the first
     event.dispatchType = pipeline.metadataStream.dispatchType;
     // keep original time, can be adjusted if needed at a higher level
-    event.cueTime = clock.videoTsToSeconds(event.pts);
+    event.cueTime = videoTsToSeconds(event.pts);
 
     transmuxer.trigger('id3Frame', event);
   });

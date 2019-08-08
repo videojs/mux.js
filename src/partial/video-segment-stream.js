@@ -10,9 +10,15 @@
 'use strict';
 
 import Stream from '../utils/stream.js';
-import mp4 from '../mp4/mp4-generator.js';
+import {moof as genMoof, mdat as genMdat, initSegment as genInitSegment} from '../mp4/mp4-generator.js';
 import trackInfo from '../mp4/track-decode-info.js';
-import frameUtils from '../mp4/frame-utils';
+import {
+  extendFirstKeyFrame,
+  groupNalsIntoFrames,
+  concatenateNalDataForFrame,
+  generateSampleTableForFrame,
+  groupFramesIntoGops
+} from '../mp4/frame-utils';
 
 var VIDEO_PROPERTIES = [
   'width',
@@ -84,7 +90,7 @@ var VideoSegmentStream = function(track, options) {
       return;
     }
 
-    var frames = frameUtils.groupNalsIntoFrames(nalUnits);
+    var frames = groupNalsIntoFrames(nalUnits);
 
     if (!frames.length) {
       return;
@@ -109,10 +115,10 @@ var VideoSegmentStream = function(track, options) {
     this.trigger('timelineStartInfo', track.timelineStartInfo);
 
     if (ensureNextFrameIsKeyFrame) {
-      gops = frameUtils.groupFramesIntoGops(frames);
+      gops = groupFramesIntoGops(frames);
 
       if (!gops[0][0].keyFrame) {
-        gops = frameUtils.extendFirstKeyFrame(gops);
+        gops = extendFirstKeyFrame(gops);
 
         if (!gops[0][0].keyFrame) {
           // we haven't yet gotten a key frame, so reset nal units to wait for more nal
@@ -143,9 +149,9 @@ var VideoSegmentStream = function(track, options) {
     for (i = 0; i < frames.length; i++) {
       var frame = frames[i];
 
-      track.samples = frameUtils.generateSampleTableForFrame(frame);
+      track.samples = generateSampleTableForFrame(frame);
 
-      var mdat = mp4.mdat(frameUtils.concatenateNalDataForFrame(frame));
+      var mdat = genMdat(concatenateNalDataForFrame(frame));
 
       trackInfo.clearDtsInfo(track);
       trackInfo.collectDtsInfo(track, frame);
@@ -153,11 +159,11 @@ var VideoSegmentStream = function(track, options) {
       track.baseMediaDecodeTime = trackInfo.calculateTrackBaseMediaDecodeTime(
         track, options.keepOriginalTimestamps);
 
-      var moof = mp4.moof(sequenceNumber, [track]);
+      var moof = genMoof(sequenceNumber, [track]);
 
       sequenceNumber++;
 
-      track.initSegment = mp4.initSegment([track]);
+      track.initSegment = genInitSegment([track]);
 
       var boxes = new Uint8Array(moof.byteLength + mdat.byteLength);
 

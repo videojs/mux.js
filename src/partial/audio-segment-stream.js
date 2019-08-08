@@ -1,7 +1,7 @@
 'use strict';
 
 import Stream from '../utils/stream.js';
-import mp4 from '../mp4/mp4-generator.js';
+import {moof as genMoof, mdat as genMdat, initSegment as genInitSegment} from '../mp4/mp4-generator.js';
 import audioFrameUtils from '../mp4/audio-frame-utils';
 import trackInfo from '../mp4/track-decode-info.js';
 import {ONE_SECOND_IN_TS} from '../utils/clock';
@@ -91,16 +91,16 @@ var AudioSegmentStream = function(track, options) {
     track.samples = audioFrameUtils.generateSampleTable(frames);
 
     // concatenate the audio data to constuct the mdat
-    mdat = mp4.mdat(audioFrameUtils.concatenateFrameData(frames));
+    mdat = genMdat(audioFrameUtils.concatenateFrameData(frames));
 
     adtsFrames = [];
 
-    moof = mp4.moof(sequenceNumber, [track]);
+    moof = genMoof(sequenceNumber, [track]);
 
     // bump the sequence number for next time
     sequenceNumber++;
 
-    track.initSegment = mp4.initSegment([track]);
+    track.initSegment = genInitSegment([track]);
 
     // it would be great to allocate this array up front instead of
     // throwing away hundreds of media segment fragments

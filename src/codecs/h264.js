@@ -9,13 +9,12 @@
 import Stream from '../utils/stream.js';
 import ExpGolomb from '../utils/exp-golomb.js';
 
-var H264Stream, NalByteStream;
 var PROFILES_WITH_OPTIONAL_SPS_DATA;
 
 /**
  * Accepts a NAL unit byte stream and unpacks the embedded NAL units.
  */
-NalByteStream = function() {
+export var NalByteStream = function() {
   var
     syncPoint = 0,
     i,
@@ -159,7 +158,7 @@ PROFILES_WITH_OPTIONAL_SPS_DATA = {
  * Accepts input from a ElementaryStream and produces H.264 NAL unit data
  * events.
  */
-H264Stream = function() {
+export var H264Stream = function() {
   var
     nalByteStream = new NalByteStream(),
     self,

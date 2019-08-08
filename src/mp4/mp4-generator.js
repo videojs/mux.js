@@ -11,7 +11,7 @@
 
 var UINT32_MAX = Math.pow(2, 32) - 1;
 
-var box, dinf, esds, ftyp, mdat, mfhd, minf, moof, moov, mvex, mvhd,
+var box, dinf, esds, mfhd, minf, mvex, mvhd,
     trak, tkhd, mdia, mdhd, hdlr, sdtp, stbl, stsd, traf, trex,
     trun, types, MAJOR_BRAND, MINOR_VERSION, AVC1_BRAND, VIDEO_HDLR,
     AUDIO_HDLR, HDLR_TYPES, VMHD, SMHD, DREF, STCO, STSC, STSZ, STTS;
@@ -219,14 +219,14 @@ esds = function(track) {
   ]));
 };
 
-ftyp = function() {
+export var ftyp = function() {
   return box(types.ftyp, MAJOR_BRAND, MINOR_VERSION, MAJOR_BRAND, AVC1_BRAND);
 };
 
 hdlr = function(type) {
   return box(types.hdlr, HDLR_TYPES[type]);
 };
-mdat = function(data) {
+export var mdat = function(data) {
   return box(types.mdat, data);
 };
 mdhd = function(track) {
@@ -276,7 +276,7 @@ minf = function(track) {
              dinf(),
              stbl(track));
 };
-moof = function(sequenceNumber, tracks) {
+export var moof = function(sequenceNumber, tracks) {
   var
     trackFragments = [],
     i = tracks.length;
@@ -294,7 +294,7 @@ moof = function(sequenceNumber, tracks) {
  * @param tracks {array} the tracks associated with this movie
  * @see ISO/IEC 14496-12:2012(E), section 8.2.1
  */
-moov = function(tracks) {
+export var moov = function(tracks) {
   var
     i = tracks.length,
     boxes = [];
@@ -751,20 +751,22 @@ trex = function(track) {
   };
 }());
 
+export var initSegment = function(tracks) {
+  var
+    fileType = ftyp(),
+    movie = moov(tracks),
+    result;
+
+  result = new Uint8Array(fileType.byteLength + movie.byteLength);
+  result.set(fileType);
+  result.set(movie, fileType.byteLength);
+  return result;
+};
+
 export default {
   ftyp: ftyp,
   mdat: mdat,
   moof: moof,
   moov: moov,
-  initSegment: function(tracks) {
-    var
-      fileType = ftyp(),
-      movie = moov(tracks),
-      result;
-
-    result = new Uint8Array(fileType.byteLength + movie.byteLength);
-    result.set(fileType);
-    result.set(movie, fileType.byteLength);
-    return result;
-  }
+  initSegment: initSegment
 };

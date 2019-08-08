@@ -11,7 +11,7 @@ import {ONE_SECOND_IN_TS} from '../utils/clock';
  * duration for each frame/sample we process in order to calculate
  * the baseMediaDecodeTime
  */
-var collectDtsInfo = function(track, data) {
+export var collectDtsInfo = function(track, data) {
   if (typeof data.pts === 'number') {
     if (track.timelineStartInfo.pts === undefined) {
       track.timelineStartInfo.pts = data.pts;
@@ -53,7 +53,7 @@ var collectDtsInfo = function(track, data) {
  * Clear values used to calculate the baseMediaDecodeTime between
  * tracks
  */
-var clearDtsInfo = function(track) {
+export var clearDtsInfo = function(track) {
   delete track.minSegmentDts;
   delete track.maxSegmentDts;
   delete track.minSegmentPts;
@@ -68,7 +68,7 @@ var clearDtsInfo = function(track) {
  * @param keepOriginalTimestamps {boolean} If true, keep the timestamps
  *        in the source; false to adjust the first segment to start at 0.
  */
-var calculateTrackBaseMediaDecodeTime = function(track, keepOriginalTimestamps) {
+export var calculateTrackBaseMediaDecodeTime = function(track, keepOriginalTimestamps) {
   var
     baseMediaDecodeTime,
     scale,

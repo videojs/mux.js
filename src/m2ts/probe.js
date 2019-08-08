@@ -17,7 +17,7 @@ var parsePid = function(packet) {
   return pid;
 };
 
-var parsePayloadUnitStartIndicator = function(packet) {
+export var parsePayloadUnitStartIndicator = function(packet) {
   return !!(packet[1] & 0x40);
 };
 
@@ -34,7 +34,7 @@ var parseAdaptionField = function(packet) {
   return offset;
 };
 
-var parseType = function(packet, pmtPid) {
+export var parseType = function(packet, pmtPid) {
   var pid = parsePid(packet);
   if (pid === 0) {
     return 'pat';
@@ -46,7 +46,7 @@ var parseType = function(packet, pmtPid) {
   return null;
 };
 
-var parsePat = function(packet) {
+export var parsePat = function(packet) {
   var pusi = parsePayloadUnitStartIndicator(packet);
   var offset = 4 + parseAdaptionField(packet);
 
@@ -57,7 +57,7 @@ var parsePat = function(packet) {
   return (packet[offset + 10] & 0x1f) << 8 | packet[offset + 11];
 };
 
-var parsePmt = function(packet) {
+export var parsePmt = function(packet) {
   var programMapTable = {};
   var pusi = parsePayloadUnitStartIndicator(packet);
   var payloadOffset = 4 + parseAdaptionField(packet);
@@ -98,7 +98,7 @@ var parsePmt = function(packet) {
   return programMapTable;
 };
 
-var parsePesType = function(packet, programMapTable) {
+export var parsePesType = function(packet, programMapTable) {
   var pid = parsePid(packet);
   var type = programMapTable[pid];
   switch (type) {
@@ -113,7 +113,7 @@ var parsePesType = function(packet, programMapTable) {
   }
 };
 
-var parsePesTime = function(packet) {
+export var parsePesTime = function(packet) {
   var pusi = parsePayloadUnitStartIndicator(packet);
   if (!pusi) {
     return null;
@@ -194,7 +194,7 @@ var parseNalUnitType = function(type) {
   }
 };
 
-var videoPacketContainsKeyFrame = function(packet) {
+export var videoPacketContainsKeyFrame = function(packet) {
   var offset = 4 + parseAdaptionField(packet);
   var frameBuffer = packet.subarray(offset);
   var frameI = 0;

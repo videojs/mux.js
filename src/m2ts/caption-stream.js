@@ -18,10 +18,14 @@
 // -----------------
 
 import Stream from '../utils/stream';
+import {
+  parseUserData,
+  USER_DATA_REGISTERED_ITU_T_T35,
+  parseSei,
+  parseCaptionPackets
+} from '../tools/caption-packet-parser';
 
-import cea708Parser from '../tools/caption-packet-parser';
-
-var CaptionStream = function() {
+export var CaptionStream = function() {
 
   CaptionStream.prototype.init.call(this);
 
@@ -55,15 +59,15 @@ CaptionStream.prototype.push = function(event) {
   }
 
   // parse the sei
-  sei = cea708Parser.parseSei(event.escapedRBSP);
+  sei = parseSei(event.escapedRBSP);
 
   // ignore everything but user_data_registered_itu_t_t35
-  if (sei.payloadType !== cea708Parser.USER_DATA_REGISTERED_ITU_T_T35) {
+  if (sei.payloadType !== USER_DATA_REGISTERED_ITU_T_T35) {
     return;
   }
 
   // parse out the user data payload
-  userData = cea708Parser.parseUserData(sei);
+  userData = parseUserData(sei);
 
   // ignore unrecognized userData
   if (!userData) {
@@ -92,7 +96,7 @@ CaptionStream.prototype.push = function(event) {
   }
 
   // parse out CC data packets and save them for later
-  newCaptionPackets = cea708Parser.parseCaptionPackets(event.pts, userData);
+  newCaptionPackets = parseCaptionPackets(event.pts, userData);
   this.captionPackets_ = this.captionPackets_.concat(newCaptionPackets);
   if (this.latestDts_ !== event.dts) {
     this.numSameDts_ = 0;
@@ -331,7 +335,7 @@ var createDisplayBuffer = function() {
   return result;
 };
 
-var Cea608Stream = function(field, dataChannel) {
+export var Cea608Stream = function(field, dataChannel) {
   Cea608Stream.prototype.init.call(this);
 
   this.field_ = field || 0;

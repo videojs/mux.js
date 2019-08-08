@@ -11,21 +11,29 @@
 'use strict';
 
 import Stream from '../utils/stream.js';
-import mp4 from './mp4-generator.js';
-import frameUtils from './frame-utils';
+import {moof as genMoof, mdat as genMdat, initSegment as genInitSegment} from './mp4-generator.js';
+import {
+  extendFirstKeyFrame,
+  groupNalsIntoFrames,
+  concatenateNalData,
+  generateSampleTable,
+  groupFramesIntoGops
+} from './frame-utils';
 import audioFrameUtils from './audio-frame-utils';
 import trackDecodeInfo from './track-decode-info';
-import m2ts from '../m2ts/m2ts.js';
-import clock from '../utils/clock';
+import {CaptionStream} from '../m2ts/caption-stream.js';
+import MetadataStream from '../m2ts/metadata-stream.js';
+import {TimestampRolloverStream} from '../m2ts/timestamp-rollover-stream.js';
+import {ElementaryStream, TransportPacketStream, TransportParseStream} from '../m2ts/m2ts.js';
 import AdtsStream from '../codecs/adts.js';
 import {H264Stream} from '../codecs/h264';
 import AacStream from '../aac';
 import {isLikelyAacData} from '../aac/utils';
-import {ONE_SECOND_IN_TS} from '../utils/clock';
+import {ONE_SECOND_IN_TS, metadataTsToSeconds, videoTsToSeconds} from '../utils/clock';
 
 
 // constants
-var AUDIO_PROPERTIES = [
+export var AUDIO_PROPERTIES = [
   'audioobjecttype',
   'channelcount',
   'samplerate',
@@ -33,16 +41,13 @@ var AUDIO_PROPERTIES = [
   'samplesize'
 ];
 
-var VIDEO_PROPERTIES = [
+export var VIDEO_PROPERTIES = [
   'width',
   'height',
   'profileIdc',
   'levelIdc',
   'profileCompatibility'
 ];
-
-// object types
-var VideoSegmentStream, AudioSegmentStream, Transmuxer, CoalesceStream;
 
 /**
  * Compare two arrays (even typed) for same-ness
@@ -65,7 +70,7 @@ var arrayEquals = function(a, b) {
   return true;
 };
 
-var generateVideoSegmentTimingInfo = function(
+export var generateVideoSegmentTimingInfo = function(
   baseMediaDecodeTime,
   startDts,
   startPts,
@@ -105,7 +110,7 @@ var generateVideoSegmentTimingInfo = function(
  * @param options.keepOriginalTimestamps {boolean} If true, keep the timestamps
  *        in the source; false to adjust the first segment to start at 0.
  */
-AudioSegmentStream = function(track, options) {
+export var AudioSegmentStream = function(track, options) {
   var
     adtsFrames = [],
     sequenceNumber = 0,
@@ -169,11 +174,11 @@ AudioSegmentStream = function(track, options) {
     track.samples = audioFrameUtils.generateSampleTable(frames);
 
     // concatenate the audio data to constuct the mdat
-    mdat = mp4.mdat(audioFrameUtils.concatenateFrameData(frames));
+    mdat = genMdat(audioFrameUtils.concatenateFrameData(frames));
 
     adtsFrames = [];
 
-    moof = mp4.moof(sequenceNumber, [track]);
+    moof = genMoof(sequenceNumber, [track]);
     boxes = new Uint8Array(moof.byteLength + mdat.byteLength);
 
     // bump the sequence number for next time
@@ -220,7 +225,7 @@ AudioSegmentStream.prototype = new Stream();
  * @param options.keepOriginalTimestamps {boolean} If true, keep the timestamps
  *        in the source; false to adjust the first segment to start at 0.
  */
-VideoSegmentStream = function(track, options) {
+export var VideoSegmentStream = function(track, options) {
   var
     sequenceNumber = 0,
     nalUnits = [],
@@ -302,8 +307,8 @@ VideoSegmentStream = function(track, options) {
     // Organize the raw nal-units into arrays that represent
     // higher-level constructs such as frames and gops
     // (group-of-pictures)
-    frames = frameUtils.groupNalsIntoFrames(nalUnits);
-    gops = frameUtils.groupFramesIntoGops(frames);
+    frames = groupNalsIntoFrames(nalUnits);
+    gops = groupFramesIntoGops(frames);
 
     // If the first frame of this fragment is not a keyframe we have
     // a problem since MSE (on Chrome) requires a leading keyframe.
@@ -342,7 +347,7 @@ VideoSegmentStream = function(track, options) {
         gops.duration += gopForFusion.duration;
       } else {
         // If we didn't find a candidate gop fall back to keyframe-pulling
-        gops = frameUtils.extendFirstKeyFrame(gops);
+        gops = extendFirstKeyFrame(gops);
       }
     }
 
@@ -387,10 +392,10 @@ VideoSegmentStream = function(track, options) {
 
     // First, we have to build the index from byte locations to
     // samples (that is, frames) in the video data
-    track.samples = frameUtils.generateSampleTable(gops);
+    track.samples = generateSampleTable(gops);
 
     // Concatenate the video data and construct the mdat
-    mdat = mp4.mdat(frameUtils.concatenateNalData(gops));
+    mdat = genMdat(concatenateNalData(gops));
 
     track.baseMediaDecodeTime = trackDecodeInfo.calculateTrackBaseMediaDecodeTime(
       track, options.keepOriginalTimestamps);
@@ -437,7 +442,7 @@ VideoSegmentStream = function(track, options) {
     this.trigger('baseMediaDecodeTime', track.baseMediaDecodeTime);
     this.trigger('timelineStartInfo', track.timelineStartInfo);
 
-    moof = mp4.moof(sequenceNumber, [track]);
+    moof = genMoof(sequenceNumber, [track]);
 
     // it would be great to allocate this array up front instead of
     // throwing away hundreds of media segment fragments
@@ -662,7 +667,7 @@ VideoSegmentStream.prototype = new Stream();
  * @param options.keepOriginalTimestamps {boolean} If true, keep the timestamps
  *        in the source; false to adjust the first segment to start at media timeline start.
  */
-CoalesceStream = function(options, metadataStream) {
+export var CoalesceStream = function(options, metadataStream) {
   // Number of Tracks per output segment
   // If greater than 1, we combine multiple
   // tracks into a single segment
@@ -793,7 +798,7 @@ CoalesceStream.prototype.flush = function(flushSource) {
 
     this.emittedTracks += this.pendingTracks.length;
 
-    initSegment = mp4.initSegment(this.pendingTracks);
+    initSegment = genInitSegment(this.pendingTracks);
 
     // Create a new typed array to hold the init segment
     event.initSegment = new Uint8Array(initSegment.byteLength);
@@ -815,9 +820,9 @@ CoalesceStream.prototype.flush = function(flushSource) {
     // video timeline for the segment, and add track info
     for (i = 0; i < this.pendingCaptions.length; i++) {
       caption = this.pendingCaptions[i];
-      caption.startTime = clock.metadataTsToSeconds(
+      caption.startTime = metadataTsToSeconds(
         caption.startPts, timelineStartPts, this.keepOriginalTimestamps);
-      caption.endTime = clock.metadataTsToSeconds(
+      caption.endTime = metadataTsToSeconds(
         caption.endPts, timelineStartPts, this.keepOriginalTimestamps);
 
       event.captionStreams[caption.stream] = true;
@@ -828,7 +833,7 @@ CoalesceStream.prototype.flush = function(flushSource) {
     // video timeline for the segment
     for (i = 0; i < this.pendingMetadata.length; i++) {
       id3 = this.pendingMetadata[i];
-      id3.cueTime = clock.videoTsToSeconds(
+      id3.cueTime = videoTsToSeconds(
         id3.pts, timelineStartPts, this.keepOriginalTimestamps);
 
       event.metadata.push(id3);
@@ -886,7 +891,7 @@ CoalesceStream.prototype.setRemux = function(val) {
  * Extension (MSE) implementations that support the ISO BMFF byte
  * stream format, like Chrome.
  */
-Transmuxer = function(options) {
+export var Transmuxer = function(options) {
   var
     self = this,
     hasFlushed = true,
@@ -904,12 +909,12 @@ Transmuxer = function(options) {
     this.transmuxPipeline_ = pipeline;
 
     pipeline.type = 'aac';
-    pipeline.metadataStream = new m2ts.MetadataStream();
+    pipeline.metadataStream = new MetadataStream();
 
     // set up the parsing pipeline
     pipeline.aacStream = new AacStream();
-    pipeline.audioTimestampRolloverStream = new m2ts.TimestampRolloverStream('audio');
-    pipeline.timedMetadataTimestampRolloverStream = new m2ts.TimestampRolloverStream('timed-metadata');
+    pipeline.audioTimestampRolloverStream = new TimestampRolloverStream('audio');
+    pipeline.timedMetadataTimestampRolloverStream = new TimestampRolloverStream('timed-metadata');
     pipeline.adtsStream = new AdtsStream();
     pipeline.coalesceStream = new CoalesceStream(options, pipeline.metadataStream);
     pipeline.headOfPipeline = pipeline.aacStream;
@@ -966,16 +971,16 @@ Transmuxer = function(options) {
     this.transmuxPipeline_ = pipeline;
 
     pipeline.type = 'ts';
-    pipeline.metadataStream = new m2ts.MetadataStream();
+    pipeline.metadataStream = new MetadataStream();
 
     // set up the parsing pipeline
-    pipeline.packetStream = new m2ts.TransportPacketStream();
-    pipeline.parseStream = new m2ts.TransportParseStream();
-    pipeline.elementaryStream = new m2ts.ElementaryStream();
-    pipeline.timestampRolloverStream = new m2ts.TimestampRolloverStream();
+    pipeline.packetStream = new TransportPacketStream();
+    pipeline.parseStream = new TransportParseStream();
+    pipeline.elementaryStream = new ElementaryStream();
+    pipeline.timestampRolloverStream = new TimestampRolloverStream();
     pipeline.adtsStream = new AdtsStream();
     pipeline.h264Stream = new H264Stream();
-    pipeline.captionStream = new m2ts.CaptionStream();
+    pipeline.captionStream = new CaptionStream();
     pipeline.coalesceStream = new CoalesceStream(options, pipeline.metadataStream);
     pipeline.headOfPipeline = pipeline.packetStream;
 

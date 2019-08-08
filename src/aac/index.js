@@ -10,7 +10,7 @@
  */
 'use strict';
 import Stream from '../utils/stream.js';
-import aacUtils from './utils';
+import {parseAdtsSize, parseId3TagSize} from './utils';
 
 // Constants
 var AacStream;
@@ -62,7 +62,7 @@ AacStream = function() {
         }
 
         // check framesize
-        frameSize = aacUtils.parseId3TagSize(everything, byteIndex);
+        frameSize = parseId3TagSize(everything, byteIndex);
 
         // Exit early if we don't have enough in the buffer
         // to emit a full packet
@@ -86,7 +86,7 @@ AacStream = function() {
           break;
         }
 
-        frameSize = aacUtils.parseAdtsSize(everything, byteIndex);
+        frameSize = parseAdtsSize(everything, byteIndex);
 
         // Exit early if we don't have enough in the buffer
         // to emit a full packet

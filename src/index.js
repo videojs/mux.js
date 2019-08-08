@@ -27,5 +27,4 @@ muxjs.mp4.tools = mp4Inspector;
 muxjs.flv.tools = flvInspector;
 muxjs.mp2t.tools = tsInspector;
 
-
 export default muxjs;

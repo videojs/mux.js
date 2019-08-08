@@ -8,7 +8,10 @@
 
 import Stream from '../utils/stream.js';
 import FlvTag from './flv-tag.js';
-import m2ts from '../m2ts/m2ts.js';
+import CaptionStream from '../m2ts/caption-stream.js';
+import MetadataStream from '../m2ts/metadata-stream.js';
+import {TimestampRolloverStream} from '../m2ts/timestamp-rollover-stream.js';
+import {ElementaryStream, TransportPacketStream, TransportParseStream} from '../m2ts/m2ts.js';
 import AdtsStream from '../codecs/adts.js';
 import {H264Stream} from '../codecs/h264';
 import CoalesceStream from './coalesce-stream.js';
@@ -338,17 +341,17 @@ Transmuxer = function(options) {
   options = options || {};
 
   // expose the metadata stream
-  this.metadataStream = new m2ts.MetadataStream();
+  this.metadataStream = new MetadataStream();
 
   options.metadataStream = this.metadataStream;
 
   // set up the parsing pipeline
-  packetStream = new m2ts.TransportPacketStream();
-  parseStream = new m2ts.TransportParseStream();
-  elementaryStream = new m2ts.ElementaryStream();
-  videoTimestampRolloverStream = new m2ts.TimestampRolloverStream('video');
-  audioTimestampRolloverStream = new m2ts.TimestampRolloverStream('audio');
-  timedMetadataTimestampRolloverStream = new m2ts.TimestampRolloverStream('timed-metadata');
+  packetStream = new TransportPacketStream();
+  parseStream = new TransportParseStream();
+  elementaryStream = new ElementaryStream();
+  videoTimestampRolloverStream = new TimestampRolloverStream('video');
+  audioTimestampRolloverStream = new TimestampRolloverStream('audio');
+  timedMetadataTimestampRolloverStream = new TimestampRolloverStream('timed-metadata');
 
   adtsStream = new AdtsStream();
   h264Stream = new H264Stream();
@@ -373,7 +376,7 @@ Transmuxer = function(options) {
     .pipe(this.metadataStream)
     .pipe(coalesceStream);
   // if CEA-708 parsing is available, hook up a caption stream
-  captionStream = new m2ts.CaptionStream();
+  captionStream = new CaptionStream();
   h264Stream.pipe(captionStream)
     .pipe(coalesceStream);
 

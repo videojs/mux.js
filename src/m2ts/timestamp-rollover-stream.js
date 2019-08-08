@@ -19,7 +19,7 @@ var RO_THRESH = 4294967296;
 
 var TYPE_SHARED = 'shared';
 
-var handleRollover = function(value, reference) {
+export var handleRollover = function(value, reference) {
   var direction = 1;
 
   if (value > reference) {
@@ -42,7 +42,7 @@ var handleRollover = function(value, reference) {
   return value;
 };
 
-var TimestampRolloverStream = function(type) {
+export var TimestampRolloverStream = function(type) {
   var lastDTS, referenceDTS;
 
   TimestampRolloverStream.prototype.init.call(this);

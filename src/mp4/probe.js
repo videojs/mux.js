@@ -10,10 +10,9 @@
 
 import {toUnsigned} from '../utils/bin';
 import {toHexString} from '../utils/bin';
-var findBox, parseType, timescale, startTime, getVideoTrackIds, getTracks;
 
 // Find the data for a box specified by its path
-findBox = function(data, path) {
+export var findBox = function(data, path) {
   var results = [],
       i, size, type, end, subresults;
 
@@ -57,7 +56,7 @@ findBox = function(data, path) {
  * @param buffer {Uint8Array} a four-byte buffer to translate
  * @return {string} the corresponding string
  */
-parseType = function(buffer) {
+export var parseType = function(buffer) {
   var result = '';
   result += String.fromCharCode(buffer[0]);
   result += String.fromCharCode(buffer[1]);
@@ -84,7 +83,7 @@ parseType = function(buffer) {
  * @return {object} a hash of track ids to timescale values or null if
  * the init segment is malformed.
  */
-timescale = function(init) {
+export var timescale = function(init) {
   var
     result = {},
     traks = findBox(init, ['moov', 'trak']);
@@ -134,7 +133,7 @@ timescale = function(init) {
  * @return {number} the earliest base media decode start time for the
  * fragment, in seconds
  */
-startTime = function(timescale, fragment) {
+export var startTime = function(timescale, fragment) {
   var trafs, baseTimes, result;
 
   // we need info from two childrend of each track fragment box
@@ -194,9 +193,9 @@ startTime = function(timescale, fragment) {
   *
   * @see ISO-BMFF-12/2015, Section 8.4.3
  **/
-getVideoTrackIds = function(init) {
+export var videoTrackIds = function(init) {
   var traks = findBox(init, ['moov', 'trak']);
-  var videoTrackIds = [];
+  var videoTrackIds_ = [];
 
   traks.forEach(function(trak) {
     var hdlrs = findBox(trak, ['mdia', 'hdlr']);
@@ -214,21 +213,21 @@ getVideoTrackIds = function(init) {
         version = view.getUint8(0);
         trackId = (version === 0) ? view.getUint32(12) : view.getUint32(20);
 
-        videoTrackIds.push(trackId);
+        videoTrackIds_.push(trackId);
       }
     });
   });
 
-  return videoTrackIds;
+  return videoTrackIds_;
 };
 
 /**
  * Get all the video, audio, and hint tracks from a non fragmented
  * mp4 segment
  */
-getTracks = function(init) {
+export var tracks = function(init) {
   var traks = findBox(init, ['moov', 'trak']);
-  var tracks = [];
+  var tracks_ = [];
 
   traks.forEach(function(trak) {
     var track = {};
@@ -324,10 +323,10 @@ getTracks = function(init) {
                                    mdhd[index + 3]);
     }
 
-    tracks.push(track);
+    tracks_.push(track);
   });
 
-  return tracks;
+  return tracks_;
 };
 
 export default {
@@ -335,6 +334,6 @@ export default {
   parseType: parseType,
   timescale: timescale,
   startTime: startTime,
-  videoTrackIds: getVideoTrackIds,
-  tracks: getTracks
+  videoTrackIds: videoTrackIds,
+  tracks: tracks
 };

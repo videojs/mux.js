@@ -8,7 +8,7 @@
 // composed of the nal units that make up that frame
 // Also keep track of cummulative data about the frame from the nal units such
 // as the frame duration, starting pts, etc.
-var groupNalsIntoFrames = function(nalUnits) {
+export var groupNalsIntoFrames = function(nalUnits) {
   var
     i,
     currentNal,
@@ -74,7 +74,7 @@ var groupNalsIntoFrames = function(nalUnits) {
 // of the frames that make up that Gop
 // Also keep track of cummulative data about the Gop from the frames such as the
 // Gop duration, starting pts, etc.
-var groupFramesIntoGops = function(frames) {
+export var groupFramesIntoGops = function(frames) {
   var
     i,
     currentFrame,
@@ -144,7 +144,7 @@ var groupFramesIntoGops = function(frames) {
  * @param {Array} gops video GOPs
  * @returns {Array} modified video GOPs
  */
-var extendFirstKeyFrame = function(gops) {
+export var extendFirstKeyFrame = function(gops) {
   var currentGop;
 
   if (!gops[0][0].keyFrame && gops.length > 1) {
@@ -209,7 +209,7 @@ var sampleForFrame = function(frame, dataOffset) {
 };
 
 // generate the track's sample table from an array of gops
-var generateSampleTable = function(gops, baseDataOffset) {
+export var generateSampleTable = function(gops, baseDataOffset) {
   var
     h, i,
     sample,
@@ -235,7 +235,7 @@ var generateSampleTable = function(gops, baseDataOffset) {
 };
 
 // generate the track's raw mdat data from an array of gops
-var concatenateNalData = function(gops) {
+export var concatenateNalData = function(gops) {
   var
     h, i, j,
     currentGop,
@@ -271,7 +271,7 @@ var concatenateNalData = function(gops) {
 };
 
 // generate the track's sample table from a frame
-var generateSampleTableForFrame = function(frame, baseDataOffset) {
+export var generateSampleTableForFrame = function(frame, baseDataOffset) {
   var
     sample,
     dataOffset = baseDataOffset || 0,
@@ -284,7 +284,7 @@ var generateSampleTableForFrame = function(frame, baseDataOffset) {
 };
 
 // generate the track's raw mdat data from a frame
-var concatenateNalDataForFrame = function(frame) {
+export var concatenateNalDataForFrame = function(frame) {
   var
     i,
     currentNal,

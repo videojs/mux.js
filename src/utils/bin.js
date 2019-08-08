@@ -4,11 +4,11 @@
  * Copyright (c) Brightcove
  * Licensed Apache-2.0 https://github.com/videojs/mux.js/blob/master/LICENSE
  */
-var toUnsigned = function(value) {
+export var toUnsigned = function(value) {
   return value >>> 0;
 };
 
-var toHexString = function(value) {
+export var toHexString = function(value) {
   return ('00' + value.toString(16)).slice(-2);
 };
 

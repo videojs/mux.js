@@ -11,8 +11,8 @@
 
 import {discardEmulationPreventionBytes} from '../tools/caption-packet-parser';
 import {CaptionStream} from '../m2ts/caption-stream';
-import probe from './probe';
-import inspect from '../tools/mp4-inspector';
+import {findBox} from './probe';
+import {parseTfdt, parseTrun, parseTfhd} from '../tools/mp4-inspector';
 
 /**
   * Maps an offset in the mdat to a sample based on the the size of the samples.
@@ -130,7 +130,7 @@ var parseSamples = function(truns, baseMediaDecodeTime, tfhd) {
     // Note: We currently do not parse the sample table as well
     // as the trun. It's possible some sources will require this.
     // moov > trak > mdia > minf > stbl
-    var trackRun = inspect.parseTrun(trun);
+    var trackRun = parseTrun(trun);
     var samples = trackRun.samples;
 
     samples.forEach(function(sample) {
@@ -166,9 +166,9 @@ var parseSamples = function(truns, baseMediaDecodeTime, tfhd) {
  **/
 var parseCaptionNals = function(segment, videoTrackId) {
   // To get the samples
-  var trafs = probe.findBox(segment, ['moof', 'traf']);
+  var trafs = findBox(segment, ['moof', 'traf']);
   // To get SEI NAL units
-  var mdats = probe.findBox(segment, ['mdat']);
+  var mdats = findBox(segment, ['mdat']);
   var captionNals = {};
   var mdatTrafPairs = [];
 
@@ -184,14 +184,14 @@ var parseCaptionNals = function(segment, videoTrackId) {
   mdatTrafPairs.forEach(function(pair) {
     var mdat = pair.mdat;
     var traf = pair.traf;
-    var tfhd = probe.findBox(traf, ['tfhd']);
+    var tfhd = findBox(traf, ['tfhd']);
     // Exactly 1 tfhd per traf
-    var headerInfo = inspect.parseTfhd(tfhd[0]);
+    var headerInfo = parseTfhd(tfhd[0]);
     var trackId = headerInfo.trackId;
-    var tfdt = probe.findBox(traf, ['tfdt']);
+    var tfdt = findBox(traf, ['tfdt']);
     // Either 0 or 1 tfdt per traf
-    var baseMediaDecodeTime = (tfdt.length > 0) ? inspect.parseTfdt(tfdt[0]).baseMediaDecodeTime : 0;
-    var truns = probe.findBox(traf, ['trun']);
+    var baseMediaDecodeTime = (tfdt.length > 0) ? parseTfdt(tfdt[0]).baseMediaDecodeTime : 0;
+    var truns = findBox(traf, ['trun']);
     var samples;
     var seiNals;
 

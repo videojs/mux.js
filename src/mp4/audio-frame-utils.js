@@ -5,8 +5,7 @@
  * Licensed Apache-2.0 https://github.com/videojs/mux.js/blob/master/LICENSE
  */
 import coneOfSilence from '../data/silence';
-
-import clock from '../utils/clock';
+import {ONE_SECOND_IN_TS, audioTsToVideoTs, videoTsToAudioTs} from '../utils/clock';
 
 /**
  * Sum the `byteLength` properties of the data in each AAC frame
@@ -28,7 +27,7 @@ var sumFrameByteLengths = function(array) {
 
 // Possibly pad (prefix) the audio track with silence if appending this track
 // would lead to the introduction of a gap in the audio buffer
-var prefixWithSilence = function(
+export var prefixWithSilence = function(
   track,
   frames,
   audioAppendStartTs,
@@ -49,9 +48,9 @@ var prefixWithSilence = function(
   }
 
   baseMediaDecodeTimeTs =
-    clock.audioTsToVideoTs(track.baseMediaDecodeTime, track.samplerate);
+    audioTsToVideoTs(track.baseMediaDecodeTime, track.samplerate);
   // determine frame clock duration based on sample rate, round up to avoid overfills
-  frameDuration = Math.ceil(clock.ONE_SECOND_IN_TS / (track.samplerate / 1024));
+  frameDuration = Math.ceil(ONE_SECOND_IN_TS / (track.samplerate / 1024));
 
   if (audioAppendStartTs && videoBaseMediaDecodeTime) {
     // insert the shortest possible amount (audio gap or audio to video gap)
@@ -64,7 +63,7 @@ var prefixWithSilence = function(
 
   // don't attempt to fill gaps smaller than a single frame or larger
   // than a half second
-  if (audioFillFrameCount < 1 || audioFillDuration > clock.ONE_SECOND_IN_TS / 2) {
+  if (audioFillFrameCount < 1 || audioFillDuration > ONE_SECOND_IN_TS / 2) {
     return;
   }
 
@@ -87,14 +86,14 @@ var prefixWithSilence = function(
   }
 
   track.baseMediaDecodeTime -=
-    Math.floor(clock.videoTsToAudioTs(audioFillDuration, track.samplerate));
+    Math.floor(videoTsToAudioTs(audioFillDuration, track.samplerate));
 };
 
 // If the audio segment extends before the earliest allowed dts
 // value, remove AAC frames until starts at or after the earliest
 // allowed DTS so that we don't end up with a negative baseMedia-
 // DecodeTime for the audio track
-var trimAdtsFramesByEarliestDts = function(adtsFrames, track, earliestAllowedDts) {
+export var trimAdtsFramesByEarliestDts = function(adtsFrames, track, earliestAllowedDts) {
   if (track.minSegmentDts >= earliestAllowedDts) {
     return adtsFrames;
   }
@@ -115,7 +114,7 @@ var trimAdtsFramesByEarliestDts = function(adtsFrames, track, earliestAllowedDts
 };
 
 // generate the track's raw mdat data from an array of frames
-var generateSampleTable = function(frames) {
+export var generateSampleTable = function(frames) {
   var
     i,
     currentFrame,
@@ -132,7 +131,7 @@ var generateSampleTable = function(frames) {
 };
 
 // generate the track's sample table from an array of frames
-var concatenateFrameData = function(frames) {
+export var concatenateFrameData = function(frames) {
   var
     i,
     currentFrame,
