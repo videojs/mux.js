@@ -20,6 +20,8 @@
     "build:flv": "browserify -s muxjs lib/flv/index.js -p bundle-collapser/plugin -o dist/mux-flv.js",
     "build:js": "browserify -s muxjs lib/index.js -p bundle-collapser/plugin -o dist/mux.js",
     "build:test": "browserify test/*.test.js -g browserify-shim -p bundle-collapser/plugin -o dist-test/mux.js",
+    "build:module": "babel src -d module --config-path scripts/babel-module.js",
+    "build:commonjs": "babel src -d lib --config-path scripts/babel-commonjs.js",
     "lint": "eslint \"lib/**/*.js\" \"test/**/*.js\"",
     "uglify": "npm-run-all -p uglify:*",
     "uglify:mp4": "uglifyjs --mangle --compress -o dist/mux-mp4.min.js dist/mux-mp4.js",
@@ -56,6 +58,7 @@
   },
   "files": [
     "lib/",
+    "modules/",
     "dist/"
   ],
   "devDependencies": {
@@ -78,5 +81,10 @@
     "uglify-js": "^2.6.2",
     "watchify": "^3.6.1",
     "webworkify": "^1.0.2"
+  },
+  "dependencies": {
+    "@babel/cli": "^7.5.5",
+    "@babel/core": "^7.5.5",
+    "@babel/preset-env": "^7.5.5"
   }
 }

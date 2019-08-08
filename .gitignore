@@ -8,3 +8,5 @@
 dist
 dist-test
 npm-debug.log
+module
+lib
