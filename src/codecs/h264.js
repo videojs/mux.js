@@ -8,6 +8,7 @@
 
 import Stream from '../utils/stream.js';
 import ExpGolomb from '../utils/exp-golomb.js';
+import {discardEmulationPreventionBytes} from '../tools/caption-packet-parser.js';
 
 var PROFILES_WITH_OPTIONAL_SPS_DATA;
 
@@ -166,7 +167,6 @@ export var H264Stream = function() {
     currentPts,
     currentDts,
 
-    discardEmulationPreventionBytes,
     readSequenceParameterSet,
     skipScalingList;
 
@@ -291,55 +291,6 @@ export var H264Stream = function() {
 
       lastScale = (nextScale === 0) ? lastScale : nextScale;
     }
-  };
-
-  /**
-   * Expunge any "Emulation Prevention" bytes from a "Raw Byte
-   * Sequence Payload"
-   * @param data {Uint8Array} the bytes of a RBSP from a NAL
-   * unit
-   * @return {Uint8Array} the RBSP without any Emulation
-   * Prevention Bytes
-   */
-  discardEmulationPreventionBytes = function(data) {
-    var
-      length = data.byteLength,
-      emulationPreventionBytesPositions = [],
-      i = 1,
-      newLength, newData;
-
-    // Find all `Emulation Prevention Bytes`
-    while (i < length - 2) {
-      if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0x03) {
-        emulationPreventionBytesPositions.push(i + 2);
-        i += 2;
-      } else {
-        i++;
-      }
-    }
-
-    // If no Emulation Prevention Bytes were found just return the original
-    // array
-    if (emulationPreventionBytesPositions.length === 0) {
-      return data;
-    }
-
-    // Create a new array to hold the NAL unit data
-    newLength = length - emulationPreventionBytesPositions.length;
-    newData = new Uint8Array(newLength);
-    var sourceIndex = 0;
-
-    for (i = 0; i < newLength; sourceIndex++, i++) {
-      if (sourceIndex === emulationPreventionBytesPositions[0]) {
-        // Skip this byte
-        sourceIndex++;
-        // Remove this position index
-        emulationPreventionBytesPositions.shift();
-      }
-      newData[i] = data[sourceIndex];
-    }
-
-    return newData;
   };
 
   /**

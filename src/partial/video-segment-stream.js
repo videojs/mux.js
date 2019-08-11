@@ -19,14 +19,7 @@ import {
   generateSampleTableForFrame,
   groupFramesIntoGops
 } from '../mp4/frame-utils';
-
-var VIDEO_PROPERTIES = [
-  'width',
-  'height',
-  'profileIdc',
-  'levelIdc',
-  'profileCompatibility'
-];
+import {VIDEO_PROPERTIES} from '../mp4/transmuxer';
 
 var VideoSegmentStream = function(track, options) {
   var

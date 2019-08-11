@@ -5,15 +5,7 @@ import {moof as genMoof, mdat as genMdat, initSegment as genInitSegment} from '.
 import audioFrameUtils from '../mp4/audio-frame-utils';
 import trackInfo from '../mp4/track-decode-info.js';
 import {ONE_SECOND_IN_TS} from '../utils/clock';
-
-// constants
-var AUDIO_PROPERTIES = [
-  'audioobjecttype',
-  'channelcount',
-  'samplerate',
-  'samplingfrequencyindex',
-  'samplesize'
-];
+import {AUDIO_PROPERTIES} from '../mp4/transmuxer.js';
 
 /**
  * Constructs a single-track, ISO BMFF media segment from AAC data

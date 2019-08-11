@@ -13,7 +13,7 @@
     "serve": "node scripts/server.js",
     "watch": "npm run mkdirs && npm-run-all -p watch:*",
     "watch:cjs": " npm run build:node:cjs -- --verbose --watch",
-    "watch:cjs": " npm run build:node:es -- --verbose --watch",
+    "watch:es": " npm run build:node:es -- --verbose --watch",
     "watch:js": "watchify -s muxjs -p bundle-collapser/plugin lib/index.js -v -o dist/mux.js",
     "watch:test": "watchify test/*.test.js -g browserify-shim -p bundle-collapser/plugin -v -o dist-test/mux.js",
     "mkdirs": "mkdir -p dist dist-test",
