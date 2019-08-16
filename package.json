@@ -78,5 +78,8 @@
     "uglify-js": "^2.6.2",
     "watchify": "^3.6.1",
     "webworkify": "^1.0.2"
+  },
+  "dependencies": {
+    "@videojs/vhs-utils": "github:videojs/vhs-utils#force-dist"
   }
 }
