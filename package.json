@@ -63,7 +63,8 @@
   },
   "files": [
     "lib/",
-    "modules/",
+    "module/",
+    "src/",
     "dist/"
   ],
   "devDependencies": {
@@ -90,6 +91,7 @@
   "dependencies": {
     "@babel/cli": "^7.5.5",
     "@babel/core": "^7.5.5",
-    "@babel/preset-env": "^7.5.5"
+    "@babel/preset-env": "^7.5.5",
+    "@videojs/vhs-utils": "^1.0.0"
   }
 }
