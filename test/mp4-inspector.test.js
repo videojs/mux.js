@@ -976,11 +976,11 @@ QUnit.test('can parse a version 0 tfdt', function() {
             }]);
 });
 
-QUnit.test('can parse a version 1 tfdt', function() {
+QUnit.test('can parse a version 1 tfdt and return an unsigned integer value', function() {
   var data = box('tfdt',
                  0x01, // version
                  0x00, 0x00, 0x00, // flags
-                 0x01, 0x02, 0x03, 0x04,
+                 0x81, 0x02, 0x03, 0x04,
                  0x05, 0x06, 0x07, 0x08); // baseMediaDecodeTime
   QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
@@ -988,7 +988,7 @@ QUnit.test('can parse a version 1 tfdt', function() {
               version: 1,
               size: 20,
               flags: new Uint8Array([0, 0, 0]),
-              baseMediaDecodeTime: 0x0102030405060708
+              baseMediaDecodeTime: 0x8102030405060708
             }]);
 });
 
