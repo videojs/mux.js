@@ -15,6 +15,8 @@ var
   moovWithoutTkhd,
   moofWithTfdt,
   multiMoof,
+  multiTraf,
+  noTrunSamples,
   v1boxes;
 
 QUnit.module('MP4 Probe');
@@ -74,6 +76,35 @@ test('startTime parses 64-bit base decode times', function() {
   }, new Uint8Array(v1boxes)),
         0x0101020304 / 3,
         'parsed a long value');
+});
+
+test('compositionStartTime calculates composition time using composition time' +
+  'offset from first trun sample', function() {
+  equal(probe.compositionStartTime({
+    1: 6,
+    4: 3
+  }, new Uint8Array(moofWithTfdt)),
+        (0x01020304 + 10) / 3,
+        'calculated correct composition start time');
+});
+
+test('compositionStartTime looks at only the first traf', function() {
+  equal(probe.compositionStartTime({
+    2: 6,
+    4: 3
+  }, new Uint8Array(multiTraf)),
+        (0x01020304 + 10) / 3,
+        'calculated composition start time from first traf');
+});
+
+test('compositionStartTime uses default composition time offset of 0' +
+  'if no trun samples present', function() {
+  equal(probe.compositionStartTime({
+    2: 6,
+    4: 3
+  }, new Uint8Array(noTrunSamples)),
+        (0x01020304 + 0) / 3,
+        'calculated correct composition start time using default offset');
 });
 
 // ---------
@@ -158,7 +189,125 @@ moofWithTfdt =
           box('tfdt',
               0x00, // version
               0x00, 0x00, 0x00, // flags
-              0x01, 0x02, 0x03, 0x04))); // baseMediaDecodeTime
+              0x01, 0x02, 0x03, 0x04), // baseMediaDecodeTime
+          box('trun',
+            0x00, // version
+            0x00, 0x0f, 0x01, // flags: dataOffsetPresent, sampleDurationPresent,
+                              // sampleSizePresent, sampleFlagsPresent,
+                              // sampleCompositionTimeOffsetsPresent
+            0x00, 0x00, 0x00, 0x02, // sample_count
+            0x00, 0x00, 0x00, 0x00, // data_offset, no first_sample_flags
+            // sample 1
+            0x00, 0x00, 0x00, 0x0a, // sample_duration = 10
+            0x00, 0x00, 0x00, 0x0a, // sample_size = 10
+            0x00, 0x00, 0x00, 0x00, // sample_flags
+            0x00, 0x00, 0x00, 0x0a, // signed sample_composition_time_offset = 10
+            // sample 2
+            0x00, 0x00, 0x00, 0x0a, // sample_duration = 10
+            0x00, 0x00, 0x00, 0x0a, // sample_size = 10
+            0x00, 0x00, 0x00, 0x00, // sample_flags
+            0x00, 0x00, 0x00, 0x14))); // signed sample_composition_time_offset = 20
+
+noTrunSamples =
+  box('moof',
+      box('mfhd',
+          0x00, // version
+          0x00, 0x00, 0x00, // flags
+          0x00, 0x00, 0x00, 0x04), // sequence_number
+      box('traf',
+          box('tfhd',
+              0x00, // version
+              0x00, 0x00, 0x3b, // flags
+              0x00, 0x00, 0x00, 0x04, // track_ID = 4
+              0x00, 0x00, 0x00, 0x00,
+              0x00, 0x00, 0x00, 0x01, // base_data_offset
+              0x00, 0x00, 0x00, 0x02, // sample_description_index
+              0x00, 0x00, 0x00, 0x03, // default_sample_duration,
+              0x00, 0x00, 0x00, 0x04, // default_sample_size
+              0x00, 0x00, 0x00, 0x05),
+          box('tfdt',
+              0x00, // version
+              0x00, 0x00, 0x00, // flags
+              0x01, 0x02, 0x03, 0x04), // baseMediaDecodeTime
+          box('trun',
+            0x00, // version
+            0x00, 0x0f, 0x01, // flags: dataOffsetPresent, sampleDurationPresent,
+                              // sampleSizePresent, sampleFlagsPresent,
+                              // sampleCompositionTimeOffsetsPresent
+            0x00, 0x00, 0x00, 0x00, // sample_count
+            0x00, 0x00, 0x00, 0x00))); // data_offset, no first_sample_flags
+
+
+multiTraf =
+  box('moof',
+      box('mfhd',
+          0x00, // version
+          0x00, 0x00, 0x00, // flags
+          0x00, 0x00, 0x00, 0x04), // sequence_number
+      box('traf',
+          box('tfhd',
+              0x00, // version
+              0x00, 0x00, 0x3b, // flags
+              0x00, 0x00, 0x00, 0x04, // track_ID = 4
+              0x00, 0x00, 0x00, 0x00,
+              0x00, 0x00, 0x00, 0x01, // base_data_offset
+              0x00, 0x00, 0x00, 0x02, // sample_description_index
+              0x00, 0x00, 0x00, 0x03, // default_sample_duration,
+              0x00, 0x00, 0x00, 0x04, // default_sample_size
+              0x00, 0x00, 0x00, 0x05),
+          box('tfdt',
+              0x00, // version
+              0x00, 0x00, 0x00, // flags
+              0x01, 0x02, 0x03, 0x04), // baseMediaDecodeTime
+          box('trun',
+            0x00, // version
+            0x00, 0x0f, 0x01, // flags: dataOffsetPresent, sampleDurationPresent,
+                              // sampleSizePresent, sampleFlagsPresent,
+                              // sampleCompositionTimeOffsetsPresent
+            0x00, 0x00, 0x00, 0x02, // sample_count
+            0x00, 0x00, 0x00, 0x00, // data_offset, no first_sample_flags
+            // sample 1
+            0x00, 0x00, 0x00, 0x0a, // sample_duration = 10
+            0x00, 0x00, 0x00, 0x0a, // sample_size = 10
+            0x00, 0x00, 0x00, 0x00, // sample_flags
+            0x00, 0x00, 0x00, 0x0a, // signed sample_composition_time_offset = 10
+            // sample 2
+            0x00, 0x00, 0x00, 0x0a, // sample_duration = 10
+            0x00, 0x00, 0x00, 0x0a, // sample_size = 10
+            0x00, 0x00, 0x00, 0x00, // sample_flags
+            0x00, 0x00, 0x00, 0x14)), // signed sample_composition_time_offset = 20
+        box('traf',
+            box('tfhd',
+                0x00, // version
+                0x00, 0x00, 0x3b, // flags
+                0x00, 0x00, 0x00, 0x02, // track_ID = 2
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x01, // base_data_offset
+                0x00, 0x00, 0x00, 0x02, // sample_description_index
+                0x00, 0x00, 0x00, 0x03, // default_sample_duration,
+                0x00, 0x00, 0x00, 0x04, // default_sample_size
+                0x00, 0x00, 0x00, 0x05),
+            box('tfdt',
+                0x00, // version
+                0x00, 0x00, 0x00, // flags
+                0x01, 0x02, 0x01, 0x02), // baseMediaDecodeTime
+            box('trun',
+              0x00, // version
+              0x00, 0x0f, 0x01, // flags: dataOffsetPresent, sampleDurationPresent,
+                                // sampleSizePresent, sampleFlagsPresent,
+                                // sampleCompositionTimeOffsetsPresent
+              0x00, 0x00, 0x00, 0x02, // sample_count
+              0x00, 0x00, 0x00, 0x00, // data_offset, no first_sample_flags
+              // sample 1
+              0x00, 0x00, 0x00, 0x0a, // sample_duration = 10
+              0x00, 0x00, 0x00, 0x0a, // sample_size = 10
+              0x00, 0x00, 0x00, 0x00, // sample_flags
+              0x00, 0x00, 0x00, 0x0b, // signed sample_composition_time_offset = 11
+              // sample 2
+              0x00, 0x00, 0x00, 0x0a, // sample_duration = 10
+              0x00, 0x00, 0x00, 0x0a, // sample_size = 10
+              0x00, 0x00, 0x00, 0x00, // sample_flags
+              0x00, 0x00, 0x00, 0x05))); // signed sample_composition_time_offset = 5
 
 multiMoof = moofWithTfdt
   .concat(box('moof',
@@ -180,7 +329,24 @@ multiMoof = moofWithTfdt
                   box('tfdt',
                       0x00, // version
                       0x00, 0x00, 0x00, // flags
-                      0x01, 0x02, 0x03, 0x04)))); // baseMediaDecodeTime
+                      0x01, 0x02, 0x03, 0x04), // baseMediaDecodeTime
+                  box('trun',
+                    0x00, // version
+                    0x00, 0x0f, 0x01, // flags: dataOffsetPresent, sampleDurationPresent,
+                                      // sampleSizePresent, sampleFlagsPresent,
+                                      // sampleCompositionTimeOffsetsPresent
+                    0x00, 0x00, 0x00, 0x02, // sample_count
+                    0x00, 0x00, 0x00, 0x00, // data_offset, no first_sample_flags
+                    // sample 1
+                    0x00, 0x00, 0x00, 0x0a, // sample_duration = 10
+                    0x00, 0x00, 0x00, 0x0a, // sample_size = 10
+                    0x00, 0x00, 0x00, 0x00, // sample_flags
+                    0x00, 0x00, 0x00, 0x14, // signed sample_composition_time_offset = 20
+                    // sample 2
+                    0x00, 0x00, 0x00, 0x0a, // sample_duration = 10
+                    0x00, 0x00, 0x00, 0x0a, // sample_size = 10
+                    0x00, 0x00, 0x00, 0x00, // sample_flags
+                    0x00, 0x00, 0x00, 0x0a)))); // signed sample_composition_time_offset = 10
 v1boxes =
   box('moof',
       box('mfhd',
