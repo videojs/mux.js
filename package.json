@@ -66,7 +66,7 @@
     "express": "^4.13.3",
     "in-publish": "^2.0.0",
     "jshint": "^2.9.1-rc2",
-    "karma": "^0.13.9",
+    "karma": "^4.4.0",
     "karma-browserify": "^4.4.2",
     "karma-chrome-launcher": "^2.2.0",
     "karma-firefox-launcher": "^1.1.0",
