@@ -9,9 +9,9 @@ Maintenance Status: Stable
 ![mux.js diagram](/docs/diagram.png)
 
 ## MPEG2-TS to fMP4 Transmuxer
-Before making use of the Transmuxer it is best to understand the structure of a fragmented MP4 (fMP4). 
+Before making use of the Transmuxer it is best to understand the structure of a fragmented MP4 (fMP4).
 
-fMP4's are structured in *boxes* as described in the ISOBMFF spec. 
+fMP4's are structured in *boxes* as described in the ISOBMFF spec.
 
 For a basic fMP4 to be valid it needs to have the following boxes.
 
@@ -20,9 +20,9 @@ For a basic fMP4 to be valid it needs to have the following boxes.
 3) moof (Movie Fragment Box)
 4) mdat (Movie Data Box)
 
-Every fMP4 stream needs to start with an ftyp and moov box which is then followed by many moof and mdat pairs. 
+Every fMP4 stream needs to start with an ftyp and moov box which is then followed by many moof and mdat pairs.
 
-This is important to understand as when you append your first segment to Media Source Extensions that this segment will need to start with an ftyp and moov followed by a moof and mdat. 
+This is important to understand as when you append your first segment to Media Source Extensions that this segment will need to start with an ftyp and moov followed by a moof and mdat.
 
 If you would like to see a clearer representation of your fMP4 you can use the muxjs.mp4.tools.inspect() method.
 
@@ -37,7 +37,7 @@ Lets look at a very basic representation of what needs to happen the first time 
 //  initOptions is optional and can be omitted at this time.
 var transmuxer = new muxjs.mp4.Transmuxer(initOptions);
 
-// Create an event listener which will be triggered after the transmuxer processes data: 
+// Create an event listener which will be triggered after the transmuxer processes data:
 //  'data' events signal a new fMP4 segment is ready
 transmuxer.on('data', function (segment) {
   // This code will be executed when the event listener is triggered by a Transmuxer.push() method execution.
@@ -64,7 +64,7 @@ transmuxer.flush();
 ```
 
 Above we are adding in the initSegment (ftyp/moov) to our data array before appending to the MSE Source Buffer.
-This is required for the first part of data we append to the MSE Source Buffer but we will omit the initSegment for our remaining chunks (moof/mdat)'s of video we are going to append to our Source Buffer. 
+This is required for the first part of data we append to the MSE Source Buffer but we will omit the initSegment for our remaining chunks (moof/mdat)'s of video we are going to append to our Source Buffer.
 
 In the case of appending additional segments after your first segment we will just need to use the following event listener anonymous function.
 
@@ -74,7 +74,7 @@ transmuxer.on('data', function(segment){
 });
 ```
 
-Here we put all of this together in a very basic example player. 
+Here we put all of this together in a very basic example player.
 
 ```html
 <html>
@@ -193,3 +193,6 @@ contributing.
 
 ## Collaborator
 If you are a collaborator, we have a guide on how to [release](https://github.com/videojs/mux.js/blob/master/COLLABORATOR_GUIDE.md#releasing) the project.
+
+## Contributing
+If you are interested in contributing to `mux.js`, take a look at our docs on [streams](/docs/streams.md) to get started.
