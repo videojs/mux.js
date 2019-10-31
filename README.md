@@ -1,9 +1,47 @@
-# mux.js [![Build Status](https://travis-ci.org/videojs/mux.js.svg?branch=master)](https://travis-ci.org/videojs/mux.js) [![Greenkeeper badge](https://badges.greenkeeper.io/videojs/mux.js.svg)](https://greenkeeper.io/)
+# mux.js
+[![Build Status](https://travis-ci.org/videojs/mux.js.svg?branch=master)](https://travis-ci.org/videojs/mux.js)[![Greenkeeper badge](https://badges.greenkeeper.io/videojs/mux.js.svg)](https://greenkeeper.io/)
+[![Slack Status](http://slack.videojs.com/badge.svg)](http://slack.videojs.com)
 
 
 Lightweight utilities for inspecting and manipulating video container formats.
 
 Maintenance Status: Stable
+
+## Table of Contents
+
+- [Installation](#installation)
+  - [NPM](#npm)
+  - [Manual Build](#manual-build)
+- [Building](#building)
+- [Collaborator](#collaborator)
+- [Background](#background)
+  - [fmp4](#fmp4)
+- [MPEG2-TS to fMP4 Transmuxer](#mpeg2-ts-to-fmp4-transmuxer)
+  - [Diagram](#diagram)
+- [Usage Examples](#usage-examples)
+  - [Basic Usage](#basic-usage)
+  - [Metadata](#metadata)
+  - [MP4 Inspector](#mp4-inspector)
+- [Documentation](#documentation)
+- [Talk to Us](#talk-to-us)
+
+## Installation
+### NPM
+
+To install `mux.js` with npm run
+
+```bash
+npm install --save mux.js
+```
+
+### Manual Build
+Download a copy of this git repository and then follow the steps in [Building](#building)
+
+## Building
+If you're using this project in a node-like environment, just `require()` whatever you need. If you'd like to package up a distribution to include separately, run `npm run build`. See the `package.json` for other handy scripts if you're thinking about contributing.
+
+## Collaborator
+If you are a collaborator, we have a guide on how to [release](https://github.com/videojs/mux.js/blob/master/COLLABORATOR_GUIDE.md#releasing) the project.
 
 ## Options
 
@@ -120,26 +158,33 @@ Handles the bulk of parsing CEA-608 captions out of MPEG2-TS segments.
 
 This module contains utilities to parse basic timing information out of MPEG2-TS segments.
 
-## Diagram
-![mux.js diagram](/docs/diagram.png)
+## Background
 
-## MPEG2-TS to fMP4 Transmuxer
+### fMP4
 Before making use of the Transmuxer it is best to understand the structure of a fragmented MP4 (fMP4).
 
 fMP4's are structured in *boxes* as described in the ISOBMFF spec.
 
-For a basic fMP4 to be valid it needs to have the following boxes.
+For a basic fMP4 to be valid it needs to have the following boxes:
 
 1) ftyp (File Type Box)
 2) moov (Movie Header Box)
 3) moof (Movie Fragment Box)
 4) mdat (Movie Data Box)
 
-Every fMP4 stream needs to start with an ftyp and moov box which is then followed by many moof and mdat pairs.
+Every fMP4 stream needs to start with an `ftyp` and `moov` box which is then followed by many `moof` and `mdat` pairs.
 
-This is important to understand as when you append your first segment to Media Source Extensions that this segment will need to start with an ftyp and moov followed by a moof and mdat.
+It is important to understand that when you append your first segment to [Media Source Extensions](https://www.w3.org/TR/media-source/) that this segment will need to start with an `ftyp` and `moov` followed by a `moof` and `mdat`. A segment containing a `ftyp` and `moov` box is often referred to as an Initialization Segment(`init`) segment, and segments containing `moof` and `mdat` boxes, referring to media itself as Media Segments.
 
-If you would like to see a clearer representation of your fMP4 you can use the muxjs.mp4.tools.inspect() method.
+If you would like to see a clearer representation of your fMP4 you can use the `muxjs.mp4.tools.inspect()` method.
+
+## MPEG2-TS to fMP4 Transmuxer
+### Diagram
+![mux.js diagram](/docs/diagram.png)
+
+## Usage Examples
+
+### Basic Usage
 
 To make use of the Transmuxer method you will need to push data to the transmuxer you have created.
 
@@ -178,10 +223,11 @@ transmuxer.push(transportStreamSegment);
 transmuxer.flush();
 ```
 
-Above we are adding in the initSegment (ftyp/moov) to our data array before appending to the MSE Source Buffer.
-This is required for the first part of data we append to the MSE Source Buffer but we will omit the initSegment for our remaining chunks (moof/mdat)'s of video we are going to append to our Source Buffer.
+Above we are adding in the `initSegment` (ftyp/moov) to our data array before appending to the MSE Source Buffer.
 
-In the case of appending additional segments after your first segment we will just need to use the following event listener anonymous function.
+This is required for the first part of data we append to the MSE Source Buffer, but we will omit the `initSegment` for our remaining chunks (moof/mdat)'s of video we are going to append to our Source Buffer.
+
+In the case of appending additional segments after your first segment we will just need to use the following event listener anonymous function:
 
 ```js
 transmuxer.on('data', function(segment){
@@ -271,6 +317,7 @@ Here we put all of this together in a very basic example player.
 *NOTE: This player is only for example and should not be used in production.*
 
 ### Metadata
+
 The transmuxer can also parse out supplementary video data like timed ID3 metadata and CEA-608 captions.
 You can find both attached to the data event object:
 
@@ -287,8 +334,10 @@ transmuxer.on('data', function (segment) {
 });
 ```
 
-## MP4 Inspector
+### MP4 Inspector
+
 Parse MP4s into javascript objects or a text representation for display or debugging:
+
 ```js
 // drop in a Uint8Array of an MP4:
 var parsed = muxjs.mp4.tools.inspect(bytes);
@@ -299,12 +348,11 @@ document.body.appendChild(document.createTextNode(muxjs.textifyMp4(parsed)));
 ```
 The MP4 inspector is used extensively as a debugging tool for the transmuxer. You can see it in action by cloning the project and opening [the debug page](https://github.com/videojs/mux.js/blob/master/debug/index.html) in your browser.
 
-## Building
-If you're using this project in a node-like environment, just
-require() whatever you need. If you'd like to package up a
-distribution to include separately, run `npm run build`. See the
-package.json for other handy scripts if you're thinking about
-contributing.
+## Documentation
 
-## Collaborator
-If you are a collaborator, we have a guide on how to [release](https://github.com/videojs/mux.js/blob/master/COLLABORATOR_GUIDE.md#releasing) the project.
+Check out our [troubleshooting guide](/docs/troubleshooting.md).
+We have some tips on [creating test content](/docs/test-content.md).
+Also, check out our guide on [working with captions in Mux.js](/docs/captions.md).
+
+## Talk to us
+Drop by our slack channel (#playback) on the [Video.js slack](http://slack.videojs.com).
