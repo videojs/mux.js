@@ -14,6 +14,8 @@ Maintenance Status: Stable
   - [Manual Build](#manual-build)
 - [Building](#building)
 - [Collaborator](#collaborator)
+- [Contributing](#contributing)
+- [Options](#options)
 - [Background](#background)
   - [fmp4](#fmp4)
 - [MPEG2-TS to fMP4 Transmuxer](#mpeg2-ts-to-fmp4-transmuxer)
@@ -41,7 +43,10 @@ Download a copy of this git repository and then follow the steps in [Building](#
 If you're using this project in a node-like environment, just `require()` whatever you need. If you'd like to package up a distribution to include separately, run `npm run build`. See the `package.json` for other handy scripts if you're thinking about contributing.
 
 ## Collaborator
-If you are a collaborator, we have a guide on how to [release](https://github.com/videojs/mux.js/blob/master/COLLABORATOR_GUIDE.md#releasing) the project.
+If you are a collaborator, we have a guide on how to [release](./COLLABORATOR_GUIDE.md#releasing) the project.
+
+## Contributing
+If you are interested in contributing to `mux.js`, take a look at our docs on [streams](/docs/streams.md) to get started.
 
 ## Options
 
