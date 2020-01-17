@@ -3170,7 +3170,7 @@ QUnit.test('ensures baseMediaDecodeTime for audio is not negative', function() {
     events.push(event);
   });
   audioSegmentStream.track.timelineStartInfo.baseMediaDecodeTime = 10;
-  audioSegmentStream.setEarliestDts(111);
+  audioSegmentStream.setEarliestDts(101);
   audioSegmentStream.push({
     channelcount: 2,
     samplerate: 90e3,
