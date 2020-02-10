@@ -8,6 +8,7 @@
   },
   "main": "./lib/index.js",
   "scripts": {
+    "netlify": "node scripts/netlify.js",
     "test": "npm run lint && karma start test/karma/karma.conf.js",
     "start": "npm-run-all -p watch serve",
     "serve": "node scripts/server.js",
@@ -59,6 +60,7 @@
     "dist/"
   ],
   "devDependencies": {
+    "@videojs/http-streaming": "^1.12.0",
     "browserify": "^12.0.1",
     "browserify-shim": "^3.8.12",
     "bundle-collapser": "^1.2.1",
@@ -75,6 +77,7 @@
     "portscanner": "^1.0.0",
     "qunitjs": "^1.0.0",
     "serve-static": "^1.10.0",
+    "shelljs": "^0.8.3",
     "uglify-js": "^2.6.2",
     "watchify": "^3.6.1",
     "webworkify": "^1.0.2"
