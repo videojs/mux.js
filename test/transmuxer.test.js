@@ -3170,7 +3170,7 @@ QUnit.test('ensures baseMediaDecodeTime for audio is not negative', function() {
     events.push(event);
   });
   audioSegmentStream.track.timelineStartInfo.baseMediaDecodeTime = 10;
-  audioSegmentStream.setEarliestDts(111);
+  audioSegmentStream.setEarliestDts(101);
   audioSegmentStream.push({
     channelcount: 2,
     samplerate: 90e3,
@@ -3406,6 +3406,131 @@ QUnit.test('adjusts caption and ID3 times when configured to adjust timestamps',
   QUnit.equal(captions[0].startPts, 90004, 'original pts value intact');
   QUnit.equal(captions[0].startTime, (90004 - 90002) / 90e3, 'caption start time are based on original timeline');
   QUnit.equal(captions[0].endTime, (90004 - 90002) / 90e3, 'caption end time are based on original timeline');
+});
+
+[
+  {options: {keepOriginalTimestamps: false}},
+  {options: {keepOriginalTimestamps: true}},
+  {options: {keepOriginalTimestamps: false, baseMediaDecodeTime: 15000}},
+  {options: {keepOriginalTimestamps: true, baseMediaDecodeTime: 15000}},
+  {options: {keepOriginalTimestamps: false}, baseMediaSetter: 15000},
+  {options: {keepOriginalTimestamps: true}, baseMediaSetter: 15000}
+].forEach(function(test) {
+  var createTransmuxer = function() {
+    var transmuxer = new Transmuxer(test.options);
+
+    if (test.baseMediaSetter) {
+      transmuxer.setBaseMediaDecodeTime(test.baseMediaSetter);
+    }
+
+    return transmuxer;
+  };
+
+  var name = '';
+
+  Object.keys(test.options).forEach(function(optionName) {
+    name += '' + optionName + ' ' + test.options[optionName] + ' ';
+  });
+
+  if (test.baseMediaSetter) {
+    name += 'baseMediaDecodeTime setter ' + test.baseMediaSetter;
+  }
+
+  QUnit.test('Audio frames after video not trimmed, ' + name, function() {
+    var
+    segments = [],
+      earliestDts = 15000,
+      transmuxer = createTransmuxer();
+
+    transmuxer.on('data', function(segment) {
+      segments.push(segment);
+    });
+
+    // the following transmuxer pushes add tiny video and
+    // audio data to the transmuxer. When we add the data
+    // we also set the pts/dts time so that audio should
+    // not be trimmed.
+    transmuxer.push(packetize(PAT));
+    transmuxer.push(packetize(generatePMT({
+      hasVideo: true,
+      hasAudio: true
+    })));
+
+    transmuxer.push(packetize(audioPes([
+      0x19, 0x47
+    ], true, earliestDts + 1)));
+    transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter_rbsp
+    ], true, earliestDts)));
+    transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+    ], true, earliestDts)));
+    transmuxer.push(packetize(videoPes([
+      0x07, // seq_parameter_set_rbsp
+      0x27, 0x42, 0xe0, 0x0b,
+      0xa9, 0x18, 0x60, 0x9d,
+      0x80, 0x53, 0x06, 0x01,
+      0x06, 0xb6, 0xc2, 0xb5,
+      0xef, 0x7c, 0x04
+    ], false, earliestDts)));
+    transmuxer.push(packetize(videoPes([
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
+    ], true, earliestDts)));
+    transmuxer.flush();
+
+    QUnit.equal(segments.length, 1, 'generated a combined segment');
+    // The audio frame is 10 bytes. The full data is 305 bytes without anything
+    // trimmed. If the audio frame was trimmed this will be 295 bytes.
+    QUnit.equal(segments[0].data.length, 305, 'trimmed audio frame');
+  });
+
+  QUnit.test('Audio frames trimmed before video, ' + name, function() {
+    var
+    segments = [],
+      earliestDts = 15000,
+      transmuxer = createTransmuxer();
+
+    transmuxer.on('data', function(segment) {
+      segments.push(segment);
+    });
+
+    // the following transmuxer pushes add tiny video and
+    // audio data to the transmuxer. When we add the data
+    // we also set the pts/dts time so that audio should
+    // be trimmed.
+    transmuxer.push(packetize(PAT));
+    transmuxer.push(packetize(generatePMT({
+      hasVideo: true,
+      hasAudio: true
+    })));
+
+    transmuxer.push(packetize(audioPes([
+      0x19, 0x47
+    ], true, earliestDts - (test.options.baseMediaDecodeTime || test.baseMediaSetter || 0) - 1)));
+    transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter_rbsp
+    ], true, earliestDts)));
+    transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+    ], true, earliestDts)));
+    transmuxer.push(packetize(videoPes([
+      0x07, // seq_parameter_set_rbsp
+      0x27, 0x42, 0xe0, 0x0b,
+      0xa9, 0x18, 0x60, 0x9d,
+      0x80, 0x53, 0x06, 0x01,
+      0x06, 0xb6, 0xc2, 0xb5,
+      0xef, 0x7c, 0x04
+    ], false, earliestDts)));
+    transmuxer.push(packetize(videoPes([
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
+    ], true, earliestDts)));
+    transmuxer.flush();
+
+    QUnit.equal(segments.length, 1, 'generated a combined segment');
+    // The audio frame is 10 bytes. The full data is 305 bytes without anything
+    // trimmed. If the audio frame was trimmed this will be 295 bytes.
+    QUnit.equal(segments[0].data.length, 295, 'trimmed audio frame');
+  });
 });
 
 QUnit.test("doesn't adjust caption and ID3 times when configured to keep original timestamps", function() {
