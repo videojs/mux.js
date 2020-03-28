@@ -77,7 +77,7 @@
     "qunitjs": "^1.0.0",
     "serve-static": "^1.10.0",
     "shelljs": "^0.8.3",
-    "uglify-js": "^2.6.2",
+    "uglify-js": "^3.8.1",
     "watchify": "^3.6.1",
     "webworkify": "^1.0.2"
   }
