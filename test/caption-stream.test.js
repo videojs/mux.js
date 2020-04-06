@@ -90,6 +90,57 @@ QUnit.test('parses SEIs containing multiple messages', function() {
   QUnit.equal(packets.length, 1, 'parsed a caption');
 });
 
+QUnit.test('parses SEIs containing multiple messages of type user_data_registered_itu_t_t35', function() {
+  var packets = [], data;
+
+  captionStream.ccStreams_[0].push = function(packet) {
+    packets.push(packet);
+  };
+  // set data channel 1 active for field 1
+  captionStream.activeCea608Channel_[0] = 0;
+
+  data = new Uint8Array(22);
+  data[0] = 0x01; // payload_type !== user_data_registered_itu_t_t35
+  data[1] = 0x04; // payload_size
+
+  // https://www.etsi.org/deliver/etsi_ts/101100_101199/101154/01.11.01_60/ts_101154v011101p.pdf#page=117
+  data[5] = 0x04; // payload_type === user_data_registered_itu_t_t35
+  data[6] = 0x09; // payload_size
+  data[7] = 181; // itu_t_t35_country_code
+  data[8] = 0x00;
+  data[9] = 0x31; // itu_t_t35_provider_code
+  data[10] = 0x44;
+  data[11] = 0x54;
+  data[12] = 0x47;
+  data[13] = 0x31; // user_identifier, "DTG1"
+  data[14] = 0x11; // zero_bit (b7), active_format_flag (b6), reserved (b5-b0)
+  data[15] = 0xF0; // reserved (b7-b4), active_format (b3-b0)
+
+  data[16] = 0x04; // payload_type === user_data_registered_itu_t_t35
+  data[17] = 0x0d; // payload_size
+  data[18] = 181; // itu_t_t35_country_code
+  data[19] = 0x00;
+  data[20] = 0x31; // itu_t_t35_provider_code
+  data[21] = 0x47;
+  data[22] = 0x41;
+  data[23] = 0x39;
+  data[24] = 0x34; // user_identifier, "GA94"
+  data[25] = 0x03; // user_data_type_code, 0x03 is cc_data
+  data[26] = 0xc1; // process_cc_data, cc_count
+  data[27] = 0xff; // reserved
+  data[28] = 0xfc; // cc_valid, cc_type (608, field 1)
+  data[29] = 0xff; // cc_data_1 with parity bit set
+  data[30] = 0x0e; // cc_data_2 without parity bit set
+  data[31] = 0xff; // marker_bits
+
+  captionStream.push({
+    nalUnitType: 'sei_rbsp',
+    escapedRBSP: data
+  });
+  captionStream.flush();
+  QUnit.equal(packets.length, 1, 'ignored DTG1 payload, parsed a GA94 caption');
+});
+
 QUnit.test('ignores SEIs that do not have type user_data_registered_itu_t_t35', function() {
   var captions = [];
   captionStream.on('data', function(caption) {
