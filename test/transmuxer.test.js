@@ -3486,8 +3486,9 @@ QUnit.test('adjusts caption and ID3 times when configured to adjust timestamps',
 
   QUnit.test('Audio frames trimmed before video, ' + name, function() {
     var
-    segments = [],
+      segments = [],
       earliestDts = 15000,
+      baseTime = test.options.baseMediaDecodeTime || test.baseMediaSetter || 0,
       transmuxer = createTransmuxer();
 
     transmuxer.on('data', function(segment) {
@@ -3506,7 +3507,7 @@ QUnit.test('adjusts caption and ID3 times when configured to adjust timestamps',
 
     transmuxer.push(packetize(audioPes([
       0x19, 0x47
-    ], true, earliestDts - (test.options.baseMediaDecodeTime || test.baseMediaSetter || 0) - 1)));
+    ], true, earliestDts - baseTime - 1)));
     transmuxer.push(packetize(videoPes([
       0x09, 0x01 // access_unit_delimiter_rbsp
     ], true, earliestDts)));
@@ -3529,7 +3530,13 @@ QUnit.test('adjusts caption and ID3 times when configured to adjust timestamps',
     QUnit.equal(segments.length, 1, 'generated a combined segment');
     // The audio frame is 10 bytes. The full data is 305 bytes without anything
     // trimmed. If the audio frame was trimmed this will be 295 bytes.
-    QUnit.equal(segments[0].data.length, 295, 'trimmed audio frame');
+// Note that if the baseMediaDecodeTime is set via options or the setter, frames may still
+// be removed, even if keepOriginalTimestamps is true.
+if (test.options.keepOriginalTimestamps && !baseTime) {
+      QUnit.equal(segments[0].data.length, 305, 'trimmed audio frame');
+    } else {
+      QUnit.equal(segments[0].data.length, 295, 'trimmed audio frame');
+    }
   });
 });
 
