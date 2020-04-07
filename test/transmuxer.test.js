@@ -3530,7 +3530,9 @@ QUnit.test('adjusts caption and ID3 times when configured to adjust timestamps',
     QUnit.equal(segments.length, 1, 'generated a combined segment');
     // The audio frame is 10 bytes. The full data is 305 bytes without anything
     // trimmed. If the audio frame was trimmed this will be 295 bytes.
-    if (test.options.keepOriginalTimestamps && !baseTime) {
+// Note that if the baseMediaDecodeTime is set via options or the setter, frames may still
+// be removed, even if keepOriginalTimestamps is true.
+if (test.options.keepOriginalTimestamps && !baseTime) {
       QUnit.equal(segments[0].data.length, 305, 'trimmed audio frame');
     } else {
       QUnit.equal(segments[0].data.length, 295, 'trimmed audio frame');
