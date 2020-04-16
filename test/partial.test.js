@@ -89,6 +89,7 @@ QUnit.module('Partial Transmuxer - Options');
     var
     segments = [],
       earliestDts = 15000,
+      baseTime = test.options.baseMediaDecodeTime || test.baseMediaSetter || 0,
       transmuxer = createTransmuxer();
 
     transmuxer.on('data', function(segment) {
@@ -107,7 +108,7 @@ QUnit.module('Partial Transmuxer - Options');
 
     transmuxer.push(packetize(audioPes([
       0x19, 0x47
-    ], true, earliestDts - (test.options.baseMediaDecodeTime || test.baseMediaSetter || 0) - 1)));
+    ], true, earliestDts - baseTime - 1)));
     transmuxer.push(packetize(videoPes([
       0x09, 0x01 // access_unit_delimiter_rbsp
     ], true, earliestDts)));
@@ -128,9 +129,16 @@ QUnit.module('Partial Transmuxer - Options');
     transmuxer.flush();
 
     // the partial transmuxer only generates a video segment
-    // when all audio frames are trimmed. So we should only have
-    // a video segment
-    QUnit.equal(segments.length, 1, 'generated only a video segment');
-    QUnit.equal(segments[0].type, 'video', 'segment is video');
+    // when all audio frames are trimmed.
+    // Note that if the baseMediaDecodeTime is set via options or the setter, frames may still
+    // be removed, even if keepOriginalTimestamps is true.
+    if (test.options.keepOriginalTimestamps && !baseTime) {
+      QUnit.equal(segments.length, 2, 'generated both a video/audio segment');
+      QUnit.equal(segments[0].type, 'video', 'segment is video');
+      QUnit.equal(segments[1].type, 'audio', 'segment is audio');
+    } else {
+      QUnit.equal(segments.length, 1, 'generated only a video segment');
+      QUnit.equal(segments[0].type, 'video', 'segment is video');
+    }
   });
 });
