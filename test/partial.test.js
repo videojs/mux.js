@@ -130,8 +130,6 @@ QUnit.module('Partial Transmuxer - Options');
 
     // the partial transmuxer only generates a video segment
     // when all audio frames are trimmed.
-    // Note that if the baseMediaDecodeTime is set via options or the setter, frames may still
-    // be removed, even if keepOriginalTimestamps is true.
     if (test.options.keepOriginalTimestamps && !baseTime) {
       QUnit.equal(segments.length, 2, 'generated both a video/audio segment');
       QUnit.equal(segments[0].type, 'video', 'segment is video');
