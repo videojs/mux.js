@@ -141,6 +141,51 @@ QUnit.test('parses SEIs containing multiple messages of type user_data_registere
   QUnit.equal(packets.length, 1, 'ignored DTG1 payload, parsed a GA94 caption');
 });
 
+QUnit.test('does not throw error if only invalid payloads', function() {
+  var packets = [], data;
+
+  captionStream.ccStreams_[0].push = function(packet) {
+    packets.push(packet);
+  };
+  // set data channel 1 active for field 1
+  captionStream.activeCea608Channel_[0] = 0;
+
+  data = new Uint8Array(33);
+  data[0] = 0x01; // payload_type !== user_data_registered_itu_t_t35
+  data[1] = 0x04; // payload_size
+
+  // https://www.etsi.org/deliver/etsi_ts/101100_101199/101154/01.11.01_60/ts_101154v011101p.pdf#page=117
+  data[6] = 0x04; // payload_type === user_data_registered_itu_t_t35
+  data[7] = 0x09; // payload_size
+  data[8] = 181; // itu_t_t35_country_code
+  data[9] = 0x00;
+  data[10] = 0x31; // itu_t_t35_provider_code
+  data[11] = 0x44;
+  data[12] = 0x54;
+  data[13] = 0x47;
+  data[14] = 0x31; // user_identifier, "DTG1"
+  data[15] = 0x11; // zero_bit (b7), active_format_flag (b6), reserved (b5-b0)
+  data[16] = 0xF0; // reserved (b7-b4), active_format (b3-b0)
+
+  data[17] = 0x04; // payload_type === user_data_registered_itu_t_t35
+  data[18] = 0x0d; // payload_size
+  data[19] = 181; // itu_t_t35_country_code
+  data[20] = 0x00;
+  data[21] = 0x31; // itu_t_t35_provider_code
+  data[22] = 0x47;
+  data[23] = 0x41;
+  data[24] = 0x39;
+
+
+  captionStream.push({
+    nalUnitType: 'sei_rbsp',
+    escapedRBSP: data
+  });
+  captionStream.flush();
+  QUnit.equal(packets.length, 0, 'ignored DTG1 payload');
+});
+
+
 QUnit.test('ignores SEIs that do not have type user_data_registered_itu_t_t35', function() {
   var captions = [];
   captionStream.on('data', function(caption) {
