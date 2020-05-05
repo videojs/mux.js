@@ -107,6 +107,46 @@ test('compositionStartTime uses default composition time offset of 0' +
         'calculated correct composition start time using default offset');
 });
 
+test('getTimescaleFromMediaHeader gets timescale for version 0 mdhd', function() {
+  var mdhd = new Uint8Array([
+    0x00, // version 0
+    0x00, 0x00, 0x00, // flags
+    // version 0 has 32 bit creation_time, modification_time, and duration
+    0x00, 0x00, 0x00, 0x02, // creation_time
+    0x00, 0x00, 0x00, 0x03, // modification_time
+    0x00, 0x00, 0x03, 0xe8, // timescale = 1000
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x02, 0x58, // 600 = 0x258 duration
+    0x15, 0xc7 // 'eng' language
+  ]);
+
+  equal(
+    probe.getTimescaleFromMediaHeader(mdhd),
+    1000,
+    'got timescale from version 0 mdhd'
+  );
+});
+
+test('getTimescaleFromMediaHeader gets timescale for version 0 mdhd', function() {
+  var mdhd = new Uint8Array([
+    0x01, // version 1
+    0x00, 0x00, 0x00, // flags
+    // version 1 has 64 bit creation_time, modification_time, and duration
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, // creation_time
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, // modification_time
+    0x00, 0x00, 0x03, 0xe8, // timescale = 1000
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x58, // 600 = 0x258 duration
+    0x15, 0xc7 // 'eng' language
+  ]);
+
+  equal(
+    probe.getTimescaleFromMediaHeader(mdhd),
+    1000,
+    'got timescale from version 1 mdhd'
+  );
+});
+
 // ---------
 // Test Data
 // ---------
