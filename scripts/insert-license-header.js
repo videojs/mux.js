@@ -1,7 +1,8 @@
-/*! @license
+/**
  * mux.js
+ *
  * Copyright (c) Brightcove
- * SPDX-License-Identifier: Apache-2.0
+ * Licensed Apache-2.0 https://github.com/videojs/mux.js/blob/master/LICENSE
  */
 var fs = require('fs');
 
