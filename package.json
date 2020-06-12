@@ -23,9 +23,9 @@
     "build:test": "browserify test/*.test.js -g browserify-shim -p bundle-collapser/plugin -o dist-test/mux.js",
     "lint": "eslint \"lib/**/*.js\" \"test/**/*.js\"",
     "uglify": "npm-run-all -p uglify:*",
-    "uglify:mp4": "uglifyjs --mangle --compress -o dist/mux-mp4.min.js dist/mux-mp4.js",
-    "uglify:flv": "uglifyjs --mangle --compress -o dist/mux-flv.min.js dist/mux-flv.js",
-    "uglify:js": "uglifyjs --mangle --compress -o dist/mux.min.js dist/mux.js",
+    "uglify:mp4": "uglifyjs --mangle --compress -o dist/mux-mp4.min.js dist/mux-mp4.js && node scripts/insert-license-header.js dist/mux-mp4.min.js",
+    "uglify:flv": "uglifyjs --mangle --compress -o dist/mux-flv.min.js dist/mux-flv.js && node scripts/insert-license-header.js dist/mux-flv.min.js",
+    "uglify:js": "uglifyjs --mangle --compress -o dist/mux.min.js dist/mux.js && node scripts/insert-license-header.js dist/mux.min.js",
     "clean": "rm -rf dist dist-test",
     "prepublish": "not-in-install && npm run build || in-install"
   },
