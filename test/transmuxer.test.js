@@ -3791,14 +3791,14 @@ QUnit.test('pipeline dynamically configures itself based on input', function() {
   transmuxer.flush();
   QUnit.equal(transmuxer.transmuxPipeline_.type, 'ts', 'detected TS file data');
 
-  transmuxer.push(new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01))));
+  transmuxer.push(new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01)).concat([0xFF, 0xF1])));
   transmuxer.flush();
   QUnit.equal(transmuxer.transmuxPipeline_.type, 'aac', 'detected AAC file data');
 });
 
 QUnit.test('reuses audio track object when the pipeline reconfigures itself', function() {
   var boxes, segments = [],
-    id3Tag = new Uint8Array(73),
+    id3Tag = new Uint8Array(75),
     streamTimestamp = 'com.apple.streaming.transportStreamTimestamp',
     priv = 'PRIV',
     i,
@@ -3813,6 +3813,8 @@ QUnit.test('reuses audio track object when the pipeline reconfigures itself', fu
   id3Tag[70] = 13;
   id3Tag[71] = 187;
   id3Tag[72] = 160;
+  id3Tag[73] = 0xFF;
+  id3Tag[74] = 0xF1;
 
   for (i = 0; i < priv.length; i++) {
     id3Tag[i + 10] = priv.charCodeAt(i);
