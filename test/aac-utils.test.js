@@ -11,6 +11,15 @@ var audioFrameOffset = 73;
 
 QUnit.module('AAC Utils');
 
+QUnit.test('correctly determines aac data', function(assert) {
+  assert.ok(utils.isLikelyAacData(testSegment), 'test segment is aac');
+
+  var id3Offset = utils.parseId3TagSize(testSegment, 0);
+
+  assert.ok(utils.isLikelyAacData(testSegment.subarray(id3Offset)), 'test segment is aac without id3');
+});
+
+
 QUnit.test('correctly parses aac packet type', function() {
   QUnit.equal(utils.parseType(testSegment, id3TagOffset), 'timed-metadata',
     'parsed timed-metadata type');
