@@ -99,9 +99,37 @@ var characters = function(text) {
   return (text.charCodeAt(0) << 8) | text.charCodeAt(1);
 };
 
+// Returns a ccData byte-pair including
+//    Header for 708 packet
+//    Header for the first service block
+// seq should increment by 1 for each byte pair mod 3 (0,1,2,0,1,2,...)
+// sizeCode is the number of byte pairs in the packet (including header)
+// serviceNum is the service number of the first service block
+// blockSize is the size of the first service block in bytes (no header)
+//    If there's only one service block, the blockSize should be (sizeCode-1)*2
+var packetHeader708 = function(seq, sizeCode, serviceNum, blockSize) {
+    var b1 = (seq << 6) | sizeCode;
+    var b2 = (serviceNum << 5) | blockSize;
+    return (b1 << 8) | b2;
+};
+
+// Returns a ccData byte-pair to execute a 708 DSW command
+// Takes an array of window indicies to display
+var displayWindows708 = function(windows) {
+    var cmd = 0x8900;
+
+    windows.forEach(function(winIdx) {
+        cmd |= (0x01 << winIdx);
+    });
+
+    return cmd;
+};
+
 module.exports = {
   makeSeiFromCaptionPacket: makeSeiFromCaptionPacket,
   makeSeiFromMultipleCaptionPackets: makeSeiFromMultipleCaptionPackets,
   makeMdatFromCaptionPackets: makeMdatFromCaptionPackets,
-  characters: characters
+  characters: characters,
+  packetHeader708: packetHeader708,
+  displayWindows708: displayWindows708
 };
