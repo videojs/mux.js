@@ -2876,7 +2876,7 @@ QUnit.test('backspace', function() {
   ].forEach(cea708Stream.push, cea708Stream);
 
   QUnit.equal(captions.length, 1, 'parsed 1 caption');
-  QUnit.deepEqual(captions[0].text, 'typo', 'parsed caption with backspaces correctly');
+  QUnit.equal(captions[0].text, 'typo', 'parsed caption with backspaces correctly');
 });
 
 QUnit.test('extended character set', function() {
@@ -2895,7 +2895,7 @@ QUnit.test('extended character set', function() {
     { type: 2, pts: 1000, ccData: 0x103f }, // Ÿ
     { type: 2, pts: 1000, ccData: 0x0020 },
 
-    { type: 3, pts: 1000, ccData: packetHeader708(0, 7, 1, 12) },
+    { type: 3, pts: 1000, ccData: packetHeader708(1, 7, 1, 12) },
     { type: 2, pts: 1000, ccData: 0x103c }, // œ
     { type: 2, pts: 1000, ccData: 0x102a }, // Š
     { type: 2, pts: 1000, ccData: 0x1025 }, // …
@@ -2903,19 +2903,62 @@ QUnit.test('extended character set', function() {
     { type: 2, pts: 1000, ccData: 0x103c }, // œ
     { type: 2, pts: 1000, ccData: 0x0020 },
 
-    { type: 3, pts: 1000, ccData: packetHeader708(0, 5, 1, 8) },
+    { type: 3, pts: 1000, ccData: packetHeader708(2, 5, 1, 8) },
     { type: 2, pts: 1000, ccData: 0x1033 }, // “
     { type: 2, pts: 1000, ccData: 0x103d }, // ℠
     { type: 2, pts: 1000, ccData: 0x1034 }, // ”
     { type: 2, pts: 1000, ccData: 0x1039 }, // ™
 
-    { type: 3, pts: 2000, ccData: packetHeader708(1, 2, 1, 2) },
+    { type: 3, pts: 2000, ccData: packetHeader708(0, 2, 1, 2) },
     { type: 2, pts: 2000, ccData: 0x8aff },
 
     // Indicate end of last packet
-    { type: 3, pts: 3000, ccData: packetHeader708(2, 1, 1, 0) }
+    { type: 3, pts: 3000, ccData: packetHeader708(1, 1, 1, 0) }
   ].forEach(cea708Stream.push, cea708Stream);
 
   QUnit.equal(captions.length, 1, 'parsed 1 caption');
-  QUnit.deepEqual(captions[0].text, 'Ÿ•Ÿ œŠ…Šœ “℠”™', 'parsed extended characters correctly');
+  QUnit.equal(captions[0].text, 'Ÿ•Ÿ œŠ…Šœ “℠”™', 'parsed extended characters correctly');
+});
+
+QUnit.test('roll up', function() {
+  var captions = [];
+
+  cea708Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    // Define window with two virtual rows (rowCount = 1)
+    { type: 3, pts: 1000, ccData: packetHeader708(0, 4, 1, 6) },
+    { type: 2, pts: 1000, ccData: 0x983b },
+    { type: 2, pts: 1000, ccData: 0x8f00 },
+    { type: 2, pts: 1000, ccData: 0x611f },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(1, 3, 1, 4) },
+    { type: 2, pts: 1000, ccData: characters('L1') },
+    { type: 2, pts: 1000, ccData: 0x0d00 }, // CR
+
+    { type: 3, pts: 2000, ccData: packetHeader708(2, 3, 1, 4) },
+    { type: 2, pts: 2000, ccData: characters('L2') },
+    { type: 2, pts: 2000, ccData: 0x0d00 }, // CR
+
+    { type: 3, pts: 3000, ccData: packetHeader708(0, 3, 1, 4) },
+    { type: 2, pts: 3000, ccData: characters('L3') },
+    { type: 2, pts: 3000, ccData: 0x0d00 }, // CR
+
+    { type: 3, pts: 4000, ccData: packetHeader708(1, 3, 1, 4) },
+    { type: 2, pts: 4000, ccData: characters('L4') },
+    { type: 2, pts: 4000, ccData: 0x0d00 }, // CR
+
+    { type: 3, pts: 5000, ccData: packetHeader708(2, 2, 1, 2) },
+    { type: 2, pts: 5000, ccData: 0x8aff },
+
+    // Indicate end of last packet
+    { type: 3, pts: 6000, ccData: packetHeader708(0, 1, 1, 0) }
+  ].forEach(cea708Stream.push, cea708Stream);
+
+  QUnit.equal(captions.length, 3, 'parsed 3 captions');
+  QUnit.equal(captions[0].text, 'L1\nL2', 'parsed caption 1 correctly');
+  QUnit.equal(captions[1].text, 'L2\nL3', 'parsed caption 2 correctly');
+  QUnit.equal(captions[2].text, 'L3\nL4', 'parsed caption 3 correctly');
 });
