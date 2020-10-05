@@ -14,10 +14,22 @@ QUnit.module('AAC Utils');
 QUnit.test('correctly determines aac data', function(assert) {
   assert.ok(utils.isLikelyAacData(testSegment), 'test segment is aac');
 
+
   var id3Offset = utils.parseId3TagSize(testSegment, 0);
-  assert.ok(utils.isLikelyAacData(testSegment.subarray(id3Offset)), 'test segment is aac without id3');
+  const id3 = Array.prototype.slice.call(testSegment, 0, id3Offset);
+  const segmentOnly = testSegment.subarray(id3Offset);
+  const multipleId3 = new Uint8Array([]
+    .concat(id3)
+    .concat(id3)
+    .concat(id3)
+    .concat(id3)
+    .concat(Array.prototype.slice.call(segmentOnly))
+  )
+
+  assert.ok(utils.isLikelyAacData(segmentOnly), 'test segment is aac without id3');
   assert.notOk(utils.isLikelyAacData(testSegment.subarray(id3Offset + 25)), 'non aac data not recognized');
   assert.notOk(utils.isLikelyAacData(testSegment.subarray(0, 5)), 'not enough aac data is not recognized');
+  assert.ok(utils.isLikelyAacData(multipleId3), 'test segment with multilpe id3');
 });
 
 
