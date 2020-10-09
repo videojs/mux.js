@@ -1,12 +1,13 @@
 'use strict';
+var segments = require('create-test-data!segments');
 
 var
   QUnit = require('qunit'),
   tsInspector = require('../lib/tools/ts-inspector.js'),
   StreamTypes = require('../lib/m2ts/stream-types.js'),
-  tsSegment = require('./utils/test-segment.js'),
-  tsNoAudioSegment = require('./utils/test-no-audio-segment.js'),
-  aacSegment = require('./utils/test-aac-segment.js'),
+  tsSegment = segments['test-segment.ts'](),
+  tsNoAudioSegment = segments['test-no-audio-segment.ts'](),
+  aacSegment = segments['test-aac-segment.aac'](),
   utils = require('./utils'),
   inspect = tsInspector.inspect,
   parseAudioPes_ = tsInspector.parseAudioPes_,

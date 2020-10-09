@@ -26,7 +26,7 @@ var metadataStream, stringToInts, stringToCString, id3Tag, id3Frame, id3Generato
 mp2t = require('../lib/m2ts');
 QUnit = require('qunit');
 id3Generator = require('./utils/id3-generator');
-webworkify = require('webworkify');
+//webworkify = require('webworkify');
 metadataStreamTestWorker = require('./metadata-stream-test-worker');
 stringToInts = id3Generator.stringToInts;
 stringToCString = id3Generator.stringToCString;
@@ -487,6 +487,7 @@ QUnit.test('constructs the dispatch type', function(assert) {
 });
 
 
+/*
 QUnit.test('can parse PRIV frames in web worker', function(assert) {
   var payload = stringToInts('arbitrary'),
       worker = webworkify(metadataStreamTestWorker),
@@ -535,6 +536,7 @@ QUnit.test('can parse TXXX frames in web worker', function(assert) {
                                 [0x00, 0x00]))
   });
 });
+*/
 
 QUnit.test('triggers special event after parsing a timestamp ID3 tag', function(assert) {
   var

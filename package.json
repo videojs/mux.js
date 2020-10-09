@@ -6,30 +6,45 @@
     "type": "git",
     "url": "https://github.com/videojs/mux.js.git"
   },
-  "main": "./lib/index.js",
+  "main": "./cjs/index.js",
+  "module": "es/index.js",
+  "browser": "dist/mux.js.js",
+  "generator-videojs-plugin": {
+    "version": "7.7.3"
+  },
+  "browserslist": [
+    "defaults",
+    "ie 11"
+  ],
   "scripts": {
     "netlify": "node scripts/netlify.js",
-    "test": "npm run lint && karma start test/karma/karma.conf.js",
-    "start": "npm-run-all -p watch serve",
-    "serve": "node scripts/server.js",
-    "watch": "npm run mkdirs && npm-run-all -p watch:*",
-    "watch:js": "watchify -s muxjs -p bundle-collapser/plugin lib/index.js -v -o dist/mux.js",
-    "watch:test": "watchify test/*.test.js -g browserify-shim -p bundle-collapser/plugin -v -o dist-test/mux.js",
-    "mkdirs": "mkdir -p dist dist-test",
-    "build": "npm run mkdirs && npm-run-all -p build:* && npm run uglify",
-    "build:mp4": "browserify -s muxjs lib/mp4/index.js -p bundle-collapser/plugin -o dist/mux-mp4.js",
-    "build:flv": "browserify -s muxjs lib/flv/index.js -p bundle-collapser/plugin -o dist/mux-flv.js",
-    "build:js": "browserify -s muxjs lib/index.js -p bundle-collapser/plugin -o dist/mux.js",
-    "build:test": "browserify test/*.test.js -g browserify-shim -p bundle-collapser/plugin -o dist-test/mux.js",
-    "lint": "eslint \"lib/**/*.js\" \"test/**/*.js\"",
-    "uglify": "npm-run-all -p uglify:*",
-    "uglify:mp4": "uglifyjs --mangle --compress -o dist/mux-mp4.min.js dist/mux-mp4.js && node scripts/insert-license-header.js dist/mux-mp4.min.js",
-    "uglify:flv": "uglifyjs --mangle --compress -o dist/mux-flv.min.js dist/mux-flv.js && node scripts/insert-license-header.js dist/mux-flv.min.js",
-    "uglify:js": "uglifyjs --mangle --compress -o dist/mux.min.js dist/mux.js && node scripts/insert-license-header.js dist/mux.min.js",
-    "clean": "rm -rf dist dist-test",
-    "prepublish": "not-in-install && npm run build || in-install"
+    "build": "npm-run-all -s clean -p build:*",
+    "build-prod": "cross-env-shell NO_TEST_BUNDLE=1 'npm run build'",
+    "build-test": "cross-env-shell TEST_BUNDLE_ONLY=1 'npm run build'",
+    "build:cjs": "babel-config-cjs -d ./cjs ./lib",
+    "build:es": "babel-config-es -d ./es ./lib",
+    "build:js": "rollup -c scripts/rollup.config.js",
+    "clean": "shx rm -rf ./dist ./test/dist ./cjs ./es && shx mkdir -p ./dist ./test/dist ./cjs ./es",
+    "docs": "npm-run-all docs:*",
+    "docs:toc": "doctoc --notitle README.md",
+    "lint": ": vjsstandard",
+    "server": "karma start scripts/karma.conf.js --singleRun=false --auto-watch",
+    "start": "npm-run-all -p server watch",
+    "test": "npm-run-all lint build-test && karma start scripts/karma.conf.js",
+    "posttest": "shx cat test/dist/coverage/text.txt",
+    "update-changelog": "conventional-changelog -p videojs -i CHANGELOG.md -s",
+    "preversion": "npm test",
+    "version": "is-prerelease || npm run update-changelog && git add CHANGELOG.md",
+    "watch": "npm-run-all -p watch:*",
+    "watch:cjs": "npm run build:cjs -- -w",
+    "watch:es": "npm run build:es -- -w",
+    "watch:js": "npm run build:js -- -w",
+    "prepublishOnly": "npm ci && npm-run-all build-prod && vjsverify --verbose"
   },
-  "browser": "./lib/index.js",
+  "engines": {
+    "node": ">=8",
+    "npm": ">=5"
+  },
   "keywords": [
     "video",
     "container",
@@ -42,43 +57,50 @@
     "aac",
     "h264"
   ],
-  "browserify-shim": {
-    "qunit": "global:QUnit"
-  },
   "author": "Brightcove",
   "license": "Apache-2.0",
-  "eslintConfig": {
+  "vjsstandard": {
     "ignore": [
+      "es",
+      "cjs",
       "dist",
-      "dist-test",
       "docs",
-      "scripts"
+      "test/dist"
     ]
   },
   "files": [
-    "lib/",
-    "dist/"
+    "CONTRIBUTING.md",
+    "cjs/",
+    "dist/",
+    "docs/",
+    "es/",
+    "index.html",
+    "scripts/",
+    "src/",
+    "test/"
   ],
+  "husky": {
+    "hooks": {
+      "pre-commit": ": lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": "vjsstandard --fix",
+    "README.md": "doctoc --notitle"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.11.2"
+  },
   "devDependencies": {
-    "browserify": "^12.0.1",
-    "browserify-shim": "^3.8.12",
-    "bundle-collapser": "^1.2.1",
-    "eslint": "^2.10.2",
-    "express": "^4.13.3",
-    "in-publish": "^2.0.0",
-    "jshint": "^2.9.1-rc2",
-    "karma": "^0.13.9",
-    "karma-browserify": "^4.4.2",
-    "karma-chrome-launcher": "^2.2.0",
-    "karma-firefox-launcher": "^1.1.0",
-    "karma-qunit": "^3.1.2",
-    "npm-run-all": "^4.1.5",
-    "portscanner": "^1.0.0",
-    "qunit": "~2.9.1",
-    "serve-static": "^1.10.0",
-    "shelljs": "^0.8.3",
-    "uglify-js": "^2.6.2",
-    "watchify": "^3.6.1",
-    "webworkify": "^1.0.2"
+    "@babel/cli": "^7.11.6",
+    "@videojs/babel-config": "^0.2.0",
+    "@videojs/generator-helpers": "~2.0.1",
+    "karma": "^5.0.0",
+    "rollup": "^2.28.2",
+    "sinon": "^9.1.0",
+    "videojs-generate-karma-config": "~6.0.0",
+    "videojs-generate-rollup-config": "~6.0.2",
+    "videojs-generator-verify": "~3.0.1",
+    "videojs-standard": "^8.0.4"
   }
 }

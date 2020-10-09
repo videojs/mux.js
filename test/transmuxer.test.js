@@ -1,13 +1,15 @@
 'use strict';
 
+var segments = require('create-test-data!segments');
+
 var mp2t = require('../lib/m2ts'),
     codecs = require('../lib/codecs'),
     flv = require('../lib/flv'),
     id3Generator = require('./utils/id3-generator'),
     mp4 = require('../lib/mp4'),
     QUnit = require('qunit'),
-    testSegment = require('./utils/test-segment'),
-    testMiddlePatPMT = require('./utils/test-middle-pat-pmt'),
+    testSegment = segments['test-segment.ts'](),
+    testMiddlePatPMT = segments['test-middle-pat-pmt.ts'](),
     mp4Transmuxer = require('../lib/mp4/transmuxer'),
     mp4AudioProperties = mp4Transmuxer.AUDIO_PROPERTIES,
     mp4VideoProperties = mp4Transmuxer.VIDEO_PROPERTIES,
