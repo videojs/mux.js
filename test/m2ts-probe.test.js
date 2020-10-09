@@ -24,50 +24,50 @@ var notPusiPacket = testSegment.subarray(1316, 1504);
 
 QUnit.module('M2TS Probe');
 
-QUnit.test('correctly parses packet type', function() {
-  QUnit.equal(probe.parseType(patPacket), 'pat', 'parses pat type');
-  QUnit.equal(probe.parseType(pmtPacket), null,
+QUnit.test('correctly parses packet type', function(assert) {
+  assert.equal(probe.parseType(patPacket), 'pat', 'parses pat type');
+  assert.equal(probe.parseType(pmtPacket), null,
     'cannot determine type of pmt packet when pmt pid has not been parsed yet');
-  QUnit.equal(probe.parseType(pmtPacket, pmtPid), 'pmt', 'parses pmt type');
-  QUnit.equal(probe.parseType(pesPacket), null,
+  assert.equal(probe.parseType(pmtPacket, pmtPid), 'pmt', 'parses pmt type');
+  assert.equal(probe.parseType(pesPacket), null,
     'cannot determine type of pes packet when pmt pid has not been parsed yet');
-  QUnit.equal(probe.parseType(pesPacket, pmtPid), 'pes', 'parses pes type');
+  assert.equal(probe.parseType(pesPacket, pmtPid), 'pes', 'parses pes type');
 });
 
-QUnit.test('correctly parses pmt pid from pat packet', function() {
-  QUnit.equal(probe.parsePat(patPacket), pmtPid, 'parses pmt pid from pat');
+QUnit.test('correctly parses pmt pid from pat packet', function(assert) {
+  assert.equal(probe.parsePat(patPacket), pmtPid, 'parses pmt pid from pat');
 });
 
-QUnit.test('correctly parses program map table from pmt packet', function() {
-  QUnit.deepEqual(probe.parsePmt(pmtPacket), programMapTable, 'generates correct pmt');
+QUnit.test('correctly parses program map table from pmt packet', function(assert) {
+  assert.deepEqual(probe.parsePmt(pmtPacket), programMapTable, 'generates correct pmt');
 });
 
-QUnit.test('correctly parses payload unit start indicator', function() {
-  QUnit.ok(probe.parsePayloadUnitStartIndicator(pesPacket),
+QUnit.test('correctly parses payload unit start indicator', function(assert) {
+  assert.ok(probe.parsePayloadUnitStartIndicator(pesPacket),
     'detects payload unit start indicator');
-  QUnit.ok(!probe.parsePayloadUnitStartIndicator(notPusiPacket),
+  assert.ok(!probe.parsePayloadUnitStartIndicator(notPusiPacket),
     'detects no payload unit start indicator');
 });
 
-QUnit.test('correctly parses type of pes packet', function() {
-  QUnit.equal(probe.parsePesType(videoPacket, programMapTable), 'video',
+QUnit.test('correctly parses type of pes packet', function(assert) {
+  assert.equal(probe.parsePesType(videoPacket, programMapTable), 'video',
     'parses video pes type');
-  QUnit.equal(probe.parsePesType(audioPacket, programMapTable), 'audio',
+  assert.equal(probe.parsePesType(audioPacket, programMapTable), 'audio',
     'parses audio pes type');
 });
 
-QUnit.test('correctly parses dts and pts values of pes packet', function() {
+QUnit.test('correctly parses dts and pts values of pes packet', function(assert) {
   var videoPes = probe.parsePesTime(videoPacket);
-  QUnit.equal(videoPes.dts, 126000, 'correct dts value');
-  QUnit.equal(videoPes.pts, 126000, 'correct pts value');
+  assert.equal(videoPes.dts, 126000, 'correct dts value');
+  assert.equal(videoPes.pts, 126000, 'correct pts value');
 
   videoPes = probe.parsePesTime(stuffedPesPacket);
-  QUnit.equal(videoPes, null,
+  assert.equal(videoPes, null,
     'correctly returned null when there is no packet data, only stuffing');
 });
 
-QUnit.test('correctly determines if video pes packet contains a key frame', function() {
-  QUnit.ok(probe.videoPacketContainsKeyFrame(videoPacket), 'detects key frame in packet');
-  QUnit.ok(!probe.videoPacketContainsKeyFrame(videoNoKeyFramePacket),
+QUnit.test('correctly determines if video pes packet contains a key frame', function(assert) {
+  assert.ok(probe.videoPacketContainsKeyFrame(videoPacket), 'detects key frame in packet');
+  assert.ok(!probe.videoPacketContainsKeyFrame(videoNoKeyFramePacket),
     'detects no key frame in packet');
 });

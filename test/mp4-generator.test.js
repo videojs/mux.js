@@ -10,12 +10,12 @@
   stop(increment)
   start(decrement)
   Test assertions:
-  QUnit.ok(value, [message])
-  QUnit.equal(actual, expected, [message])
+  assert.ok(value, [message])
+  assert.equal(actual, expected, [message])
   notEqual(actual, expected, [message])
-  QUnit.deepEqual(actual, expected, [message])
+  assert.deepEqual(actual, expected, [message])
   notDeepEqual(actual, expected, [message])
-  QUnit.strictEqual(actual, expected, [message])
+  assert.strictEqual(actual, expected, [message])
   notStrictEqual(actual, expected, [message])
   throws(block, [expected], [message])
 */
@@ -29,49 +29,49 @@ var
 
 QUnit.module('MP4 Generator');
 
-QUnit.test('generates a BSMFF ftyp', function() {
+QUnit.test('generates a BSMFF ftyp', function(assert) {
   var data = mp4.generator.ftyp(), boxes;
 
-  QUnit.ok(data, 'box is not null');
+  assert.ok(data, 'box is not null');
 
   boxes = mp4.tools.inspect(data);
-  QUnit.equal(1, boxes.length, 'generated a single box');
-  QUnit.equal(boxes[0].type, 'ftyp', 'generated ftyp type');
-  QUnit.equal(boxes[0].size, data.byteLength, 'generated size');
-  QUnit.equal(boxes[0].majorBrand, 'isom', 'major version is "isom"');
-  QUnit.equal(boxes[0].minorVersion, 1, 'minor version is one');
+  assert.equal(1, boxes.length, 'generated a single box');
+  assert.equal(boxes[0].type, 'ftyp', 'generated ftyp type');
+  assert.equal(boxes[0].size, data.byteLength, 'generated size');
+  assert.equal(boxes[0].majorBrand, 'isom', 'major version is "isom"');
+  assert.equal(boxes[0].minorVersion, 1, 'minor version is one');
 });
 
 validateMvhd = function(mvhd) {
-  QUnit.equal(mvhd.type, 'mvhd', 'generated a mvhd');
-  QUnit.equal(mvhd.duration, 0xffffffff, 'wrote the maximum movie header duration');
-  QUnit.equal(mvhd.nextTrackId, 0xffffffff, 'wrote the max next track id');
+  QUnit.assert.equal(mvhd.type, 'mvhd', 'generated a mvhd');
+  QUnit.assert.equal(mvhd.duration, 0xffffffff, 'wrote the maximum movie header duration');
+  QUnit.assert.equal(mvhd.nextTrackId, 0xffffffff, 'wrote the max next track id');
 };
 
 validateTrak = function(trak, expected) {
   expected = expected || {};
-  QUnit.equal(trak.type, 'trak', 'generated a trak');
-  QUnit.equal(trak.boxes.length, 2, 'generated two track sub boxes');
+  QUnit.assert.equal(trak.type, 'trak', 'generated a trak');
+  QUnit.assert.equal(trak.boxes.length, 2, 'generated two track sub boxes');
 
   validateTkhd(trak.boxes[0], expected);
   validateMdia(trak.boxes[1], expected);
 };
 
 validateTkhd = function(tkhd, expected) {
-  QUnit.equal(tkhd.type, 'tkhd', 'generated a tkhd');
-  QUnit.equal(tkhd.trackId, 7, 'wrote the track id');
-  QUnit.deepEqual(tkhd.flags, new Uint8Array([0, 0, 7]), 'flags should QUnit.equal 7');
-  QUnit.equal(tkhd.duration,
+  QUnit.assert.equal(tkhd.type, 'tkhd', 'generated a tkhd');
+  QUnit.assert.equal(tkhd.trackId, 7, 'wrote the track id');
+  QUnit.assert.deepEqual(tkhd.flags, new Uint8Array([0, 0, 7]), 'flags should QUnit.equal 7');
+  QUnit.assert.equal(tkhd.duration,
         expected.duration || Math.pow(2, 32) - 1,
         'wrote duration into the track header');
-  QUnit.equal(tkhd.width, expected.width || 0, 'wrote width into the track header');
-  QUnit.equal(tkhd.height, expected.height || 0, 'wrote height into the track header');
-  QUnit.equal(tkhd.volume, 1, 'set volume to 1');
+  QUnit.assert.equal(tkhd.width, expected.width || 0, 'wrote width into the track header');
+  QUnit.assert.equal(tkhd.height, expected.height || 0, 'wrote height into the track header');
+  QUnit.assert.equal(tkhd.volume, 1, 'set volume to 1');
 };
 
 validateMdia = function(mdia, expected) {
-  QUnit.equal(mdia.type, 'mdia', 'generated an mdia type');
-  QUnit.equal(mdia.boxes.length, 3, 'generated three track media sub boxes');
+  QUnit.assert.equal(mdia.type, 'mdia', 'generated an mdia type');
+  QUnit.assert.equal(mdia.boxes.length, 3, 'generated three track media sub boxes');
 
   validateMdhd(mdia.boxes[0], expected);
   validateHdlr(mdia.boxes[1], expected);
@@ -79,31 +79,31 @@ validateMdia = function(mdia, expected) {
 };
 
 validateMdhd = function(mdhd, expected) {
-  QUnit.equal(mdhd.type, 'mdhd', 'generate an mdhd type');
-  QUnit.equal(mdhd.language, 'und', 'wrote undetermined language');
-  QUnit.equal(mdhd.timescale, expected.timescale || 90000, 'wrote the timescale');
-  QUnit.equal(mdhd.duration,
+  QUnit.assert.equal(mdhd.type, 'mdhd', 'generate an mdhd type');
+  QUnit.assert.equal(mdhd.language, 'und', 'wrote undetermined language');
+  QUnit.assert.equal(mdhd.timescale, expected.timescale || 90000, 'wrote the timescale');
+  QUnit.assert.equal(mdhd.duration,
         expected.duration || Math.pow(2, 32) - 1,
         'wrote duration into the media header');
 };
 
 validateHdlr = function(hdlr, expected) {
-  QUnit.equal(hdlr.type, 'hdlr', 'generate an hdlr type');
+  QUnit.assert.equal(hdlr.type, 'hdlr', 'generate an hdlr type');
   if (expected.type !== 'audio') {
-    QUnit.equal(hdlr.handlerType, 'vide', 'wrote a video handler');
-    QUnit.equal(hdlr.name, 'VideoHandler', 'wrote the handler name');
+    QUnit.assert.equal(hdlr.handlerType, 'vide', 'wrote a video handler');
+    QUnit.assert.equal(hdlr.name, 'VideoHandler', 'wrote the handler name');
   } else {
-    QUnit.equal(hdlr.handlerType, 'soun', 'wrote a sound handler');
-    QUnit.equal(hdlr.name, 'SoundHandler', 'wrote the sound handler name');
+    QUnit.assert.equal(hdlr.handlerType, 'soun', 'wrote a sound handler');
+    QUnit.assert.equal(hdlr.name, 'SoundHandler', 'wrote the sound handler name');
   }
 };
 
 validateMinf = function(minf, expected) {
-  QUnit.equal(minf.type, 'minf', 'generate an minf type');
-  QUnit.equal(minf.boxes.length, 3, 'generates three minf sub boxes');
+  QUnit.assert.equal(minf.type, 'minf', 'generate an minf type');
+  QUnit.assert.equal(minf.boxes.length, 3, 'generates three minf sub boxes');
 
   if (expected.type !== 'audio') {
-    QUnit.deepEqual({
+    QUnit.assert.deepEqual({
       type: 'vmhd',
       size: 20,
       version: 0,
@@ -112,7 +112,7 @@ validateMinf = function(minf, expected) {
       opcolor: new Uint16Array([0, 0, 0])
     }, minf.boxes[0], 'generates a vhmd');
   } else {
-    QUnit.deepEqual({
+    QUnit.assert.deepEqual({
       type: 'smhd',
       size: 16,
       version: 0,
@@ -126,7 +126,7 @@ validateMinf = function(minf, expected) {
 };
 
 validateDinf = function(dinf) {
-  QUnit.deepEqual({
+  QUnit.assert.deepEqual({
     type: 'dinf',
     size: 36,
     boxes: [{
@@ -145,25 +145,25 @@ validateDinf = function(dinf) {
 };
 
 validateStbl = function(stbl, expected) {
-  QUnit.equal(stbl.type, 'stbl', 'generates an stbl type');
-  QUnit.equal(stbl.boxes.length, 5, 'generated five stbl child boxes');
+  QUnit.assert.equal(stbl.type, 'stbl', 'generates an stbl type');
+  QUnit.assert.equal(stbl.boxes.length, 5, 'generated five stbl child boxes');
 
   validateStsd(stbl.boxes[0], expected);
-  QUnit.deepEqual({
+  QUnit.assert.deepEqual({
     type: 'stts',
     size: 16,
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
     timeToSamples: []
   }, stbl.boxes[1], 'generated an stts');
-  QUnit.deepEqual({
+  QUnit.assert.deepEqual({
     type: 'stsc',
     size: 16,
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
     sampleToChunks: []
   }, stbl.boxes[2], 'generated an stsc');
-  QUnit.deepEqual({
+  QUnit.assert.deepEqual({
     type: 'stsz',
     version: 0,
     size: 20,
@@ -171,7 +171,7 @@ validateStbl = function(stbl, expected) {
     sampleSize: 0,
     entries: []
   }, stbl.boxes[3], 'generated an stsz');
-  QUnit.deepEqual({
+  QUnit.assert.deepEqual({
     type: 'stco',
     size: 16,
     version: 0,
@@ -181,8 +181,8 @@ validateStbl = function(stbl, expected) {
 };
 
 validateStsd = function(stsd, expected) {
-  QUnit.equal(stsd.type, 'stsd', 'generated an stsd');
-  QUnit.equal(stsd.sampleDescriptions.length, 1, 'generated one sample');
+  QUnit.assert.equal(stsd.type, 'stsd', 'generated an stsd');
+  QUnit.assert.equal(stsd.sampleDescriptions.length, 1, 'generated one sample');
   if (expected.type !== 'audio') {
     validateVideoSample(stsd.sampleDescriptions[0]);
   } else {
@@ -191,7 +191,7 @@ validateStsd = function(stsd, expected) {
 };
 
 validateVideoSample = function(sample) {
-  QUnit.deepEqual(sample, {
+  QUnit.assert.deepEqual(sample, {
     type: 'avc1',
     size: 152,
     dataReferenceIndex: 1,
@@ -232,7 +232,7 @@ validateVideoSample = function(sample) {
 };
 
 validateAudioSample = function(sample) {
-  QUnit.deepEqual(sample, {
+  QUnit.assert.deepEqual(sample, {
     type: 'mp4a',
     size: 75,
     dataReferenceIndex: 1,
@@ -269,7 +269,7 @@ validateMvex = function(mvex, options) {
   options = options || {
     sampleDegradationPriority: 1
   };
-  QUnit.deepEqual({
+  QUnit.assert.deepEqual({
     type: 'mvex',
     size: 40,
     boxes: [{
@@ -291,7 +291,7 @@ validateMvex = function(mvex, options) {
   }, mvex, 'writes a movie extends box');
 };
 
-QUnit.test('generates a video moov', function() {
+QUnit.test('generates a video moov', function(assert) {
   var
     boxes,
     data = mp4.generator.moov([{
@@ -308,12 +308,12 @@ QUnit.test('generates a video moov', function() {
       pps: [new Uint8Array([6, 7, 8])]
     }]);
 
-  QUnit.ok(data, 'box is not null');
+  assert.ok(data, 'box is not null');
   boxes = mp4.tools.inspect(data);
-  QUnit.equal(boxes.length, 1, 'generated a single box');
-  QUnit.equal(boxes[0].type, 'moov', 'generated a moov type');
-  QUnit.equal(boxes[0].size, data.byteLength, 'generated size');
-  QUnit.equal(boxes[0].boxes.length, 3, 'generated three sub boxes');
+  assert.equal(boxes.length, 1, 'generated a single box');
+  assert.equal(boxes[0].type, 'moov', 'generated a moov type');
+  assert.equal(boxes[0].size, data.byteLength, 'generated size');
+  assert.equal(boxes[0].boxes.length, 3, 'generated three sub boxes');
 
   validateMvhd(boxes[0].boxes[0]);
   validateTrak(boxes[0].boxes[1], {
@@ -324,7 +324,7 @@ QUnit.test('generates a video moov', function() {
   validateMvex(boxes[0].boxes[2]);
 });
 
-QUnit.test('generates an audio moov', function() {
+QUnit.test('generates an audio moov', function(assert) {
   var
     data = mp4.generator.moov([{
       id: 7,
@@ -337,12 +337,12 @@ QUnit.test('generates an audio moov', function() {
     }]),
     boxes;
 
-  QUnit.ok(data, 'box is not null');
+  assert.ok(data, 'box is not null');
   boxes = mp4.tools.inspect(data);
-  QUnit.equal(boxes.length, 1, 'generated a single box');
-  QUnit.equal(boxes[0].type, 'moov', 'generated a moov type');
-  QUnit.equal(boxes[0].size, data.byteLength, 'generated size');
-  QUnit.equal(boxes[0].boxes.length, 3, 'generated three sub boxes');
+  assert.equal(boxes.length, 1, 'generated a single box');
+  assert.equal(boxes[0].type, 'moov', 'generated a moov type');
+  assert.equal(boxes[0].size, data.byteLength, 'generated size');
+  assert.equal(boxes[0].boxes.length, 3, 'generated three sub boxes');
 
   validateMvhd(boxes[0].boxes[0]);
   validateTrak(boxes[0].boxes[1], {
@@ -354,24 +354,24 @@ QUnit.test('generates an audio moov', function() {
   });
 });
 
-QUnit.test('generates a sound hdlr', function() {
+QUnit.test('generates a sound hdlr', function(assert) {
   var boxes, hdlr,
     data = mp4.generator.moov([{
       duration: 100,
       type: 'audio'
     }]);
 
-  QUnit.ok(data, 'box is not null');
+  assert.ok(data, 'box is not null');
 
   boxes = mp4.tools.inspect(data);
 
   hdlr = boxes[0].boxes[1].boxes[1].boxes[1];
-  QUnit.equal(hdlr.type, 'hdlr', 'generate an hdlr type');
-  QUnit.equal(hdlr.handlerType, 'soun', 'wrote a sound handler');
-  QUnit.equal(hdlr.name, 'SoundHandler', 'wrote the handler name');
+  assert.equal(hdlr.type, 'hdlr', 'generate an hdlr type');
+  assert.equal(hdlr.handlerType, 'soun', 'wrote a sound handler');
+  assert.equal(hdlr.name, 'SoundHandler', 'wrote the handler name');
 });
 
-QUnit.test('generates a video hdlr', function() {
+QUnit.test('generates a video hdlr', function(assert) {
   var boxes, hdlr,
     data = mp4.generator.moov([{
       duration: 100,
@@ -382,17 +382,17 @@ QUnit.test('generates a video hdlr', function() {
       pps: []
     }]);
 
-  QUnit.ok(data, 'box is not null');
+  assert.ok(data, 'box is not null');
 
   boxes = mp4.tools.inspect(data);
 
   hdlr = boxes[0].boxes[1].boxes[1].boxes[1];
-  QUnit.equal(hdlr.type, 'hdlr', 'generate an hdlr type');
-  QUnit.equal(hdlr.handlerType, 'vide', 'wrote a video handler');
-  QUnit.equal(hdlr.name, 'VideoHandler', 'wrote the handler name');
+  assert.equal(hdlr.type, 'hdlr', 'generate an hdlr type');
+  assert.equal(hdlr.handlerType, 'vide', 'wrote a video handler');
+  assert.equal(hdlr.name, 'VideoHandler', 'wrote the handler name');
 });
 
-QUnit.test('generates an initialization segment', function() {
+QUnit.test('generates an initialization segment', function(assert) {
   var
     data = mp4.generator.initSegment([{
       id: 1,
@@ -408,31 +408,31 @@ QUnit.test('generates an initialization segment', function() {
     init, mvhd, trak1, trak2, mvex;
 
   init = mp4.tools.inspect(data);
-  QUnit.equal(init.length, 2, 'generated two boxes');
-  QUnit.equal(init[0].type, 'ftyp', 'generated a ftyp box');
-  QUnit.equal(init[1].type, 'moov', 'generated a moov box');
-  QUnit.equal(init[1].boxes[0].duration, 0xffffffff, 'wrote a maximum duration');
+  assert.equal(init.length, 2, 'generated two boxes');
+  assert.equal(init[0].type, 'ftyp', 'generated a ftyp box');
+  assert.equal(init[1].type, 'moov', 'generated a moov box');
+  assert.equal(init[1].boxes[0].duration, 0xffffffff, 'wrote a maximum duration');
 
   mvhd = init[1].boxes[0];
-  QUnit.equal(mvhd.type, 'mvhd', 'wrote an mvhd');
+  assert.equal(mvhd.type, 'mvhd', 'wrote an mvhd');
 
   trak1 = init[1].boxes[1];
-  QUnit.equal(trak1.type, 'trak', 'wrote a trak');
-  QUnit.equal(trak1.boxes[0].trackId, 1, 'wrote the first track id');
-  QUnit.equal(trak1.boxes[0].width, 600, 'wrote the first track width');
-  QUnit.equal(trak1.boxes[0].height, 300, 'wrote the first track height');
-  QUnit.equal(trak1.boxes[1].boxes[1].handlerType, 'vide', 'wrote the first track type');
+  assert.equal(trak1.type, 'trak', 'wrote a trak');
+  assert.equal(trak1.boxes[0].trackId, 1, 'wrote the first track id');
+  assert.equal(trak1.boxes[0].width, 600, 'wrote the first track width');
+  assert.equal(trak1.boxes[0].height, 300, 'wrote the first track height');
+  assert.equal(trak1.boxes[1].boxes[1].handlerType, 'vide', 'wrote the first track type');
 
   trak2 = init[1].boxes[2];
-  QUnit.equal(trak2.type, 'trak', 'wrote a trak');
-  QUnit.equal(trak2.boxes[0].trackId, 2, 'wrote the second track id');
-  QUnit.equal(trak2.boxes[1].boxes[1].handlerType, 'soun', 'wrote the second track type');
+  assert.equal(trak2.type, 'trak', 'wrote a trak');
+  assert.equal(trak2.boxes[0].trackId, 2, 'wrote the second track id');
+  assert.equal(trak2.boxes[1].boxes[1].handlerType, 'soun', 'wrote the second track type');
 
   mvex = init[1].boxes[3];
-  QUnit.equal(mvex.type, 'mvex', 'wrote an mvex');
+  assert.equal(mvex.type, 'mvex', 'wrote an mvex');
 });
 
-QUnit.test('generates a minimal moof', function() {
+QUnit.test('generates a minimal moof', function(assert) {
   var
     data = mp4.generator.moof(7, [{
       id: 17,
@@ -468,31 +468,31 @@ QUnit.test('generates a minimal moof', function() {
     trun,
     sdtp;
 
-  QUnit.equal(moof.length, 1, 'generated one box');
-  QUnit.equal(moof[0].type, 'moof', 'generated a moof box');
-  QUnit.equal(moof[0].boxes.length, 2, 'generated two child boxes');
-  QUnit.equal(moof[0].boxes[0].type, 'mfhd', 'generated an mfhd box');
-  QUnit.equal(moof[0].boxes[0].sequenceNumber, 7, 'included the sequence_number');
-  QUnit.equal(moof[0].boxes[1].type, 'traf', 'generated a traf box');
-  QUnit.equal(moof[0].boxes[1].boxes.length, 4, 'generated track fragment info');
-  QUnit.equal(moof[0].boxes[1].boxes[0].type, 'tfhd', 'generated a tfhd box');
-  QUnit.equal(moof[0].boxes[1].boxes[0].trackId, 17, 'wrote the first track id');
-  QUnit.equal(moof[0].boxes[1].boxes[0].baseDataOffset, undefined, 'did not set a base data offset');
+  assert.equal(moof.length, 1, 'generated one box');
+  assert.equal(moof[0].type, 'moof', 'generated a moof box');
+  assert.equal(moof[0].boxes.length, 2, 'generated two child boxes');
+  assert.equal(moof[0].boxes[0].type, 'mfhd', 'generated an mfhd box');
+  assert.equal(moof[0].boxes[0].sequenceNumber, 7, 'included the sequence_number');
+  assert.equal(moof[0].boxes[1].type, 'traf', 'generated a traf box');
+  assert.equal(moof[0].boxes[1].boxes.length, 4, 'generated track fragment info');
+  assert.equal(moof[0].boxes[1].boxes[0].type, 'tfhd', 'generated a tfhd box');
+  assert.equal(moof[0].boxes[1].boxes[0].trackId, 17, 'wrote the first track id');
+  assert.equal(moof[0].boxes[1].boxes[0].baseDataOffset, undefined, 'did not set a base data offset');
 
-  QUnit.equal(moof[0].boxes[1].boxes[1].type, 'tfdt', 'generated a tfdt box');
-  QUnit.ok(moof[0].boxes[1].boxes[1].baseMediaDecodeTime >= 0,
+  assert.equal(moof[0].boxes[1].boxes[1].type, 'tfdt', 'generated a tfdt box');
+  assert.ok(moof[0].boxes[1].boxes[1].baseMediaDecodeTime >= 0,
      'media decode time is non-negative');
 
   trun = moof[0].boxes[1].boxes[2];
-  QUnit.equal(trun.type, 'trun', 'generated a trun box');
-  QUnit.equal(typeof trun.dataOffset, 'number', 'has a data offset');
-  QUnit.ok(trun.dataOffset >= 0, 'has a non-negative data offset');
-  QUnit.equal(trun.dataOffset, moof[0].size + 8, 'sets the data offset past the mdat header');
-  QUnit.equal(trun.samples.length, 2, 'wrote two samples');
+  assert.equal(trun.type, 'trun', 'generated a trun box');
+  assert.equal(typeof trun.dataOffset, 'number', 'has a data offset');
+  assert.ok(trun.dataOffset >= 0, 'has a non-negative data offset');
+  assert.equal(trun.dataOffset, moof[0].size + 8, 'sets the data offset past the mdat header');
+  assert.equal(trun.samples.length, 2, 'wrote two samples');
 
-  QUnit.equal(trun.samples[0].duration, 9000, 'wrote a sample duration');
-  QUnit.equal(trun.samples[0].size, 10, 'wrote a sample size');
-  QUnit.deepEqual(trun.samples[0].flags, {
+  assert.equal(trun.samples[0].duration, 9000, 'wrote a sample duration');
+  assert.equal(trun.samples[0].size, 10, 'wrote a sample size');
+  assert.deepEqual(trun.samples[0].flags, {
     isLeading: 0,
     dependsOn: 2,
     isDependedOn: 1,
@@ -501,11 +501,11 @@ QUnit.test('generates a minimal moof', function() {
     isNonSyncSample: 0,
     degradationPriority: 14
   }, 'wrote the sample flags');
-  QUnit.equal(trun.samples[0].compositionTimeOffset, 500, 'wrote the composition time offset');
+  assert.equal(trun.samples[0].compositionTimeOffset, 500, 'wrote the composition time offset');
 
-  QUnit.equal(trun.samples[1].duration, 10000, 'wrote a sample duration');
-  QUnit.equal(trun.samples[1].size, 11, 'wrote a sample size');
-  QUnit.deepEqual(trun.samples[1].flags, {
+  assert.equal(trun.samples[1].duration, 10000, 'wrote a sample duration');
+  assert.equal(trun.samples[1].size, 11, 'wrote a sample size');
+  assert.deepEqual(trun.samples[1].flags, {
     isLeading: 0,
     dependsOn: 1,
     isDependedOn: 0,
@@ -514,24 +514,24 @@ QUnit.test('generates a minimal moof', function() {
     isNonSyncSample: 0,
     degradationPriority: 9
   }, 'wrote the sample flags');
-  QUnit.equal(trun.samples[1].compositionTimeOffset, 1000, 'wrote the composition time offset');
+  assert.equal(trun.samples[1].compositionTimeOffset, 1000, 'wrote the composition time offset');
 
   sdtp = moof[0].boxes[1].boxes[3];
-  QUnit.equal(sdtp.type, 'sdtp', 'generated an sdtp box');
-  QUnit.equal(sdtp.samples.length, 2, 'wrote two samples');
-  QUnit.deepEqual(sdtp.samples[0], {
+  assert.equal(sdtp.type, 'sdtp', 'generated an sdtp box');
+  assert.equal(sdtp.samples.length, 2, 'wrote two samples');
+  assert.deepEqual(sdtp.samples[0], {
       dependsOn: 2,
       isDependedOn: 1,
       hasRedundancy: 0
   }, 'wrote the sample data table');
-  QUnit.deepEqual(sdtp.samples[1], {
+  assert.deepEqual(sdtp.samples[1], {
     dependsOn: 1,
     isDependedOn: 0,
     hasRedundancy: 0
   }, 'wrote the sample data table');
 });
 
-QUnit.test('generates a moof for audio', function() {
+QUnit.test('generates a moof for audio', function(assert) {
   var
     data = mp4.generator.moof(7, [{
       id: 17,
@@ -547,11 +547,11 @@ QUnit.test('generates a moof for audio', function() {
     moof = mp4.tools.inspect(data),
     trun;
 
-  QUnit.deepEqual(moof[0].boxes[1].boxes.length, 3, 'generated three traf children');
+  assert.deepEqual(moof[0].boxes[1].boxes.length, 3, 'generated three traf children');
   trun = moof[0].boxes[1].boxes[2];
-  QUnit.ok(trun, 'generated a trun');
-  QUnit.equal(trun.dataOffset, data.byteLength + 8, 'calculated the data offset');
-  QUnit.deepEqual(trun.samples, [{
+  assert.ok(trun, 'generated a trun');
+  assert.equal(trun.dataOffset, data.byteLength + 8, 'calculated the data offset');
+  assert.deepEqual(trun.samples, [{
     duration: 9000,
     size: 10
   }, {
@@ -560,22 +560,22 @@ QUnit.test('generates a moof for audio', function() {
   }], 'wrote simple audio samples');
 });
 
-QUnit.test('can generate a traf without samples', function() {
+QUnit.test('can generate a traf without samples', function(assert) {
   var
     data = mp4.generator.moof(8, [{
       trackId: 13
     }]),
     moof = mp4.tools.inspect(data);
 
-  QUnit.equal(moof[0].boxes[1].boxes[2].samples.length, 0, 'generated no samples');
+  assert.equal(moof[0].boxes[1].boxes[2].samples.length, 0, 'generated no samples');
 });
 
-QUnit.test('generates an mdat', function() {
+QUnit.test('generates an mdat', function(assert) {
   var
     data = mp4.generator.mdat(new Uint8Array([1, 2, 3, 4])),
     mdat = mp4.tools.inspect(data);
 
-  QUnit.equal(mdat.length, 1, 'generated one box');
-  QUnit.equal(mdat[0].type, 'mdat', 'generated an mdat box');
-  QUnit.deepEqual(mdat[0].byteLength, 4, 'encapsulated the data');
+  assert.equal(mdat.length, 1, 'generated one box');
+  assert.equal(mdat[0].type, 'mdat', 'generated an mdat box');
+  assert.deepEqual(mdat[0].byteLength, 4, 'encapsulated the data');
 });

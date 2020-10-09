@@ -16,11 +16,11 @@ var
 
 QUnit.module('TS Inspector');
 
-QUnit.test('returns null for empty segment input', function() {
-  QUnit.equal(inspect(new Uint8Array([])), null, 'returned null');
+QUnit.test('returns null for empty segment input', function(assert) {
+  assert.equal(inspect(new Uint8Array([])), null, 'returned null');
 });
 
-QUnit.test('can parse a ts segment', function() {
+QUnit.test('can parse a ts segment', function(assert) {
   var expected = {
     video: [
       {
@@ -63,10 +63,10 @@ QUnit.test('can parse a ts segment', function() {
     ]
   };
 
-  QUnit.deepEqual(inspect(tsSegment), expected, 'parses ts segment timing data');
+  assert.deepEqual(inspect(tsSegment), expected, 'parses ts segment timing data');
 });
 
-QUnit.test('adjusts timestamp values based on provided reference', function() {
+QUnit.test('adjusts timestamp values based on provided reference', function(assert) {
   var rollover = Math.pow(2, 33);
 
   var expected = {
@@ -111,11 +111,11 @@ QUnit.test('adjusts timestamp values based on provided reference', function() {
     ]
   };
 
-  QUnit.deepEqual(inspect(tsSegment, rollover - 1), expected,
+  assert.deepEqual(inspect(tsSegment, rollover - 1), expected,
     'adjusts inspected time data to account for pts rollover');
 });
 
-QUnit.test('can parse an aac segment', function() {
+QUnit.test('can parse an aac segment', function(assert) {
   var expected = {
     audio: [
       {
@@ -135,10 +135,10 @@ QUnit.test('can parse an aac segment', function() {
     ]
   };
 
-  QUnit.deepEqual(inspect(aacSegment), expected, 'parses aac segment timing data');
+  assert.deepEqual(inspect(aacSegment), expected, 'parses aac segment timing data');
 });
 
-QUnit.test('can parse ts segment with no audio muxed in', function() {
+QUnit.test('can parse ts segment with no audio muxed in', function(assert) {
   var expected = {
     video: [
       {
@@ -167,12 +167,12 @@ QUnit.test('can parse ts segment with no audio muxed in', function() {
 
   var actual = inspect(tsNoAudioSegment);
 
-  QUnit.equal(typeof actual.audio, 'undefined', 'results do not contain audio info');
-  QUnit.deepEqual(actual, expected,
+  assert.equal(typeof actual.audio, 'undefined', 'results do not contain audio info');
+  assert.deepEqual(actual, expected,
     'parses ts segment without audio timing data');
 });
 
-QUnit.test('can parse audio PES when it\'s the only packet in a stream', function() {
+QUnit.test('can parse audio PES when it\'s the only packet in a stream', function(assert) {
   var
     pts = 90000,
     pmt = {
@@ -189,7 +189,7 @@ QUnit.test('can parse audio PES when it\'s the only packet in a stream', functio
 
   // note that both the first and last packet timings are the same, as there's only one
   // packet to parse
-  QUnit.deepEqual(
+  assert.deepEqual(
     result.audio,
     [{
       dts: pts,

@@ -2,10 +2,6 @@
 
 var
   QUnit = require('qunit'),
-  deepEqual = QUnit.deepEqual,
-  equal = QUnit.equal,
-  test = QUnit.test,
-
   probe = require('../lib/mp4/probe'),
   mp4Helpers = require('./utils/mp4-helpers'),
   box = mp4Helpers.box,
@@ -21,48 +17,48 @@ var
 
 QUnit.module('MP4 Probe');
 
-test('reads the timescale from an mdhd', function() {
+QUnit.test('reads the timescale from an mdhd', function(assert) {
   // sampleMoov has a base timescale of 1000 with an override to 90kHz
   // in the mdhd
-  deepEqual(probe.timescale(new Uint8Array(mp4Helpers.sampleMoov)), {
+  assert.deepEqual(probe.timescale(new Uint8Array(mp4Helpers.sampleMoov)), {
     1: 90e3,
     2: 90e3
   }, 'found the timescale');
 });
 
-test('reads tracks', function() {
+QUnit.test('reads tracks', function(assert) {
   var tracks = probe.tracks(new Uint8Array(mp4Helpers.sampleMoov));
 
-  equal(tracks.length, 2, 'two tracks');
-  equal(tracks[0].codec, 'avc1.4d400d', 'codec is correct');
-  equal(tracks[0].id, 1, 'id is correct');
-  equal(tracks[0].type, 'video', 'type is correct');
-  equal(tracks[0].timescale, 90e3, 'timescale is correct');
+  assert.equal(tracks.length, 2, 'two tracks');
+  assert.equal(tracks[0].codec, 'avc1.4d400d', 'codec is correct');
+  assert.equal(tracks[0].id, 1, 'id is correct');
+  assert.equal(tracks[0].type, 'video', 'type is correct');
+  assert.equal(tracks[0].timescale, 90e3, 'timescale is correct');
 
-  equal(tracks[1].codec, 'mp4a.40.2', 'codec is correct');
-  equal(tracks[1].id, 2, 'id is correct');
-  equal(tracks[1].type, 'audio', 'type is correct');
-  equal(tracks[1].timescale, 90e3, 'timescale is correct');
+  assert.equal(tracks[1].codec, 'mp4a.40.2', 'codec is correct');
+  assert.equal(tracks[1].id, 2, 'id is correct');
+  assert.equal(tracks[1].type, 'audio', 'type is correct');
+  assert.equal(tracks[1].timescale, 90e3, 'timescale is correct');
 });
 
-test('returns null if the tkhd is missing', function() {
-  equal(probe.timescale(new Uint8Array(moovWithoutTkhd)), null, 'indicated missing info');
+QUnit.test('returns null if the tkhd is missing', function(assert) {
+  assert.equal(probe.timescale(new Uint8Array(moovWithoutTkhd)), null, 'indicated missing info');
 });
 
-test('returns null if the mdhd is missing', function() {
-  equal(probe.timescale(new Uint8Array(moovWithoutMdhd)), null, 'indicated missing info');
+QUnit.test('returns null if the mdhd is missing', function(assert) {
+  assert.equal(probe.timescale(new Uint8Array(moovWithoutMdhd)), null, 'indicated missing info');
 });
 
-test('startTime reads the base decode time from a tfdt', function() {
-  equal(probe.startTime({
+QUnit.test('startTime reads the base decode time from a tfdt', function(assert) {
+  assert.equal(probe.startTime({
     4: 2
   }, new Uint8Array(moofWithTfdt)),
         0x01020304 / 2,
         'calculated base decode time');
 });
 
-test('startTime returns the earliest base decode time', function() {
-  equal(probe.startTime({
+QUnit.test('startTime returns the earliest base decode time', function(assert) {
+  assert.equal(probe.startTime({
     4: 2,
     6: 1
   }, new Uint8Array(multiMoof)),
@@ -70,17 +66,17 @@ test('startTime returns the earliest base decode time', function() {
         'returned the earlier time');
 });
 
-test('startTime parses 64-bit base decode times', function() {
-  equal(probe.startTime({
+QUnit.test('startTime parses 64-bit base decode times', function(assert) {
+  assert.equal(probe.startTime({
     4: 3
   }, new Uint8Array(v1boxes)),
         0x0101020304 / 3,
         'parsed a long value');
 });
 
-test('compositionStartTime calculates composition time using composition time' +
-  'offset from first trun sample', function() {
-  equal(probe.compositionStartTime({
+QUnit.test('compositionStartTime calculates composition time using composition time' +
+  'offset from first trun sample', function(assert) {
+  assert.equal(probe.compositionStartTime({
     1: 6,
     4: 3
   }, new Uint8Array(moofWithTfdt)),
@@ -88,8 +84,8 @@ test('compositionStartTime calculates composition time using composition time' +
         'calculated correct composition start time');
 });
 
-test('compositionStartTime looks at only the first traf', function() {
-  equal(probe.compositionStartTime({
+QUnit.test('compositionStartTime looks at only the first traf', function(assert) {
+  assert.equal(probe.compositionStartTime({
     2: 6,
     4: 3
   }, new Uint8Array(multiTraf)),
@@ -97,9 +93,9 @@ test('compositionStartTime looks at only the first traf', function() {
         'calculated composition start time from first traf');
 });
 
-test('compositionStartTime uses default composition time offset of 0' +
-  'if no trun samples present', function() {
-  equal(probe.compositionStartTime({
+QUnit.test('compositionStartTime uses default composition time offset of 0' +
+  'if no trun samples present', function(assert) {
+  assert.equal(probe.compositionStartTime({
     2: 6,
     4: 3
   }, new Uint8Array(noTrunSamples)),
@@ -107,7 +103,7 @@ test('compositionStartTime uses default composition time offset of 0' +
         'calculated correct composition start time using default offset');
 });
 
-test('getTimescaleFromMediaHeader gets timescale for version 0 mdhd', function() {
+QUnit.test('getTimescaleFromMediaHeader gets timescale for version 0 mdhd', function(assert) {
   var mdhd = new Uint8Array([
     0x00, // version 0
     0x00, 0x00, 0x00, // flags
@@ -120,14 +116,14 @@ test('getTimescaleFromMediaHeader gets timescale for version 0 mdhd', function()
     0x15, 0xc7 // 'eng' language
   ]);
 
-  equal(
+  assert.equal(
     probe.getTimescaleFromMediaHeader(mdhd),
     1000,
     'got timescale from version 0 mdhd'
   );
 });
 
-test('getTimescaleFromMediaHeader gets timescale for version 0 mdhd', function() {
+QUnit.test('getTimescaleFromMediaHeader gets timescale for version 0 mdhd', function(assert) {
   var mdhd = new Uint8Array([
     0x01, // version 1
     0x00, 0x00, 0x00, // flags
@@ -140,7 +136,7 @@ test('getTimescaleFromMediaHeader gets timescale for version 0 mdhd', function()
     0x15, 0xc7 // 'eng' language
   ]);
 
-  equal(
+  assert.equal(
     probe.getTimescaleFromMediaHeader(mdhd),
     1000,
     'got timescale from version 1 mdhd'
