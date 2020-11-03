@@ -16,6 +16,10 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+    - run: sudo apt-get update
+    - run: sudo apt-get install ffmpeg firefox
+    - run: wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    - run: sudo dpkg -i google-chrome-stable_current_amd64.deb
     - run: npm ci
     - run: npm test
       env:
