@@ -165,6 +165,6 @@
     "vars-on-top": 1,
     "wrap-iife": [2, "outside"],
     "wrap-regex": 2,
-    "yoda": [2, "never"]
+    "yoda": [2, "never", {"exceptRange": true}]
   }
 }

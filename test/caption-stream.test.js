@@ -9,9 +9,12 @@ var
   makeSeiFromCaptionPacket = seiNalUnitGenerator.makeSeiFromCaptionPacket,
   makeSeiFromMultipleCaptionPackets = seiNalUnitGenerator.makeSeiFromMultipleCaptionPackets,
   characters = seiNalUnitGenerator.characters,
+  packetHeader708 = seiNalUnitGenerator.packetHeader708,
+  displayWindows708 = seiNalUnitGenerator.displayWindows708,
   sintelCaptions = require('./utils/sintel-captions'),
   mixed608708Captions = require('./utils/mixed-608-708-captions'),
-  multiChannel608Captions = require('./utils/multi-channel-608-captions');
+  multiChannel608Captions = require('./utils/multi-channel-608-captions'),
+  cc708PinkUnderscore = require('./utils/cc708-pink-underscore');
 
 QUnit.module('Caption Stream', {
   beforeEach: function() {
@@ -2633,4 +2636,329 @@ QUnit.test('Cea608Stream will log errors, not throw an exception', function(asse
   );
 
   window.console.error = originalConsole;
+});
+
+var cea708Stream;
+
+QUnit.module('CEA 708 Stream', {
+  beforeEach: function() {
+    cea708Stream = new m2ts.Cea708Stream();
+  }
+});
+
+QUnit.test('parses 708 captions', function() {
+  var captions = [];
+
+  cea708Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  cc708PinkUnderscore.forEach(cea708Stream.push, cea708Stream);
+
+  QUnit.equal(captions.length, 235, 'parsed 235 captions');
+  QUnit.deepEqual(captions[0], {
+    startPts: 6723335478,
+    endPts: 6723626769,
+    text: '\"Pinkalicious_and_Peterrific\"\nis_made_possible_in_part_by:',
+    stream: 'cc708_1'
+  }, 'parsed first caption correctly');
+  QUnit.deepEqual(captions[1], {
+    startPts: 6723740883,
+    endPts: 6723945087,
+    text: 'GIRL:\nRead_me_the_tale\nof_a_faraway_land.',
+    stream: 'cc708_1'
+  }, 'parsed second caption correctly');
+  QUnit.deepEqual(captions[2], {
+    startPts: 6723948090,
+    endPts: 6724200342,
+    text: 'Tell_me_of_planets\nwith_oceans_of_sand.',
+    stream: 'cc708_1'
+  }, 'parsed third caption correctly');
+  QUnit.deepEqual(captions[33], {
+    startPts: 6732617751,
+    endPts: 6732876009,
+    text: '♪_It\'s_a_Pinkalicious_feeling_♪',
+    stream: 'cc708_1'
+  }, 'parsed caption 33 correctly with music note');
+  QUnit.deepEqual(captions[38], {
+    startPts: 6734218350,
+    endPts: 6734425557,
+    text: 'PINKALICIOUS:\n\"Dream_Salon.\"',
+    stream: 'cc708_1'
+  }, 'parsed caption 38 correctly');
+  QUnit.deepEqual(captions[234], {
+    startPts: 6778809897,
+    endPts: 6779104191,
+    text: 'I_guess_I\'ll_just_have\nto_duck_a_little_bit.',
+    stream: 'cc708_1'
+  }, 'parsed caption 234 correctly');
+});
+
+QUnit.test('reset command', function() {
+  var captions = [];
+
+  cea708Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+      { type: 3, pts: 153315036, ccData: 0x8322 },
+      { type: 2, pts: 153315036, ccData: 0x4820 },
+      { type: 2, pts: 153315036, ccData: 0x0000 },
+      { type: 3, pts: 153318039, ccData: 0xc322 },
+      { type: 2, pts: 153318039, ccData: 0x4953 },
+      { type: 2, pts: 153318039, ccData: 0x0000 },
+      { type: 3, pts: 153387108, ccData: 0x0628 },
+      { type: 2, pts: 153387108, ccData: 0x0d90 },
+      { type: 2, pts: 153387108, ccData: 0x0503 },
+      { type: 2, pts: 153387108, ccData: 0x912a },
+      { type: 2, pts: 153387108, ccData: 0x002a },
+      { type: 2, pts: 153387108, ccData: 0x0000 },
+      { type: 3, pts: 153405126, ccData: 0x4da2 },
+      { type: 2, pts: 153405126, ccData: 0x8c0f },
+      { type: 2, pts: 153405126, ccData: 0x628c },
+      { type: 2, pts: 153405126, ccData: 0x0f31 },
+      { type: 2, pts: 153405126, ccData: 0x983b },
+      { type: 2, pts: 153405126, ccData: 0x912a },
+      { type: 2, pts: 153405126, ccData: 0x8f00 },
+      { type: 2, pts: 153405126, ccData: 0x611f },
+      { type: 2, pts: 153405126, ccData: 0x002a },
+      { type: 2, pts: 153405126, ccData: 0x1090 },
+      { type: 2, pts: 153405126, ccData: 0x0503 },
+      { type: 3, pts: 153408129, ccData: 0x8a31 },
+      { type: 2, pts: 153408129, ccData: 0x9201 },
+      { type: 2, pts: 153408129, ccData: 0x983b },
+      // RST (Reset command)
+      { type: 2, pts: 153408129, ccData: 0x8f00 },
+      { type: 2, pts: 153408129, ccData: 0x0000 },
+      { type: 2, pts: 153408129, ccData: 0x611f },
+      { type: 2, pts: 153408129, ccData: 0x1090 },
+      { type: 2, pts: 153408129, ccData: 0x0000 },
+      { type: 2, pts: 153408129, ccData: 0x0503 },
+      { type: 2, pts: 153408129, ccData: 0x912a },
+      { type: 2, pts: 153408129, ccData: 0x0000 },
+      { type: 2, pts: 153408129, ccData: 0x9201 },
+      { type: 3, pts: 153414135, ccData: 0xc322 },
+      { type: 2, pts: 153414135, ccData: 0x434f },
+      { type: 2, pts: 153414135, ccData: 0x0000 }
+  ].forEach(cea708Stream.push, cea708Stream);
+
+  QUnit.equal(captions.length, 1, 'parsed 1 caption');
+  QUnit.deepEqual(captions[0], {
+    startPts: 153315036,
+    endPts: 153408129,
+    text: '*\n;',
+    stream: 'cc708_1'
+  }, 'parsed the caption correctly');
+});
+
+QUnit.test('windowing', function() {
+  var captions = [];
+
+  cea708Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    { type: 3, pts: 1000, ccData: packetHeader708(0, 3, 1, 4) },
+    { type: 2, pts: 1000, ccData: 0x8000 }, // CW0
+    { type: 2, pts: 1000, ccData: characters('w0') },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(1, 3, 1, 4) },
+    { type: 2, pts: 1000, ccData: 0x8100 }, // CW1
+    { type: 2, pts: 1000, ccData: characters('w1') },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(2, 3, 1, 4) },
+    { type: 2, pts: 1000, ccData: 0x8200 }, // CW2
+    { type: 2, pts: 1000, ccData: characters('w2') },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(0, 3, 1, 4) },
+    { type: 2, pts: 1000, ccData: 0x8300 }, // CW3
+    { type: 2, pts: 1000, ccData: characters('w3') },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(1, 3, 1, 4) },
+    { type: 2, pts: 1000, ccData: 0x8400 }, // CW4
+    { type: 2, pts: 1000, ccData: characters('w4') },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(2, 3, 1, 4) },
+    { type: 2, pts: 1000, ccData: 0x8500 }, // CW5
+    { type: 2, pts: 1000, ccData: characters('w5') },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(0, 3, 1, 4) },
+    { type: 2, pts: 1000, ccData: 0x8600 }, // CW6
+    { type: 2, pts: 1000, ccData: characters('w6') },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(1, 3, 1, 4) },
+    { type: 2, pts: 1000, ccData: 0x8700 }, // CW7
+    { type: 2, pts: 1000, ccData: characters('w7') },
+
+    { type: 3, pts: 2000, ccData: packetHeader708(2, 3, 1, 4) },
+    { type: 2, pts: 2000, ccData: 0x8aff }, // HDW (Hide all)
+    { type: 2, pts: 2000, ccData: displayWindows708([0]) },
+
+    { type: 3, pts: 3000, ccData: packetHeader708(0, 3, 1, 4) },
+    { type: 2, pts: 3000, ccData: 0x8aff }, // HDW (Hide all)
+    { type: 2, pts: 3000, ccData: displayWindows708([1]) },
+
+    { type: 3, pts: 4000, ccData: packetHeader708(1, 3, 1, 4) },
+    { type: 2, pts: 4000, ccData: 0x8aff }, // HDW (Hide all)
+    { type: 2, pts: 4000, ccData: displayWindows708([2, 3]) },
+
+    { type: 3, pts: 5000, ccData: packetHeader708(2, 3, 1, 4) },
+    { type: 2, pts: 5000, ccData: 0x8aff }, // HDW (Hide all)
+    { type: 2, pts: 5000, ccData: displayWindows708([3, 4]) },
+
+    { type: 3, pts: 6000, ccData: packetHeader708(0, 3, 1, 4) },
+    { type: 2, pts: 6000, ccData: 0x8aff }, // HDW (Hide all)
+    { type: 2, pts: 6000, ccData: displayWindows708([5, 6, 7]) },
+
+    { type: 3, pts: 7000, ccData: packetHeader708(1, 2, 1, 2) },
+    { type: 2, pts: 7000, ccData: 0x8aff }, // HDW (Hide all)
+
+    // Indicate end of last packet
+    { type: 3, pts: 8000, ccData: packetHeader708(2, 1, 1, 0) }
+  ].forEach(cea708Stream.push, cea708Stream);
+
+  QUnit.equal(captions.length, 5, 'parsed 5 captions');
+  QUnit.deepEqual(captions[0], {
+    startPts: 2000,
+    endPts: 3000,
+    text: 'w0',
+    stream: 'cc708_1'
+  }, 'parsed caption 0 correctly');
+  QUnit.deepEqual(captions[1], {
+    startPts: 3000,
+    endPts: 4000,
+    text: 'w1',
+    stream: 'cc708_1'
+  }, 'parsed caption 1 correctly');
+  QUnit.deepEqual(captions[2], {
+    startPts: 4000,
+    endPts: 5000,
+    text: 'w2\n\nw3',
+    stream: 'cc708_1'
+  }, 'parsed caption 2 correctly');
+  QUnit.deepEqual(captions[3], {
+    startPts: 5000,
+    endPts: 6000,
+    text: 'w3\n\nw4',
+    stream: 'cc708_1'
+  }, 'parsed caption 3 correctly');
+  QUnit.deepEqual(captions[4], {
+    startPts: 6000,
+    endPts: 7000,
+    text: 'w5\n\nw6\n\nw7',
+    stream: 'cc708_1'
+  }, 'parsed caption 4 correctly');
+});
+
+QUnit.test('backspace', function() {
+  var captions = [];
+
+  cea708Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    { type: 3, pts: 1000, ccData: packetHeader708(0, 7, 1, 12) },
+    { type: 2, pts: 1000, ccData: 0x8000 }, // CW0
+    { type: 2, pts: 1000, ccData: characters('ty') },
+    { type: 2, pts: 1000, ccData: characters('op') },
+    { type: 2, pts: 1000, ccData: 0x0808 }, // BS BS: Backspace twice
+    { type: 2, pts: 1000, ccData: characters('po') },
+    { type: 2, pts: 1000, ccData: displayWindows708([0]) },
+
+    { type: 3, pts: 2000, ccData: packetHeader708(1, 2, 1, 2) },
+    { type: 2, pts: 2000, ccData: 0x8aff },
+
+    // Indicate end of last packet
+    { type: 3, pts: 3000, ccData: packetHeader708(2, 1, 1, 0) }
+  ].forEach(cea708Stream.push, cea708Stream);
+
+  QUnit.equal(captions.length, 1, 'parsed 1 caption');
+  QUnit.equal(captions[0].text, 'typo', 'parsed caption with backspaces correctly');
+});
+
+QUnit.test('extended character set', function() {
+  var captions = [];
+
+  cea708Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    { type: 3, pts: 1000, ccData: packetHeader708(0, 7, 1, 12) },
+    { type: 2, pts: 1000, ccData: displayWindows708([0]) },
+    { type: 2, pts: 1000, ccData: 0x8000 }, // CW0
+    { type: 2, pts: 1000, ccData: 0x103f }, // Ÿ
+    { type: 2, pts: 1000, ccData: 0x1035 }, // •
+    { type: 2, pts: 1000, ccData: 0x103f }, // Ÿ
+    { type: 2, pts: 1000, ccData: 0x0020 },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(1, 7, 1, 12) },
+    { type: 2, pts: 1000, ccData: 0x103c }, // œ
+    { type: 2, pts: 1000, ccData: 0x102a }, // Š
+    { type: 2, pts: 1000, ccData: 0x1025 }, // …
+    { type: 2, pts: 1000, ccData: 0x102a }, // Š
+    { type: 2, pts: 1000, ccData: 0x103c }, // œ
+    { type: 2, pts: 1000, ccData: 0x0020 },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(2, 5, 1, 8) },
+    { type: 2, pts: 1000, ccData: 0x1033 }, // “
+    { type: 2, pts: 1000, ccData: 0x103d }, // ℠
+    { type: 2, pts: 1000, ccData: 0x1034 }, // ”
+    { type: 2, pts: 1000, ccData: 0x1039 }, // ™
+
+    { type: 3, pts: 2000, ccData: packetHeader708(0, 2, 1, 2) },
+    { type: 2, pts: 2000, ccData: 0x8aff },
+
+    // Indicate end of last packet
+    { type: 3, pts: 3000, ccData: packetHeader708(1, 1, 1, 0) }
+  ].forEach(cea708Stream.push, cea708Stream);
+
+  QUnit.equal(captions.length, 1, 'parsed 1 caption');
+  QUnit.equal(captions[0].text, 'Ÿ•Ÿ œŠ…Šœ “℠”™', 'parsed extended characters correctly');
+});
+
+QUnit.test('roll up', function() {
+  var captions = [];
+
+  cea708Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    // Define window with two virtual rows (rowCount = 1)
+    { type: 3, pts: 1000, ccData: packetHeader708(0, 4, 1, 6) },
+    { type: 2, pts: 1000, ccData: 0x983b },
+    { type: 2, pts: 1000, ccData: 0x8f00 },
+    { type: 2, pts: 1000, ccData: 0x611f },
+
+    { type: 3, pts: 1000, ccData: packetHeader708(1, 3, 1, 4) },
+    { type: 2, pts: 1000, ccData: characters('L1') },
+    { type: 2, pts: 1000, ccData: 0x0d00 }, // CR
+
+    { type: 3, pts: 2000, ccData: packetHeader708(2, 3, 1, 4) },
+    { type: 2, pts: 2000, ccData: characters('L2') },
+    { type: 2, pts: 2000, ccData: 0x0d00 }, // CR
+
+    { type: 3, pts: 3000, ccData: packetHeader708(0, 3, 1, 4) },
+    { type: 2, pts: 3000, ccData: characters('L3') },
+    { type: 2, pts: 3000, ccData: 0x0d00 }, // CR
+
+    { type: 3, pts: 4000, ccData: packetHeader708(1, 3, 1, 4) },
+    { type: 2, pts: 4000, ccData: characters('L4') },
+    { type: 2, pts: 4000, ccData: 0x0d00 }, // CR
+
+    { type: 3, pts: 5000, ccData: packetHeader708(2, 2, 1, 2) },
+    { type: 2, pts: 5000, ccData: 0x8aff },
+
+    // Indicate end of last packet
+    { type: 3, pts: 6000, ccData: packetHeader708(0, 1, 1, 0) }
+  ].forEach(cea708Stream.push, cea708Stream);
+
+  QUnit.equal(captions.length, 3, 'parsed 3 captions');
+  QUnit.equal(captions[0].text, 'L1\nL2', 'parsed caption 1 correctly');
+  QUnit.equal(captions[1].text, 'L2\nL3', 'parsed caption 2 correctly');
+  QUnit.equal(captions[2].text, 'L3\nL4', 'parsed caption 3 correctly');
 });
