@@ -2646,7 +2646,7 @@ QUnit.module('CEA 708 Stream', {
   }
 });
 
-QUnit.test('parses 708 captions', function() {
+QUnit.test('parses 708 captions', function(assert) {
   var captions = [];
 
   cea708Stream.on('data', function(caption) {
@@ -2655,38 +2655,38 @@ QUnit.test('parses 708 captions', function() {
 
   cc708PinkUnderscore.forEach(cea708Stream.push, cea708Stream);
 
-  QUnit.equal(captions.length, 235, 'parsed 235 captions');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 235, 'parsed 235 captions');
+  assert.deepEqual(captions[0], {
     startPts: 6723335478,
     endPts: 6723626769,
     text: '\"Pinkalicious_and_Peterrific\"\nis_made_possible_in_part_by:',
     stream: 'cc708_1'
   }, 'parsed first caption correctly');
-  QUnit.deepEqual(captions[1], {
+  assert.deepEqual(captions[1], {
     startPts: 6723740883,
     endPts: 6723945087,
     text: 'GIRL:\nRead_me_the_tale\nof_a_faraway_land.',
     stream: 'cc708_1'
   }, 'parsed second caption correctly');
-  QUnit.deepEqual(captions[2], {
+  assert.deepEqual(captions[2], {
     startPts: 6723948090,
     endPts: 6724200342,
     text: 'Tell_me_of_planets\nwith_oceans_of_sand.',
     stream: 'cc708_1'
   }, 'parsed third caption correctly');
-  QUnit.deepEqual(captions[33], {
+  assert.deepEqual(captions[33], {
     startPts: 6732617751,
     endPts: 6732876009,
     text: '♪_It\'s_a_Pinkalicious_feeling_♪',
     stream: 'cc708_1'
   }, 'parsed caption 33 correctly with music note');
-  QUnit.deepEqual(captions[38], {
+  assert.deepEqual(captions[38], {
     startPts: 6734218350,
     endPts: 6734425557,
     text: 'PINKALICIOUS:\n\"Dream_Salon.\"',
     stream: 'cc708_1'
   }, 'parsed caption 38 correctly');
-  QUnit.deepEqual(captions[234], {
+  assert.deepEqual(captions[234], {
     startPts: 6778809897,
     endPts: 6779104191,
     text: 'I_guess_I\'ll_just_have\nto_duck_a_little_bit.',
@@ -2694,7 +2694,7 @@ QUnit.test('parses 708 captions', function() {
   }, 'parsed caption 234 correctly');
 });
 
-QUnit.test('reset command', function() {
+QUnit.test('reset command', function(assert) {
   var captions = [];
 
   cea708Stream.on('data', function(caption) {
@@ -2743,8 +2743,8 @@ QUnit.test('reset command', function() {
       { type: 2, pts: 153414135, ccData: 0x0000 }
   ].forEach(cea708Stream.push, cea708Stream);
 
-  QUnit.equal(captions.length, 1, 'parsed 1 caption');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'parsed 1 caption');
+  assert.deepEqual(captions[0], {
     startPts: 153315036,
     endPts: 153408129,
     text: '*\n;',
@@ -2752,7 +2752,7 @@ QUnit.test('reset command', function() {
   }, 'parsed the caption correctly');
 });
 
-QUnit.test('windowing', function() {
+QUnit.test('windowing', function(assert) {
   var captions = [];
 
   cea708Stream.on('data', function(caption) {
@@ -2819,32 +2819,32 @@ QUnit.test('windowing', function() {
     { type: 3, pts: 8000, ccData: packetHeader708(2, 1, 1, 0) }
   ].forEach(cea708Stream.push, cea708Stream);
 
-  QUnit.equal(captions.length, 5, 'parsed 5 captions');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 5, 'parsed 5 captions');
+  assert.deepEqual(captions[0], {
     startPts: 2000,
     endPts: 3000,
     text: 'w0',
     stream: 'cc708_1'
   }, 'parsed caption 0 correctly');
-  QUnit.deepEqual(captions[1], {
+  assert.deepEqual(captions[1], {
     startPts: 3000,
     endPts: 4000,
     text: 'w1',
     stream: 'cc708_1'
   }, 'parsed caption 1 correctly');
-  QUnit.deepEqual(captions[2], {
+  assert.deepEqual(captions[2], {
     startPts: 4000,
     endPts: 5000,
     text: 'w2\n\nw3',
     stream: 'cc708_1'
   }, 'parsed caption 2 correctly');
-  QUnit.deepEqual(captions[3], {
+  assert.deepEqual(captions[3], {
     startPts: 5000,
     endPts: 6000,
     text: 'w3\n\nw4',
     stream: 'cc708_1'
   }, 'parsed caption 3 correctly');
-  QUnit.deepEqual(captions[4], {
+  assert.deepEqual(captions[4], {
     startPts: 6000,
     endPts: 7000,
     text: 'w5\n\nw6\n\nw7',
@@ -2852,7 +2852,7 @@ QUnit.test('windowing', function() {
   }, 'parsed caption 4 correctly');
 });
 
-QUnit.test('backspace', function() {
+QUnit.test('backspace', function(assert) {
   var captions = [];
 
   cea708Stream.on('data', function(caption) {
@@ -2875,11 +2875,11 @@ QUnit.test('backspace', function() {
     { type: 3, pts: 3000, ccData: packetHeader708(2, 1, 1, 0) }
   ].forEach(cea708Stream.push, cea708Stream);
 
-  QUnit.equal(captions.length, 1, 'parsed 1 caption');
-  QUnit.equal(captions[0].text, 'typo', 'parsed caption with backspaces correctly');
+  assert.equal(captions.length, 1, 'parsed 1 caption');
+  assert.equal(captions[0].text, 'typo', 'parsed caption with backspaces correctly');
 });
 
-QUnit.test('extended character set', function() {
+QUnit.test('extended character set', function(assert) {
   var captions = [];
 
   cea708Stream.on('data', function(caption) {
@@ -2916,11 +2916,11 @@ QUnit.test('extended character set', function() {
     { type: 3, pts: 3000, ccData: packetHeader708(1, 1, 1, 0) }
   ].forEach(cea708Stream.push, cea708Stream);
 
-  QUnit.equal(captions.length, 1, 'parsed 1 caption');
-  QUnit.equal(captions[0].text, 'Ÿ•Ÿ œŠ…Šœ “℠”™', 'parsed extended characters correctly');
+  assert.equal(captions.length, 1, 'parsed 1 caption');
+  assert.equal(captions[0].text, 'Ÿ•Ÿ œŠ…Šœ “℠”™', 'parsed extended characters correctly');
 });
 
-QUnit.test('roll up', function() {
+QUnit.test('roll up', function(assert) {
   var captions = [];
 
   cea708Stream.on('data', function(caption) {
@@ -2957,8 +2957,8 @@ QUnit.test('roll up', function() {
     { type: 3, pts: 6000, ccData: packetHeader708(0, 1, 1, 0) }
   ].forEach(cea708Stream.push, cea708Stream);
 
-  QUnit.equal(captions.length, 3, 'parsed 3 captions');
-  QUnit.equal(captions[0].text, 'L1\nL2', 'parsed caption 1 correctly');
-  QUnit.equal(captions[1].text, 'L2\nL3', 'parsed caption 2 correctly');
-  QUnit.equal(captions[2].text, 'L3\nL4', 'parsed caption 3 correctly');
+  assert.equal(captions.length, 3, 'parsed 3 captions');
+  assert.equal(captions[0].text, 'L1\nL2', 'parsed caption 1 correctly');
+  assert.equal(captions[1].text, 'L2\nL3', 'parsed caption 2 correctly');
+  assert.equal(captions[2].text, 'L3\nL4', 'parsed caption 3 correctly');
 });
