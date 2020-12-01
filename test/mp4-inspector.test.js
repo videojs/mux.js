@@ -943,7 +943,7 @@ QUnit.test('can parse a sidx', function(assert) {
             }]);
 });
 
-QUnit.test('can parse a version 1 sidx', function() {
+QUnit.test('can parse a version 1 sidx', function(assert) {
   var data = box('sidx',
                   0x01, // version
                   0x00, 0x00, 0x00, // flags
@@ -964,7 +964,7 @@ QUnit.test('can parse a version 1 sidx', function() {
                   0x00, 0x00, 0x00, 0x04, // subsegment_duration
                   0x10, 0x00, 0x00, 0x05  // starts_with_SAP(1) + SAP_type(3) + SAP_delta_time(28)
   );
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
     [{
       type: 'sidx',
       version: 1,
