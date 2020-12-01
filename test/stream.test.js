@@ -12,7 +12,7 @@ QUnit.module('Stream', {
   }
 });
 
-QUnit.test('trigger calls listeners', function() {
+QUnit.test('trigger calls listeners', function(assert) {
   var args = [];
 
   stream.on('test', function(data) {
@@ -22,10 +22,10 @@ QUnit.test('trigger calls listeners', function() {
   stream.trigger('test', 1);
   stream.trigger('test', 2);
 
-  QUnit.deepEqual(args, [1, 2]);
+  assert.deepEqual(args, [1, 2]);
 });
 
-QUnit.test('callbacks can remove themselves', function() {
+QUnit.test('callbacks can remove themselves', function(assert) {
   var args1 = [], args2 = [], args3 = [];
 
   stream.on('test', function(event) {
@@ -42,7 +42,7 @@ QUnit.test('callbacks can remove themselves', function() {
   stream.trigger('test', 1);
   stream.trigger('test', 2);
 
-  QUnit.deepEqual(args1, [1, 2], 'first callback ran all times');
-  QUnit.deepEqual(args2, [1], 'second callback removed after first run');
-  QUnit.deepEqual(args3, [1, 2], 'third callback ran all times');
+  assert.deepEqual(args1, [1, 2], 'first callback ran all times');
+  assert.deepEqual(args2, [1], 'second callback removed after first run');
+  assert.deepEqual(args3, [1, 2], 'third callback ran all times');
 });

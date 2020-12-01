@@ -4,12 +4,12 @@ var
 
 QUnit.module('Binary Utils');
 
-QUnit.test('converts values to unsigned integers after bitwise operations', function() {
+QUnit.test('converts values to unsigned integers after bitwise operations', function(assert) {
   var bytes;
 
   bytes = [0, 0, 124, 129];
 
-  QUnit.equal(toUnsigned(bytes[0] << 24 |
+  assert.equal(toUnsigned(bytes[0] << 24 |
                          bytes[1] << 16 |
                          bytes[2] <<  8 |
                          bytes[3]),
@@ -18,13 +18,13 @@ QUnit.test('converts values to unsigned integers after bitwise operations', func
   bytes = [150, 234, 221, 192];
 
   // sanity check
-  QUnit.equal(bytes[0] << 24 |
+  assert.equal(bytes[0] << 24 |
               bytes[1] << 16 |
               bytes[2] <<  8 |
               bytes[3],
               -1762992704, 'bitwise operation produces negative signed result');
 
-  QUnit.equal(toUnsigned(bytes[0] << 24 |
+  assert.equal(toUnsigned(bytes[0] << 24 |
                          bytes[1] << 16 |
                          bytes[2] <<  8 |
                          bytes[3]),

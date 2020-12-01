@@ -93,7 +93,7 @@ QUnit.module('AAC Stream', {
   }
 });
 
-QUnit.test('parses ID3 tag', function() {
+QUnit.test('parses ID3 tag', function(assert) {
   var
     id3Count = 0,
     adtsCount = 0,
@@ -110,11 +110,11 @@ QUnit.test('parses ID3 tag', function() {
 
   aacStream.push(new Uint8Array(id3Tag));
 
-  QUnit.equal(adtsCount, 0, 'no adts frames');
-  QUnit.equal(id3Count, 1, 'one id3 chunk');
+  assert.equal(adtsCount, 0, 'no adts frames');
+  assert.equal(id3Count, 1, 'one id3 chunk');
 });
 
-QUnit.test('parses two ID3 tags in sequence', function() {
+QUnit.test('parses two ID3 tags in sequence', function(assert) {
   var
     id3Count = 0,
     adtsCount = 0,
@@ -131,11 +131,11 @@ QUnit.test('parses two ID3 tags in sequence', function() {
 
   aacStream.push(new Uint8Array(id3Tag.concat(id3Tag)));
 
-  QUnit.equal(adtsCount, 0, 'no adts frames');
-  QUnit.equal(id3Count, 2, 'two id3 chunks');
+  assert.equal(adtsCount, 0, 'no adts frames');
+  assert.equal(id3Count, 2, 'two id3 chunks');
 });
 
-QUnit.test('does not parse second ID3 tag if it\'s incomplete', function() {
+QUnit.test('does not parse second ID3 tag if it\'s incomplete', function(assert) {
   var
     id3Count = 0,
     adtsCount = 0,
@@ -152,11 +152,11 @@ QUnit.test('does not parse second ID3 tag if it\'s incomplete', function() {
 
   aacStream.push(new Uint8Array(id3Tag.concat(id3Tag.slice(0, id3Tag.length - 1))));
 
-  QUnit.equal(adtsCount, 0, 'no adts frames');
-  QUnit.equal(id3Count, 1, 'one id3 chunk');
+  assert.equal(adtsCount, 0, 'no adts frames');
+  assert.equal(id3Count, 1, 'one id3 chunk');
 });
 
-QUnit.test('handles misaligned adts header', function() {
+QUnit.test('handles misaligned adts header', function(assert) {
   var
     id3Count = 0,
     adtsCount = 0,
@@ -176,11 +176,11 @@ QUnit.test('handles misaligned adts header', function() {
   // (where we were only properly checking the second byte)
   aacStream.push(new Uint8Array([0x01, 0xf0].concat(packetStream)));
 
-  QUnit.equal(adtsCount, 1, 'one adts frames');
-  QUnit.equal(id3Count, 0, 'no id3 chunk');
+  assert.equal(adtsCount, 1, 'one adts frames');
+  assert.equal(id3Count, 0, 'no id3 chunk');
 });
 
-QUnit.test('handles incomplete adts frame after id3 frame', function() {
+QUnit.test('handles incomplete adts frame after id3 frame', function(assert) {
   var
     id3Count = 0,
     adtsCount = 0,
@@ -205,11 +205,11 @@ QUnit.test('handles incomplete adts frame after id3 frame', function() {
 
   aacStream.push(new Uint8Array(packetStream));
 
-  QUnit.equal(adtsCount, 0, 'no adts frame');
-  QUnit.equal(id3Count, 1, 'one id3 chunk');
+  assert.equal(adtsCount, 0, 'no adts frame');
+  assert.equal(id3Count, 1, 'one id3 chunk');
 });
 
-QUnit.test('emits data after receiving push', function() {
+QUnit.test('emits data after receiving push', function(assert) {
   var
     array = new Uint8Array(109),
     count = 0;
@@ -235,10 +235,10 @@ QUnit.test('emits data after receiving push', function() {
     }
   });
   aacStream.push(array);
-  QUnit.equal(count, 1);
+  assert.equal(count, 1);
 });
 
-QUnit.test('continues parsing after corrupted stream', function() {
+QUnit.test('continues parsing after corrupted stream', function(assert) {
   var
     array = new Uint8Array(10000),
     adtsCount = 0,
@@ -284,6 +284,6 @@ QUnit.test('continues parsing after corrupted stream', function() {
     }
   });
   aacStream.push(array);
-  QUnit.equal(adtsCount, 1);
-  QUnit.equal(id3Count, 1);
+  assert.equal(adtsCount, 1);
+  assert.equal(id3Count, 1);
 });

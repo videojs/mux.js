@@ -22,7 +22,7 @@ QUnit.module('Caption Stream', {
   }
 });
 
-QUnit.test('parses SEIs messages larger than 255 bytes', function() {
+QUnit.test('parses SEIs messages larger than 255 bytes', function(assert) {
   var packets = [], data;
   captionStream.ccStreams_[0].push = function(packet) {
     packets.push(packet);
@@ -53,10 +53,10 @@ QUnit.test('parses SEIs messages larger than 255 bytes', function() {
     escapedRBSP: data
   });
   captionStream.flush();
-  QUnit.equal(packets.length, 1, 'parsed a caption');
+  assert.equal(packets.length, 1, 'parsed a caption');
 });
 
-QUnit.test('parses SEIs containing multiple messages', function() {
+QUnit.test('parses SEIs containing multiple messages', function(assert) {
   var packets = [], data;
 
   captionStream.ccStreams_[0].push = function(packet) {
@@ -90,10 +90,10 @@ QUnit.test('parses SEIs containing multiple messages', function() {
     escapedRBSP: data
   });
   captionStream.flush();
-  QUnit.equal(packets.length, 1, 'parsed a caption');
+  assert.equal(packets.length, 1, 'parsed a caption');
 });
 
-QUnit.test('parses SEIs containing multiple messages of type user_data_registered_itu_t_t35', function() {
+QUnit.test('parses SEIs containing multiple messages of type user_data_registered_itu_t_t35', function(assert) {
   var packets = [], data;
 
   captionStream.ccStreams_[0].push = function(packet) {
@@ -141,10 +141,10 @@ QUnit.test('parses SEIs containing multiple messages of type user_data_registere
     escapedRBSP: data
   });
   captionStream.flush();
-  QUnit.equal(packets.length, 1, 'ignored DTG1 payload, parsed a GA94 caption');
+  assert.equal(packets.length, 1, 'ignored DTG1 payload, parsed a GA94 caption');
 });
 
-QUnit.test('does not throw error if only invalid payloads', function() {
+QUnit.test('does not throw error if only invalid payloads', function(assert) {
   var packets = [], data;
 
   captionStream.ccStreams_[0].push = function(packet) {
@@ -185,11 +185,11 @@ QUnit.test('does not throw error if only invalid payloads', function() {
     escapedRBSP: data
   });
   captionStream.flush();
-  QUnit.equal(packets.length, 0, 'ignored DTG1 payload');
+  assert.equal(packets.length, 0, 'ignored DTG1 payload');
 });
 
 
-QUnit.test('ignores SEIs that do not have type user_data_registered_itu_t_t35', function() {
+QUnit.test('ignores SEIs that do not have type user_data_registered_itu_t_t35', function(assert) {
   var captions = [];
   captionStream.on('data', function(caption) {
     captions.push(caption);
@@ -201,10 +201,10 @@ QUnit.test('ignores SEIs that do not have type user_data_registered_itu_t_t35', 
     ])
   });
 
-  QUnit.equal(captions.length, 0, 'ignored the unknown payload type');
+  assert.equal(captions.length, 0, 'ignored the unknown payload type');
 });
 
-QUnit.test('parses a minimal example of caption data', function() {
+QUnit.test('parses a minimal example of caption data', function(assert) {
   var packets = [];
   captionStream.ccStreams_[0].push = function(packet) {
     packets.push(packet);
@@ -235,10 +235,10 @@ QUnit.test('parses a minimal example of caption data', function() {
     ])
   });
   captionStream.flush();
-  QUnit.equal(packets.length, 1, 'parsed a caption packet');
+  assert.equal(packets.length, 1, 'parsed a caption packet');
 });
 
-QUnit.test('can be parsed from a segment', function() {
+QUnit.test('can be parsed from a segment', function(assert) {
   var transmuxer = new mp4.Transmuxer(),
       captions = [];
 
@@ -256,14 +256,14 @@ QUnit.test('can be parsed from a segment', function() {
   transmuxer.push(sintelCaptions);
   transmuxer.flush();
 
-  QUnit.equal(captions.length, 2, 'parsed two captions');
-  QUnit.equal(captions[0].text.indexOf('ASUKA'), 0, 'parsed the start of the first caption');
-  QUnit.ok(captions[0].text.indexOf('Japanese') > 0, 'parsed the end of the first caption');
-  QUnit.equal(captions[0].startTime, 1, 'parsed the start time');
-  QUnit.equal(captions[0].endTime, 4, 'parsed the end time');
+  assert.equal(captions.length, 2, 'parsed two captions');
+  assert.equal(captions[0].text.indexOf('ASUKA'), 0, 'parsed the start of the first caption');
+  assert.ok(captions[0].text.indexOf('Japanese') > 0, 'parsed the end of the first caption');
+  assert.equal(captions[0].startTime, 1, 'parsed the start time');
+  assert.equal(captions[0].endTime, 4, 'parsed the end time');
 });
 
-QUnit.test('dispatches caption track information', function() {
+QUnit.test('dispatches caption track information', function(assert) {
   var transmuxer = new mp4.Transmuxer(),
       captions = [],
       captionStreams = {};
@@ -285,13 +285,13 @@ QUnit.test('dispatches caption track information', function() {
   transmuxer.push(multiChannel608Captions);
   transmuxer.flush();
 
-  QUnit.deepEqual(captionStreams, {CC1: true, CC3: true}, 'found captions in CC1 and CC3');
-  QUnit.equal(captions.length, 4, 'parsed eight captions');
-  QUnit.equal(captions[0].text, 'être une période de questions', 'parsed the text of the first caption in CC3');
-  QUnit.equal(captions[1].text, 'PERIOD, FOLKS.', 'parsed the text of the first caption in CC1');
+  assert.deepEqual(captionStreams, {CC1: true, CC3: true}, 'found captions in CC1 and CC3');
+  assert.equal(captions.length, 4, 'parsed eight captions');
+  assert.equal(captions[0].text, 'être une période de questions', 'parsed the text of the first caption in CC3');
+  assert.equal(captions[1].text, 'PERIOD, FOLKS.', 'parsed the text of the first caption in CC1');
 });
 
-QUnit.test('sorting is fun', function() {
+QUnit.test('sorting is fun', function(assert) {
   var packets, captions, seiNals;
   packets = [
     // Send another command so that the second EOC isn't ignored
@@ -336,12 +336,12 @@ QUnit.test('sorting is fun', function() {
   seiNals.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.equal(captions.length, 2, 'detected two captions');
-  QUnit.equal(captions[0].text, 'test string #1', 'parsed caption 1');
-  QUnit.equal(captions[1].text, 'test string #2', 'parsed caption 2');
+  assert.equal(captions.length, 2, 'detected two captions');
+  assert.equal(captions[0].text, 'test string #1', 'parsed caption 1');
+  assert.equal(captions[1].text, 'test string #2', 'parsed caption 2');
 });
 
-QUnit.test('drops duplicate segments', function() {
+QUnit.test('drops duplicate segments', function(assert) {
   var packets, captions, seiNals;
   packets = [
     {
@@ -400,11 +400,11 @@ QUnit.test('drops duplicate segments', function() {
   seiNals.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.equal(captions.length, 1, 'detected one caption');
-  QUnit.equal(captions[0].text, 'test string data', 'parsed caption properly');
+  assert.equal(captions.length, 1, 'detected one caption');
+  assert.equal(captions[0].text, 'test string data', 'parsed caption properly');
 });
 
-QUnit.test('drops duplicate segments with multi-segment DTS values', function() {
+QUnit.test('drops duplicate segments with multi-segment DTS values', function(assert) {
   var packets, captions, seiNals;
   packets = [
     {
@@ -550,12 +550,12 @@ QUnit.test('drops duplicate segments with multi-segment DTS values', function() 
   seiNals.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.equal(captions.length, 2, 'detected two captions');
-  QUnit.equal(captions[0].text, 'test string data stuff', 'parsed caption properly');
-  QUnit.equal(captions[1].text, 'and even more text data here!', 'parsed caption properly');
+  assert.equal(captions.length, 2, 'detected two captions');
+  assert.equal(captions[0].text, 'test string data stuff', 'parsed caption properly');
+  assert.equal(captions[1].text, 'and even more text data here!', 'parsed caption properly');
 });
 
-QUnit.test("doesn't ignore older segments if reset", function() {
+QUnit.test('doesn\'t ignore older segments if reset', function(assert) {
   var firstPackets, secondPackets, captions, seiNals1, seiNals2;
   firstPackets = [
     {
@@ -633,20 +633,20 @@ QUnit.test("doesn't ignore older segments if reset", function() {
 
   seiNals1.forEach(captionStream.push, captionStream);
   captionStream.flush();
-  QUnit.equal(captionStream.latestDts_, 13000, 'DTS is tracked correctly');
+  assert.equal(captionStream.latestDts_, 13000, 'DTS is tracked correctly');
 
   captionStream.reset();
-  QUnit.equal(captionStream.latestDts_, null, 'DTS tracking was reset');
+  assert.equal(captionStream.latestDts_, null, 'DTS tracking was reset');
 
   seiNals2.forEach(captionStream.push, captionStream);
   captionStream.flush();
-  QUnit.equal(captionStream.latestDts_, 4000, 'DTS is tracked correctly');
+  assert.equal(captionStream.latestDts_, 4000, 'DTS is tracked correctly');
 
-  QUnit.equal(captions.length, 1, 'detected one caption');
-  QUnit.equal(captions[0].text, 'after reset data!!', 'parsed caption properly');
+  assert.equal(captions.length, 1, 'detected one caption');
+  assert.equal(captions[0].text, 'after reset data!!', 'parsed caption properly');
 });
 
-QUnit.test('extracts all theoretical caption channels', function() {
+QUnit.test('extracts all theoretical caption channels', function(assert) {
   var captions = [];
   captionStream.ccStreams_.forEach(function(cc) {
     cc.on('data', function(caption) {
@@ -685,17 +685,17 @@ QUnit.test('extracts all theoretical caption channels', function() {
   seiNals.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.equal(captions.length, 6, 'got all captions');
-  QUnit.equal(captions[0].text, '1a', 'cc1 first row');
-  QUnit.equal(captions[1].text, '2a', 'cc2 first row');
-  QUnit.equal(captions[2].text, '1a\n1b1c', 'cc1 first and second row');
-  QUnit.equal(captions[3].text, '3a', 'cc3 first row');
-  QUnit.equal(captions[4].text, '4a4b', 'cc4 first row');
-  QUnit.equal(captions[5].text, '2a\n2b', 'cc2 first and second row');
+  assert.equal(captions.length, 6, 'got all captions');
+  assert.equal(captions[0].text, '1a', 'cc1 first row');
+  assert.equal(captions[1].text, '2a', 'cc2 first row');
+  assert.equal(captions[2].text, '1a\n1b1c', 'cc1 first and second row');
+  assert.equal(captions[3].text, '3a', 'cc3 first row');
+  assert.equal(captions[4].text, '4a4b', 'cc4 first row');
+  assert.equal(captions[5].text, '2a\n2b', 'cc2 first and second row');
 
 });
 
-QUnit.test('drops data until first command that sets activeChannel for a field', function() {
+QUnit.test('drops data until first command that sets activeChannel for a field', function(assert) {
   var captions = [];
   captionStream.ccStreams_.forEach(function(cc) {
     cc.on('data', function(caption) {
@@ -758,14 +758,14 @@ QUnit.test('drops data until first command that sets activeChannel for a field',
   seiNals.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.equal(captions.length, 2, 'received 2 captions');
-  QUnit.equal(captions[0].text, 'field0', 'received only confirmed field0 data');
-  QUnit.equal(captions[0].stream, 'CC1', 'caption went to right channel');
-  QUnit.equal(captions[1].text, 'field1', 'received only confirmed field1 data');
-  QUnit.equal(captions[1].stream, 'CC4', 'caption went to right channel');
+  assert.equal(captions.length, 2, 'received 2 captions');
+  assert.equal(captions[0].text, 'field0', 'received only confirmed field0 data');
+  assert.equal(captions[0].stream, 'CC1', 'caption went to right channel');
+  assert.equal(captions[1].text, 'field1', 'received only confirmed field1 data');
+  assert.equal(captions[1].stream, 'CC4', 'caption went to right channel');
 });
 
-QUnit.test('clears buffer and drops data until first command that sets activeChannel after reset', function() {
+QUnit.test('clears buffer and drops data until first command that sets activeChannel after reset', function(assert) {
   var firstPackets, secondPackets, captions, seiNals1, seiNals2;
   captions = [];
 
@@ -851,37 +851,37 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
   seiNals1.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.equal(captionStream.ccStreams_[0].nonDisplayed_[14], 'field0',
+  assert.equal(captionStream.ccStreams_[0].nonDisplayed_[14], 'field0',
     'there is data in non-displayed memory for field 0 before reset');
-  QUnit.equal(captionStream.ccStreams_[3].nonDisplayed_[14], 'field1',
+  assert.equal(captionStream.ccStreams_[3].nonDisplayed_[14], 'field1',
     'there is data in non-displayed memory for field 1 before reset');
-  QUnit.equal(captionStream.ccStreams_[0].displayed_[14], 'field0',
+  assert.equal(captionStream.ccStreams_[0].displayed_[14], 'field0',
     'there is data in displayed memory for field 0 before reset');
-  QUnit.equal(captionStream.ccStreams_[3].displayed_[14], 'field1',
+  assert.equal(captionStream.ccStreams_[3].displayed_[14], 'field1',
     'there is data in displayed memory for field 1 before reset');
 
   captionStream.reset();
 
-  QUnit.equal(captionStream.ccStreams_[0].nonDisplayed_[14], '',
+  assert.equal(captionStream.ccStreams_[0].nonDisplayed_[14], '',
     'there is no data in non-displayed memory for field 0 after reset');
-  QUnit.equal(captionStream.ccStreams_[3].nonDisplayed_[14], '',
+  assert.equal(captionStream.ccStreams_[3].nonDisplayed_[14], '',
     'there is no data in non-displayed memory for field 1 after reset');
-  QUnit.equal(captionStream.ccStreams_[0].displayed_[14], '',
+  assert.equal(captionStream.ccStreams_[0].displayed_[14], '',
     'there is no data in displayed memory for field 0 after reset');
-  QUnit.equal(captionStream.ccStreams_[3].displayed_[14], '',
+  assert.equal(captionStream.ccStreams_[3].displayed_[14], '',
     'there is no data in displayed memory for field 1 after reset');
 
   seiNals2.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.equal(captions.length, 2, 'detected two captions');
-  QUnit.equal(captions[0].text, 'but this', 'parsed caption properly');
-  QUnit.equal(captions[0].stream, 'CC1', 'caption went to right channel');
-  QUnit.equal(captions[1].text, 'and this', 'parsed caption properly');
-  QUnit.equal(captions[1].stream, 'CC4', 'caption went to right channel');
+  assert.equal(captions.length, 2, 'detected two captions');
+  assert.equal(captions[0].text, 'but this', 'parsed caption properly');
+  assert.equal(captions[0].stream, 'CC1', 'caption went to right channel');
+  assert.equal(captions[1].text, 'and this', 'parsed caption properly');
+  assert.equal(captions[1].stream, 'CC4', 'caption went to right channel');
 });
 
-QUnit.test('ignores CEA708 captions', function() {
+QUnit.test('ignores CEA708 captions', function(assert) {
   var captions = [];
   captionStream.ccStreams_.forEach(function(cc) {
     cc.on('data', function(caption) {
@@ -893,14 +893,14 @@ QUnit.test('ignores CEA708 captions', function() {
   seiNals.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.equal(captions.length, 3, 'parsed three captions');
-  QUnit.equal(captions[0].text, 'BUT IT\'S NOT SUFFERING\nRIGHW.', 'parsed first caption correctly');
+  assert.equal(captions.length, 3, 'parsed three captions');
+  assert.equal(captions[0].text, 'BUT IT\'S NOT SUFFERING\nRIGHW.', 'parsed first caption correctly');
   // there is also bad data in the captions, but the null ascii character is removed
-  QUnit.equal(captions[1].text, 'IT\'S NOT A THREAT TO ANYBODY.', 'parsed second caption correctly');
-  QUnit.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN\nIF WE DON\'T HAVE TO.', 'parsed third caption correctly');
+  assert.equal(captions[1].text, 'IT\'S NOT A THREAT TO ANYBODY.', 'parsed second caption correctly');
+  assert.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN\nIF WE DON\'T HAVE TO.', 'parsed third caption correctly');
 });
 
-QUnit.test('ignores XDS and Text packets', function() {
+QUnit.test('ignores XDS and Text packets', function(assert) {
   var captions = [];
 
   captionStream.on('data', function(caption) {
@@ -923,8 +923,8 @@ QUnit.test('ignores XDS and Text packets', function() {
     { pts: 5000, ccData: 0x1420, type: 0 }
   ].map(makeSeiFromCaptionPacket).forEach(captionStream.push, captionStream);
   captionStream.flush();
-  QUnit.equal(captionStream.activeCea608Channel_[0], 0, 'field 1: CC1 is active');
-  QUnit.equal(captionStream.activeCea608Channel_[1], 0, 'field 2: CC3 is active');
+  assert.equal(captionStream.activeCea608Channel_[0], 0, 'field 1: CC1 is active');
+  assert.equal(captionStream.activeCea608Channel_[1], 0, 'field 2: CC3 is active');
 
   [
     // TR, text restart, CC1
@@ -932,8 +932,8 @@ QUnit.test('ignores XDS and Text packets', function() {
     { pts: 6000, ccData: characters('tx'), type: 0 }
   ].map(makeSeiFromCaptionPacket).forEach(captionStream.push, captionStream);
   captionStream.flush();
-  QUnit.equal(captionStream.activeCea608Channel_[0], null, 'field 1: disabled');
-  QUnit.equal(captionStream.activeCea608Channel_[1], 0, 'field 2: CC3 is active');
+  assert.equal(captionStream.activeCea608Channel_[0], null, 'field 1: disabled');
+  assert.equal(captionStream.activeCea608Channel_[1], 0, 'field 2: CC3 is active');
 
   [
     // EOC, End of Caption
@@ -951,8 +951,8 @@ QUnit.test('ignores XDS and Text packets', function() {
     { pts: 12000, ccData: 0x0f00, type: 1 }
   ].map(makeSeiFromCaptionPacket).forEach(captionStream.push, captionStream);
   captionStream.flush();
-  QUnit.equal(captionStream.activeCea608Channel_[0], 0, 'field 1: CC1 is active');
-  QUnit.equal(captionStream.activeCea608Channel_[1], null, 'field 2: disabled');
+  assert.equal(captionStream.activeCea608Channel_[0], 0, 'field 1: CC1 is active');
+  assert.equal(captionStream.activeCea608Channel_[1], null, 'field 2: disabled');
 
   [
     // EOC, End of Caption
@@ -962,15 +962,15 @@ QUnit.test('ignores XDS and Text packets', function() {
   ].map(makeSeiFromCaptionPacket).forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.equal(captions.length, 1, 'only parsed real caption');
-  QUnit.equal(captions[0].text, 'hi', 'caption is correct');
+  assert.equal(captions.length, 1, 'only parsed real caption');
+  assert.equal(captions[0].text, 'hi', 'caption is correct');
 
 });
 
 // Full character translation tests are below for Cea608Stream, they just only
 // test support for CC1. See those tests and the source code for more about the
 // mechanics of special and extended characters.
-QUnit.test('special and extended character codes work regardless of field and data channel', function() {
+QUnit.test('special and extended character codes work regardless of field and data channel', function(assert) {
   var packets, seiNals, captions = [];
   packets = [
     // RU2 (roll-up, 2 rows), CC2
@@ -1005,9 +1005,9 @@ QUnit.test('special and extended character codes work regardless of field and da
   seiNals.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.deepEqual(captions[0].text, String.fromCharCode(0xae), 'CC2 special character correct');
-  QUnit.deepEqual(captions[1].text, String.fromCharCode(0xab), 'CC3 extended character correct');
-  QUnit.deepEqual(captions[2].text, String.fromCharCode(0xbb), 'CC4 extended character correct');
+  assert.deepEqual(captions[0].text, String.fromCharCode(0xae), 'CC2 special character correct');
+  assert.deepEqual(captions[1].text, String.fromCharCode(0xab), 'CC3 extended character correct');
+  assert.deepEqual(captions[2].text, String.fromCharCode(0xbb), 'CC4 extended character correct');
 });
 
 QUnit.test('number of roll up rows takes precedence over base row command', function(assert) {
@@ -1054,8 +1054,8 @@ QUnit.test('number of roll up rows takes precedence over base row command', func
   seis.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.deepEqual(captions[0].text, '-', 'RU2 caption is correct');
-  QUnit.deepEqual(captions[1].text, '-\nso', 'RU3 caption is correct');
+  assert.deepEqual(captions[0].text, '-', 'RU2 caption is correct');
+  assert.deepEqual(captions[1].text, '-\nso', 'RU3 caption is correct');
 
   packets = [
     // switching from row 11 to 0
@@ -1073,7 +1073,7 @@ QUnit.test('number of roll up rows takes precedence over base row command', func
   seis.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  QUnit.deepEqual(captions[2].text, '-\nso', 'RU3 caption is correct');
+  assert.deepEqual(captions[2].text, '-\nso', 'RU3 caption is correct');
 });
 
 var cea608Stream;
@@ -1084,15 +1084,15 @@ QUnit.module('CEA 608 Stream', {
   }
 });
 
-QUnit.skip('filters null data', function() {
-  QUnit.ok(false, 'not implemented');
+QUnit.skip('filters null data', function(assert) {
+  assert.ok(false, 'not implemented');
 });
 
-QUnit.skip('removes parity bits', function() {
-  QUnit.ok(false, 'not implemented');
+QUnit.skip('removes parity bits', function(assert) {
+  assert.ok(false, 'not implemented');
 });
 
-QUnit.test('converts non-ASCII character codes to ASCII', function() {
+QUnit.test('converts non-ASCII character codes to ASCII', function(assert) {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
@@ -1116,12 +1116,12 @@ QUnit.test('converts non-ASCII character codes to ASCII', function() {
   });
 
   packets.forEach(cea608Stream.push, cea608Stream);
-  QUnit.equal(captions[0].text,
+  assert.equal(captions[0].text,
         String.fromCharCode(0xe1, 0xe9, 0xed, 0xf3, 0xfa, 0xe7, 0xf7, 0xd1, 0xf1, 0x2588),
         'translated non-standard characters');
 });
 
-QUnit.test('properly handles special character codes', function() {
+QUnit.test('properly handles special character codes', function(assert) {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
@@ -1159,13 +1159,13 @@ QUnit.test('properly handles special character codes', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions[0].text,
+  assert.equal(captions[0].text,
         String.fromCharCode(0xae, 0xb0, 0xbd, 0xbf, 0x2122, 0xa2, 0xa3, 0x266a,
             0xe0, 0xa0, 0xe8, 0xe2, 0xea, 0xee, 0xf4, 0xfb),
         'translated special characters');
 });
 
-QUnit.test('properly handles extended character codes', function() {
+QUnit.test('properly handles extended character codes', function(assert) {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
@@ -1202,11 +1202,11 @@ QUnit.test('properly handles extended character codes', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions[0].text, '«LÀ-LÅ LAÑD♪»',
+  assert.equal(captions[0].text, '«LÀ-LÅ LAÑD♪»',
         'translated special characters');
 });
 
-QUnit.test('pop-on mode', function() {
+QUnit.test('pop-on mode', function(assert) {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
@@ -1228,8 +1228,8 @@ QUnit.test('pop-on mode', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected a caption');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'detected a caption');
+  assert.deepEqual(captions[0], {
     startPts: 1000,
     endPts: 10 * 1000,
     text: 'hi',
@@ -1237,7 +1237,7 @@ QUnit.test('pop-on mode', function() {
   }, 'parsed the caption');
 });
 
-QUnit.test('ignores null characters', function() {
+QUnit.test('ignores null characters', function(assert) {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
@@ -1263,8 +1263,8 @@ QUnit.test('ignores null characters', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected a caption');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'detected a caption');
+  assert.deepEqual(captions[0], {
     startPts: 1000,
     endPts: 10 * 1000,
     text: 'mu x',
@@ -1272,7 +1272,7 @@ QUnit.test('ignores null characters', function() {
   }, 'ignored null characters');
 });
 
-QUnit.test('recognizes the Erase Displayed Memory command', function() {
+QUnit.test('recognizes the Erase Displayed Memory command', function(assert) {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
@@ -1304,20 +1304,20 @@ QUnit.test('recognizes the Erase Displayed Memory command', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 3, 'detected three captions');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 3, 'detected three captions');
+  assert.deepEqual(captions[0], {
     startPts: 1 * 1000,
     endPts: 1.5 * 1000,
     text: '01',
     stream: 'CC1'
   }, 'parsed the first caption');
-  QUnit.deepEqual(captions[1], {
+  assert.deepEqual(captions[1], {
     startPts: 2 * 1000,
     endPts: 3 * 1000,
     text: '23',
     stream: 'CC1'
   }, 'parsed the second caption');
-  QUnit.deepEqual(captions[2], {
+  assert.deepEqual(captions[2], {
     startPts: 3 * 1000,
     endPts: 4 * 1000,
     text: '34',
@@ -1325,7 +1325,7 @@ QUnit.test('recognizes the Erase Displayed Memory command', function() {
   }, 'parsed the third caption');
 });
 
-QUnit.test('backspaces are applied to non-displayed memory for pop-on mode', function() {
+QUnit.test('backspaces are applied to non-displayed memory for pop-on mode', function(assert) {
   var captions = [], packets;
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1355,11 +1355,11 @@ QUnit.test('backspaces are applied to non-displayed memory for pop-on mode', fun
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected a caption');
-  QUnit.equal(captions[0].text, '310\n\n023', 'applied the backspaces');
+  assert.equal(captions.length, 1, 'detected a caption');
+  assert.equal(captions[0].text, '310\n\n023', 'applied the backspaces');
 });
 
-QUnit.test('backspaces on cleared memory are no-ops', function() {
+QUnit.test('backspaces on cleared memory are no-ops', function(assert) {
   var captions = [], packets;
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1375,10 +1375,10 @@ QUnit.test('backspaces on cleared memory are no-ops', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 0, 'no captions detected');
+  assert.equal(captions.length, 0, 'no captions detected');
 });
 
-QUnit.test('recognizes the Erase Non-Displayed Memory command', function() {
+QUnit.test('recognizes the Erase Non-Displayed Memory command', function(assert) {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
@@ -1405,8 +1405,8 @@ QUnit.test('recognizes the Erase Non-Displayed Memory command', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected one caption');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'detected one caption');
+  assert.deepEqual(captions[0], {
     startPts: 1 * 1000,
     endPts: 2 * 1000,
     text: '23',
@@ -1414,7 +1414,7 @@ QUnit.test('recognizes the Erase Non-Displayed Memory command', function() {
   }, 'cleared the non-displayed memory');
 });
 
-QUnit.test('ignores unrecognized commands', function() {
+QUnit.test('ignores unrecognized commands', function(assert) {
   var packets, captions;
   packets = [
     // RCL, resume caption loading
@@ -1437,18 +1437,18 @@ QUnit.test('ignores unrecognized commands', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions[0].text, '01', 'skipped the unrecognized commands');
+  assert.equal(captions[0].text, '01', 'skipped the unrecognized commands');
 });
 
-QUnit.skip('applies preamble address codes', function() {
-  QUnit.ok(false, 'not implemented');
+QUnit.skip('applies preamble address codes', function(assert) {
+  assert.ok(false, 'not implemented');
 });
 
-QUnit.skip('applies mid-row colors', function() {
-  QUnit.ok(false, 'not implemented');
+QUnit.skip('applies mid-row colors', function(assert) {
+  assert.ok(false, 'not implemented');
 });
 
-QUnit.test('applies mid-row underline', function() {
+QUnit.test('applies mid-row underline', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1467,11 +1467,11 @@ QUnit.test('applies mid-row underline', function() {
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
-  QUnit.equal(captions[0].text, 'no <u>yes.</u>', 'properly closed by CR');
-  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
+  assert.equal(captions[0].text, 'no <u>yes.</u>', 'properly closed by CR');
+  assert.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
-QUnit.test('applies mid-row italics', function() {
+QUnit.test('applies mid-row italics', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1490,11 +1490,11 @@ QUnit.test('applies mid-row italics', function() {
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
-  QUnit.equal(captions[0].text, 'no <i>yes.</i>', 'properly closed by CR');
-  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
+  assert.equal(captions[0].text, 'no <i>yes.</i>', 'properly closed by CR');
+  assert.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
-QUnit.test('applies mid-row italics underline', function() {
+QUnit.test('applies mid-row italics underline', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1513,13 +1513,13 @@ QUnit.test('applies mid-row italics underline', function() {
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
-  QUnit.equal(captions[0].text, 'no <i><u>yes.</u></i>', 'properly closed by CR');
-  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
+  assert.equal(captions[0].text, 'no <i><u>yes.</u></i>', 'properly closed by CR');
+  assert.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
 // NOTE: With the exception of white italics PACs (the following two test
 // cases), PACs only have their underline attribute extracted and used
-QUnit.test('applies PAC underline', function() {
+QUnit.test('applies PAC underline', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1537,11 +1537,11 @@ QUnit.test('applies PAC underline', function() {
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
-  QUnit.equal(captions[0].text, '<u>yes.</u>', 'properly closed by CR');
-  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
+  assert.equal(captions[0].text, '<u>yes.</u>', 'properly closed by CR');
+  assert.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
-QUnit.test('applies PAC white italics', function() {
+QUnit.test('applies PAC white italics', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1559,11 +1559,11 @@ QUnit.test('applies PAC white italics', function() {
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
-  QUnit.equal(captions[0].text, '<i>yes.</i>', 'properly closed by CR');
-  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
+  assert.equal(captions[0].text, '<i>yes.</i>', 'properly closed by CR');
+  assert.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
-QUnit.test('applies PAC white italics underline', function() {
+QUnit.test('applies PAC white italics underline', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1581,11 +1581,11 @@ QUnit.test('applies PAC white italics underline', function() {
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
-  QUnit.equal(captions[0].text, '<u><i>yes.</i></u>', 'properly closed by CR');
-  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
+  assert.equal(captions[0].text, '<u><i>yes.</i></u>', 'properly closed by CR');
+  assert.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
-QUnit.test('closes formatting at PAC row change', function() {
+QUnit.test('closes formatting at PAC row change', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1610,11 +1610,11 @@ QUnit.test('closes formatting at PAC row change', function() {
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
-  QUnit.equal(captions[0].text, '<u><i>yes.</i></u>\nno', 'properly closed by PAC row change');
-  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
+  assert.equal(captions[0].text, '<u><i>yes.</i></u>\nno', 'properly closed by PAC row change');
+  assert.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
-QUnit.test('closes formatting at EOC', function() {
+QUnit.test('closes formatting at EOC', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1636,11 +1636,11 @@ QUnit.test('closes formatting at EOC', function() {
   ];
 
   packets.forEach(cea608Stream.push, cea608Stream);
-  QUnit.equal(captions[0].text, '<u><i>yes.</i></u>', 'properly closed by EOC');
-  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
+  assert.equal(captions[0].text, '<u><i>yes.</i></u>', 'properly closed by EOC');
+  assert.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
-QUnit.test('closes formatting at negating mid-row code', function() {
+QUnit.test('closes formatting at negating mid-row code', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1661,11 +1661,11 @@ QUnit.test('closes formatting at negating mid-row code', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
   cea608Stream.flushDisplayed();
-  QUnit.equal(captions[0].text, 'no <i><u>yes.</u></i> no', 'properly closed by negating mid-row code');
-  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
+  assert.equal(captions[0].text, 'no <i><u>yes.</u></i> no', 'properly closed by negating mid-row code');
+  assert.deepEqual(cea608Stream.formatting_, [], 'formatting is empty');
 });
 
-QUnit.test('roll-up display mode', function() {
+QUnit.test('roll-up display mode', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1683,8 +1683,8 @@ QUnit.test('roll-up display mode', function() {
     { pts: 3 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected one caption');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'detected one caption');
+  assert.deepEqual(captions[0], {
     startPts: 0 * 1000,
     endPts: 3 * 1000,
     text: '01',
@@ -1705,8 +1705,8 @@ QUnit.test('roll-up display mode', function() {
     { pts: 5 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected another caption');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'detected another caption');
+  assert.deepEqual(captions[0], {
     startPts: 3 * 1000,
     endPts: 5 * 1000,
     text: '01\n23',
@@ -1714,7 +1714,7 @@ QUnit.test('roll-up display mode', function() {
   }, 'parsed the new caption and kept the caption up after the new caption');
 });
 
-QUnit.test('roll-up displays multiple rows simultaneously', function() {
+QUnit.test('roll-up displays multiple rows simultaneously', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1733,8 +1733,8 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
     { pts: 1 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected a caption');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'detected a caption');
+  assert.deepEqual(captions[0], {
     startPts: 0 * 1000,
     endPts: 1 * 1000,
     text: '01',
@@ -1753,8 +1753,8 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
     { pts: 3 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected another caption');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'detected another caption');
+  assert.deepEqual(captions[0], {
     startPts: 1 * 1000,
     endPts: 3 * 1000,
     text: '01\n23',
@@ -1773,8 +1773,8 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
     { pts: 5 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected third caption');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'detected third caption');
+  assert.deepEqual(captions[0], {
     startPts: 3 * 1000,
     endPts: 5 * 1000,
     text: '23\n45',
@@ -1782,7 +1782,7 @@ QUnit.test('roll-up displays multiple rows simultaneously', function() {
   }, 'created the top and bottom rows after the shift up');
 });
 
-QUnit.test('the roll-up count can be changed on-the-fly', function() {
+QUnit.test('the roll-up count can be changed on-the-fly', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1809,7 +1809,7 @@ QUnit.test('the roll-up count can be changed on-the-fly', function() {
     { pts: 2 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'still displaying a caption');
+  assert.equal(captions.length, 1, 'still displaying a caption');
   captions = [];
 
   [ // RU4, roll-up captions 4 rows
@@ -1818,15 +1818,15 @@ QUnit.test('the roll-up count can be changed on-the-fly', function() {
     { pts: 3 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'still displaying a caption');
+  assert.equal(captions.length, 1, 'still displaying a caption');
   captions = [];
 
   // RU3, roll-up captions 3 rows
   cea608Stream.push({ ccdata: 0x1426, type: 0 });
-  QUnit.equal(captions.length, 0, 'cleared the caption');
+  assert.equal(captions.length, 0, 'cleared the caption');
 });
 
-QUnit.test('switching to roll-up from pop-on wipes memories and flushes captions', function() {
+QUnit.test('switching to roll-up from pop-on wipes memories and flushes captions', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1856,16 +1856,16 @@ QUnit.test('switching to roll-up from pop-on wipes memories and flushes captions
     return acc;
   });
 
-  QUnit.equal(captions.length, 2, 'both captions flushed');
-  QUnit.equal(displayed, '', 'displayed memory is wiped');
-  QUnit.equal(nonDisplayed, '', 'non-displayed memory is wiped');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 2, 'both captions flushed');
+  assert.equal(displayed, '', 'displayed memory is wiped');
+  assert.equal(nonDisplayed, '', 'non-displayed memory is wiped');
+  assert.deepEqual(captions[0], {
     startPts: 1000,
     endPts: 2000,
     text: 'hi',
     stream: 'CC1'
   }, 'first caption correct');
-  QUnit.deepEqual(captions[1], {
+  assert.deepEqual(captions[1], {
     startPts: 2000,
     endPts: 3000,
     text: 'oh',
@@ -1873,7 +1873,7 @@ QUnit.test('switching to roll-up from pop-on wipes memories and flushes captions
   }, 'second caption correct');
 });
 
-QUnit.test('switching to roll-up from paint-on wipes memories and flushes captions', function() {
+QUnit.test('switching to roll-up from paint-on wipes memories and flushes captions', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1896,10 +1896,10 @@ QUnit.test('switching to roll-up from paint-on wipes memories and flushes captio
     return acc;
   });
 
-  QUnit.equal(captions.length, 1, 'flushed caption');
-  QUnit.equal(displayed, '', 'displayed memory is wiped');
-  QUnit.equal(nonDisplayed, '', 'non-displayed memory is wiped');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'flushed caption');
+  assert.equal(displayed, '', 'displayed memory is wiped');
+  assert.equal(nonDisplayed, '', 'non-displayed memory is wiped');
+  assert.deepEqual(captions[0], {
     startPts: 0,
     endPts: 1000,
     text: 'hi',
@@ -1909,7 +1909,7 @@ QUnit.test('switching to roll-up from paint-on wipes memories and flushes captio
 
 // NOTE: This should change to not wiping the display when caption
 // positioning is properly implemented
-QUnit.test('switching to paint-on from pop-on flushes display', function() {
+QUnit.test('switching to paint-on from pop-on flushes display', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1936,16 +1936,16 @@ QUnit.test('switching to paint-on from pop-on flushes display', function() {
     { pts: 4 * 1000, ccData: 0x142c, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 2, 'detected 2 captions');
-  QUnit.equal(captions[0].text, 'hi', 'pop-on caption received');
-  QUnit.equal(captions[0].startPts, 1000, 'proper start pts');
-  QUnit.equal(captions[0].endPts, 2000, 'proper end pts');
-  QUnit.equal(captions[1].text, 'io', 'paint-on caption received');
-  QUnit.equal(captions[1].startPts, 2000, 'proper start pts');
-  QUnit.equal(captions[1].endPts, 4000, 'proper end pts');
+  assert.equal(captions.length, 2, 'detected 2 captions');
+  assert.equal(captions[0].text, 'hi', 'pop-on caption received');
+  assert.equal(captions[0].startPts, 1000, 'proper start pts');
+  assert.equal(captions[0].endPts, 2000, 'proper end pts');
+  assert.equal(captions[1].text, 'io', 'paint-on caption received');
+  assert.equal(captions[1].startPts, 2000, 'proper start pts');
+  assert.equal(captions[1].endPts, 4000, 'proper end pts');
 });
 
-QUnit.test('backspaces are reflected in the generated captions', function() {
+QUnit.test('backspaces are reflected in the generated captions', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1970,11 +1970,11 @@ QUnit.test('backspaces are reflected in the generated captions', function() {
     { pts: 1 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected a caption');
-  QUnit.equal(captions[0].text, '023', 'applied the backspace');
+  assert.equal(captions.length, 1, 'detected a caption');
+  assert.equal(captions[0].text, '023', 'applied the backspace');
 });
 
-QUnit.test('backspaces can remove a caption entirely', function() {
+QUnit.test('backspaces can remove a caption entirely', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -1999,10 +1999,10 @@ QUnit.test('backspaces can remove a caption entirely', function() {
     { pts: 1 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 0, 'no caption emitted');
+  assert.equal(captions.length, 0, 'no caption emitted');
 });
 
-QUnit.test('a second identical control code immediately following the first is ignored', function() {
+QUnit.test('a second identical control code immediately following the first is ignored', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -2032,11 +2032,11 @@ QUnit.test('a second identical control code immediately following the first is i
     { pts: 2 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'caption emitted');
-  QUnit.equal(captions[0].text, '01', 'only two backspaces processed');
+  assert.equal(captions.length, 1, 'caption emitted');
+  assert.equal(captions[0].text, '01', 'only two backspaces processed');
 });
 
-QUnit.test('a second identical control code separated by only padding from the first is ignored', function() {
+QUnit.test('a second identical control code separated by only padding from the first is ignored', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -2068,11 +2068,11 @@ QUnit.test('a second identical control code separated by only padding from the f
     { pts: 3 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'caption emitted');
-  QUnit.equal(captions[0].text, '010', 'only one backspace processed');
+  assert.equal(captions.length, 1, 'caption emitted');
+  assert.equal(captions[0].text, '010', 'only one backspace processed');
 });
 
-QUnit.test('preamble address codes on same row are NOT converted into spaces', function() {
+QUnit.test('preamble address codes on same row are NOT converted into spaces', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -2098,11 +2098,11 @@ QUnit.test('preamble address codes on same row are NOT converted into spaces', f
     { pts: 2 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'caption emitted');
-  QUnit.equal(captions[0].text, '0102', 'PACs were NOT converted to space');
+  assert.equal(captions.length, 1, 'caption emitted');
+  assert.equal(captions[0].text, '0102', 'PACs were NOT converted to space');
 });
 
-QUnit.test('preserves newlines from PACs in pop-on mode', function() {
+QUnit.test('preserves newlines from PACs in pop-on mode', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -2137,11 +2137,11 @@ QUnit.test('preserves newlines from PACs in pop-on mode', function() {
     { pts: 2 * 1000, ccData: 0x142f, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'caption emitted');
-  QUnit.equal(captions[0].text, 'TEST\n\nSTRING\nDATA', 'Position PACs were converted to newlines');
+  assert.equal(captions.length, 1, 'caption emitted');
+  assert.equal(captions[0].text, 'TEST\n\nSTRING\nDATA', 'Position PACs were converted to newlines');
 });
 
-QUnit.test('extracts real-world cc1 and cc3 channels', function() {
+QUnit.test('extracts real-world cc1 and cc3 channels', function(assert) {
   var cea608Stream1 = cea608Stream;
   var cea608Stream3 = new m2ts.Cea608Stream(1, 0);
   var captions = [];
@@ -2209,14 +2209,14 @@ QUnit.test('extracts real-world cc1 and cc3 channels', function() {
   var cc1 = {stream: 'CC1', text: 'PERIOD, FOLKS.'};
   var cc3 = {stream: 'CC3', text: 'être une période de questions'};
 
-  QUnit.equal(captions.length, 2, 'caption emitted');
-  QUnit.equal(captions[0].stream, cc1.stream, 'cc1 stream detected');
-  QUnit.equal(captions[0].text, cc1.text, 'cc1 stream extracted successfully');
-  QUnit.equal(captions[1].stream, cc3.stream, 'cc3 stream detected');
-  QUnit.equal(captions[1].text, cc3.text, 'cc3 stream extracted successfully');
+  assert.equal(captions.length, 2, 'caption emitted');
+  assert.equal(captions[0].stream, cc1.stream, 'cc1 stream detected');
+  assert.equal(captions[0].text, cc1.text, 'cc1 stream extracted successfully');
+  assert.equal(captions[1].stream, cc3.stream, 'cc3 stream detected');
+  assert.equal(captions[1].text, cc3.text, 'cc3 stream extracted successfully');
 });
 
-QUnit.test('backspaces stop at the beginning of the line', function() {
+QUnit.test('backspaces stop at the beginning of the line', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -2246,10 +2246,10 @@ QUnit.test('backspaces stop at the beginning of the line', function() {
     { pts: 1 * 1000, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 0, 'no caption emitted');
+  assert.equal(captions.length, 0, 'no caption emitted');
 });
 
-QUnit.test('reset works', function() {
+QUnit.test('reset works', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -2265,7 +2265,7 @@ QUnit.test('reset works', function() {
   }).join('\n')
   .replace(/^\n+|\n+$/g, '');
 
-  QUnit.equal(buffer, '<u>01', 'buffer is as expected');
+  assert.equal(buffer, '<u>01', 'buffer is as expected');
 
   cea608Stream.reset();
   buffer = cea608Stream.displayed_
@@ -2274,14 +2274,14 @@ QUnit.test('reset works', function() {
     })
     .join('\n')
     .replace(/^\n+|\n+$/g, '');
-  QUnit.equal(buffer, '', 'displayed buffer reset successfully');
-  QUnit.equal(cea608Stream.lastControlCode_, null, 'last control code reset successfully');
-  QUnit.deepEqual(cea608Stream.formatting_, [], 'formatting was reset');
+  assert.equal(buffer, '', 'displayed buffer reset successfully');
+  assert.equal(cea608Stream.lastControlCode_, null, 'last control code reset successfully');
+  assert.deepEqual(cea608Stream.formatting_, [], 'formatting was reset');
 
 });
 
 
-QUnit.test('paint-on mode', function() {
+QUnit.test('paint-on mode', function(assert) {
   var packets, captions;
   packets = [
     // RDC, resume direct captioning, begin display
@@ -2298,8 +2298,8 @@ QUnit.test('paint-on mode', function() {
 
   packets.forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected a caption');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 1, 'detected a caption');
+  assert.deepEqual(captions[0], {
     startPts: 1000,
     endPts: 3000,
     text: 'hi',
@@ -2307,7 +2307,7 @@ QUnit.test('paint-on mode', function() {
   }, 'parsed the caption');
 });
 
-QUnit.test('preserves newlines from PACs in paint-on mode', function() {
+QUnit.test('preserves newlines from PACs in paint-on mode', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -2336,11 +2336,11 @@ QUnit.test('preserves newlines from PACs in paint-on mode', function() {
     { pts: 6000, ccData: 0x142c, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'caption emitted');
-  QUnit.equal(captions[0].text, 'TEST\n\nSTRING\nDATA', 'Position PACs were converted to newlines');
+  assert.equal(captions.length, 1, 'caption emitted');
+  assert.equal(captions[0].text, 'TEST\n\nSTRING\nDATA', 'Position PACs were converted to newlines');
 });
 
-QUnit.test('backspaces are reflected in the generated captions (paint-on)', function() {
+QUnit.test('backspaces are reflected in the generated captions (paint-on)', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -2363,11 +2363,11 @@ QUnit.test('backspaces are reflected in the generated captions (paint-on)', func
     { pts: 5 * 1000, ccData: 0x142c, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 1, 'detected a caption');
-  QUnit.equal(captions[0].text, '310\n\n023', 'applied the backspaces');
+  assert.equal(captions.length, 1, 'detected a caption');
+  assert.equal(captions[0].text, '310\n\n023', 'applied the backspaces');
 });
 
-QUnit.test('mix of all modes (extract from CNN)', function() {
+QUnit.test('mix of all modes (extract from CNN)', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
     captions.push(caption);
@@ -2558,44 +2558,44 @@ QUnit.test('mix of all modes (extract from CNN)', function() {
     { pts: 6846, ccData: 0x142d, type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
 
-  QUnit.equal(captions.length, 7, 'detected 7 captions of varying types');
-  QUnit.deepEqual(captions[0], {
+  assert.equal(captions.length, 7, 'detected 7 captions of varying types');
+  assert.deepEqual(captions[0], {
     startPts: 6675,
     endPts: 6677,
     text: 'YEAR.',
     stream: 'CC1'
   }, 'parsed the 1st roll-up caption');
-  QUnit.deepEqual(captions[1], {
+  assert.deepEqual(captions[1], {
     startPts: 6677,
     endPts: 6697,
     text: 'YEAR.\nGO TO CNNHEROS.COM.',
     stream: 'CC1'
   }, 'parsed the 2nd roll-up caption');
-  QUnit.deepEqual(captions[2], {
+  assert.deepEqual(captions[2], {
     startPts: 6749,
     endPts: 6781,
     text: 'Did your Senator or Congressman\nget elected by talking tough',
     stream: 'CC1'
   }, 'parsed the paint-on caption');
-  QUnit.deepEqual(captions[3], {
+  assert.deepEqual(captions[3], {
     startPts: 6782,
     endPts: 6797,
     text: 'on the national debt?',
     stream: 'CC1'
   }, 'parsed the 1st pop-on caption');
-  QUnit.deepEqual(captions[4], {
+  assert.deepEqual(captions[4], {
     startPts: 6798,
     endPts: 6838,
     text: 'Will they stay true\nto their words?',
     stream: 'CC1'
   }, 'parsed the 2nd pop-on caption');
-  QUnit.deepEqual(captions[5], {
+  assert.deepEqual(captions[5], {
     startPts: 6841,
     endPts: 6844,
     text: '>>> NO MORE SPECULATION, NO MORE',
     stream: 'CC1'
   }, 'parsed the 3rd roll-up caption');
-  QUnit.deepEqual(captions[6], {
+  assert.deepEqual(captions[6], {
     startPts: 6844,
     endPts: 6846,
     text: '>>> NO MORE SPECULATION, NO MORE\nRUMORS OR GUESSING GAMES.',
@@ -2623,11 +2623,11 @@ QUnit.test('Cea608Stream will log errors, not throw an exception', function(asse
     result = false;
   }
 
-  QUnit.ok(
+  assert.ok(
     result,
     'the function does not throw an exception'
   );
-  QUnit.deepEqual(
+  assert.deepEqual(
     logs,
     [
       'Skipping malformed caption.'
