@@ -35,7 +35,7 @@ QUnit.module('Partial Transmuxer - Options');
     name += 'baseMediaDecodeTime setter ' + test.baseMediaSetter;
   }
 
-  QUnit.test('Audio frames after video not trimmed, ' + name, function() {
+  QUnit.test('Audio frames after video not trimmed, ' + name, function(assert) {
     var
     segments = [],
       earliestDts = 15000,
@@ -80,12 +80,12 @@ QUnit.module('Partial Transmuxer - Options');
     // the partial transmuxer only generates a video segment
     // when all audio frames are trimmed. So we should have an audio and video
     // segment
-    QUnit.equal(segments.length, 2, 'generated a video and an audio segment');
-    QUnit.equal(segments[0].type, 'video', 'video segment exists');
-    QUnit.equal(segments[1].type, 'audio', 'audio segment exists');
+    assert.equal(segments.length, 2, 'generated a video and an audio segment');
+    assert.equal(segments[0].type, 'video', 'video segment exists');
+    assert.equal(segments[1].type, 'audio', 'audio segment exists');
   });
 
-  QUnit.test('Audio frames trimmed before video, ' + name, function() {
+  QUnit.test('Audio frames trimmed before video, ' + name, function(assert) {
     var
     segments = [],
       earliestDts = 15000,
@@ -131,12 +131,12 @@ QUnit.module('Partial Transmuxer - Options');
     // the partial transmuxer only generates a video segment
     // when all audio frames are trimmed.
     if (test.options.keepOriginalTimestamps && !baseTime) {
-      QUnit.equal(segments.length, 2, 'generated both a video/audio segment');
-      QUnit.equal(segments[0].type, 'video', 'segment is video');
-      QUnit.equal(segments[1].type, 'audio', 'segment is audio');
+      assert.equal(segments.length, 2, 'generated both a video/audio segment');
+      assert.equal(segments[0].type, 'video', 'segment is video');
+      assert.equal(segments[1].type, 'audio', 'segment is audio');
     } else {
-      QUnit.equal(segments.length, 1, 'generated only a video segment');
-      QUnit.equal(segments[0].type, 'video', 'segment is video');
+      assert.equal(segments.length, 1, 'generated only a video segment');
+      assert.equal(segments[0].type, 'video', 'segment is video');
     }
   });
 });

@@ -1,5 +1,5 @@
 # mux.js
-[![Build Status](https://travis-ci.org/videojs/mux.js.svg?branch=master)](https://travis-ci.org/videojs/mux.js)[![Greenkeeper badge](https://badges.greenkeeper.io/videojs/mux.js.svg)](https://greenkeeper.io/)
+[![Build Status](https://travis-ci.org/videojs/mux.js.svg?branch=main)](https://travis-ci.org/videojs/mux.js)[![Greenkeeper badge](https://badges.greenkeeper.io/videojs/mux.js.svg)](https://greenkeeper.io/)
 [![Slack Status](http://slack.videojs.com/badge.svg)](http://slack.videojs.com)
 
 

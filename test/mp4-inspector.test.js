@@ -10,12 +10,12 @@
   stop(increment)
   start(decrement)
   Test assertions:
-  QUnit.ok(value, [message])
-  QUnit.equal(actual, expected, [message])
+  assert.ok(value, [message])
+  assert.equal(actual, expected, [message])
   notEqual(actual, expected, [message])
-  QUnit.deepEqual(actual, expected, [message])
+  assert.deepEqual(actual, expected, [message])
   notDeepEqual(actual, expected, [message])
-  QUnit.strictEqual(actual, expected, [message])
+  assert.strictEqual(actual, expected, [message])
   notStrictEqual(actual, expected, [message])
   throws(block, [expected], [message])
 */
@@ -77,24 +77,24 @@ var
 
 QUnit.module('MP4 Inspector');
 
-QUnit.test('produces an empty array for empty input', function() {
-  QUnit.strictEqual(mp4.tools.inspect(new Uint8Array([])).length, 0, 'returned an empty array');
+QUnit.test('produces an empty array for empty input', function(assert) {
+  assert.strictEqual(mp4.tools.inspect(new Uint8Array([])).length, 0, 'returned an empty array');
 });
 
-QUnit.test('can parse a Box', function() {
+QUnit.test('can parse a Box', function(assert) {
   var box = new Uint8Array([
     0x00, 0x00, 0x00, 0x00, // size 0
     0x00, 0x00, 0x00, 0x00 // boxtype 0
   ]);
-  QUnit.deepEqual(mp4.tools.inspect(box), [{
+  assert.deepEqual(mp4.tools.inspect(box), [{
     type: '\u0000\u0000\u0000\u0000',
     size: 0,
     data: box.subarray(box.byteLength)
   }], 'parsed a Box');
 });
 
-QUnit.test('can parse an ftyp', function() {
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(box('ftyp',
+QUnit.test('can parse an ftyp', function(assert) {
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(box('ftyp',
     0x61, 0x76, 0x63, 0x31, // major brand
     0x00, 0x00, 0x00, 0x02, // minor version
     98, 111, 111, 112, // compatible brands
@@ -108,8 +108,8 @@ QUnit.test('can parse an ftyp', function() {
   }], 'parsed an ftyp');
 });
 
-QUnit.test('can parse a pdin', function() {
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(box('pdin',
+QUnit.test('can parse a pdin', function(assert) {
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(box('pdin',
     0x01, // version 1
     0x01, 0x02, 0x03, // flags
     0x00, 0x00, 0x04, 0x00, // 1024 = 0x400 bytes/second rate
@@ -124,12 +124,12 @@ QUnit.test('can parse a pdin', function() {
   }], 'parsed a pdin');
 });
 
-QUnit.test('can parse an mdat', function() {
+QUnit.test('can parse an mdat', function(assert) {
   var mdat = new Uint8Array(box('mdat',
       0, 0, 0, 4, // length
       0x01, 0x02, 0x03, 0x04 // data
     ));
-  QUnit.deepEqual(mp4.tools.inspect(mdat), [{
+  assert.deepEqual(mp4.tools.inspect(mdat), [{
     size: 16,
     type: 'mdat',
     nals: [
@@ -139,27 +139,27 @@ QUnit.test('can parse an mdat', function() {
   }], 'parsed an mdat');
 });
 
-QUnit.test('can parse a free or skip', function() {
+QUnit.test('can parse a free or skip', function(assert) {
   var
     free = new Uint8Array(box('free',
                               0x01, 0x02, 0x03, 0x04)), // data
     skip = new Uint8Array(box('skip',
                               0x01, 0x02, 0x03, 0x04)); // data
 
-  QUnit.deepEqual(mp4.tools.inspect(free), [{
+  assert.deepEqual(mp4.tools.inspect(free), [{
       size: 12,
       type: 'free',
       data: free.subarray(free.byteLength - 4)
     }], 'parsed a free');
-  QUnit.deepEqual(mp4.tools.inspect(skip), [{
+  assert.deepEqual(mp4.tools.inspect(skip), [{
       size: 12,
       type: 'skip',
       data: skip.subarray(skip.byteLength - 4)
     }], 'parsed a skip');
 });
 
-QUnit.test('can parse a version 0 mvhd', function() {
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(mvhd0)), [{
+QUnit.test('can parse a version 0 mvhd', function(assert) {
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(mvhd0)), [{
     type: 'mvhd',
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
@@ -175,8 +175,8 @@ QUnit.test('can parse a version 0 mvhd', function() {
   }]);
 });
 
-QUnit.test('can parse a version 0 tkhd', function() {
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(tkhd0)), [{
+QUnit.test('can parse a version 0 tkhd', function(assert) {
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(tkhd0)), [{
     type: 'tkhd',
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
@@ -194,8 +194,8 @@ QUnit.test('can parse a version 0 tkhd', function() {
   }]);
 });
 
-QUnit.test('can parse a version 0 mdhd', function() {
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(mdhd0)), [{
+QUnit.test('can parse a version 0 mdhd', function(assert) {
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(mdhd0)), [{
     type: 'mdhd',
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
@@ -208,7 +208,7 @@ QUnit.test('can parse a version 0 mdhd', function() {
   }]);
 });
 
-QUnit.test('can parse a moov', function() {
+QUnit.test('can parse a moov', function(assert) {
   var data = mp4Helpers.sampleMoov;
 
   QUnit.dump.maxDepth = 100;
@@ -476,10 +476,10 @@ QUnit.test('can parse a moov', function() {
       }]
     }]
   }]);
-  QUnit.equal(result, expected, 'can parse moov');
+  assert.equal(result, expected, 'can parse moov');
 });
 
-QUnit.test('can parse an mvex', function() {
+QUnit.test('can parse an mvex', function(assert) {
   var mvex =
     box('mvex',
         box('trex',
@@ -490,7 +490,7 @@ QUnit.test('can parse an mvex', function() {
             0x00, 0x00, 0x00, 0x02, // default_sample_duration
             0x00, 0x00, 0x00, 0x03, // default_sample_size
             0x00, 0x61, 0x00, 0x01)); // default_sample_flags
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(mvex)), [{
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(mvex)), [{
     type: 'mvex',
     size: 40,
     boxes: [{
@@ -512,7 +512,7 @@ QUnit.test('can parse an mvex', function() {
   }], 'parsed an mvex');
 });
 
-QUnit.test('can parse a video stsd', function() {
+QUnit.test('can parse a video stsd', function(assert) {
   var data = box('stsd',
                  0x00, // version 0
                  0x00, 0x00, 0x00, // flags
@@ -564,7 +564,7 @@ QUnit.test('can parse a video stsd', function() {
                      box('pasp',
                         0x00, 0x00, 0x00, 0x01, // hSpacing
                         0x00, 0x00, 0x00, 0x01))); // vSpacing
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)), [{
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)), [{
     type: 'stsd',
     size: 163,
     version: 0,
@@ -605,7 +605,7 @@ QUnit.test('can parse a video stsd', function() {
   }]);
 });
 
-QUnit.test('can parse an audio stsd', function() {
+QUnit.test('can parse an audio stsd', function(assert) {
   var data = box('stsd',
                  0x00,                         // version 0
                  0x00, 0x00, 0x00,             // flags
@@ -646,7 +646,7 @@ QUnit.test('can parse an audio stsd', function() {
                          // GASpecificConfig
                          0x06, 0x01, 0x02)));
 
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)), [{
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)), [{
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
     type: 'stsd',
@@ -684,8 +684,8 @@ QUnit.test('can parse an audio stsd', function() {
   }], 'parsed an audio stsd');
 });
 
-QUnit.test('can parse an styp', function() {
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(box('styp',
+QUnit.test('can parse an styp', function(assert) {
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(box('styp',
     0x61, 0x76, 0x63, 0x31, // major brand
     0x00, 0x00, 0x00, 0x02, // minor version
     98, 111, 111, 112 // compatible brands
@@ -698,7 +698,7 @@ QUnit.test('can parse an styp', function() {
   }], 'parsed an styp');
 });
 
-QUnit.test('can parse a vmhd', function() {
+QUnit.test('can parse a vmhd', function(assert) {
   var data = box('vmhd',
                  0x00, // version
                  0x00, 0x00, 0x00, // flags
@@ -707,7 +707,7 @@ QUnit.test('can parse a vmhd', function() {
                  0x00, 0x00,
                  0x00, 0x00); // opcolor
 
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
               type: 'vmhd',
               size: 20,
@@ -718,7 +718,7 @@ QUnit.test('can parse a vmhd', function() {
             }]);
 });
 
-QUnit.test('can parse an stsz', function() {
+QUnit.test('can parse an stsz', function(assert) {
   var data = box('stsz',
                  0x00, // version
                  0x00, 0x00, 0x00, // flags
@@ -727,7 +727,7 @@ QUnit.test('can parse an stsz', function() {
                  0x00, 0x00, 0x00, 0x01, // entry_size
                  0x00, 0x00, 0x00, 0x02, // entry_size
                  0x00, 0x00, 0x00, 0x03); // entry_size
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
               type: 'stsz',
               size: 32,
@@ -738,7 +738,7 @@ QUnit.test('can parse an stsz', function() {
             }]);
 });
 
-QUnit.test('can parse a moof', function() {
+QUnit.test('can parse a moof', function(assert) {
   var data = box('moof',
                  box('mfhd',
                      0x00, // version
@@ -755,7 +755,7 @@ QUnit.test('can parse a moof', function() {
                         0x00, 0x00, 0x00, 0x03, // default_sample_duration,
                         0x00, 0x00, 0x00, 0x04, // default_sample_size
                         0x00, 0x00, 0x00, 0x05))); // default_sample_flags
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
               type: 'moof',
               size: 72,
@@ -785,7 +785,7 @@ QUnit.test('can parse a moof', function() {
             }]);
 });
 
-QUnit.test('can parse a trun', function() {
+QUnit.test('can parse a trun', function(assert) {
   var data = box('trun',
                  0x00, // version
                  0x00, 0x0b, 0x05, // flags
@@ -803,7 +803,7 @@ QUnit.test('can parse a trun', function() {
                  0x00, 0x00, 0x00, 0x08, // sample_duration
                  0x00, 0x00, 0x00, 0xfe, // sample_size
                  0x00, 0x00, 0x00, 0x00); // sample_composition_time_offset
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
               type: 'trun',
               version: 0,
@@ -831,7 +831,7 @@ QUnit.test('can parse a trun', function() {
             }]);
 });
 
-QUnit.test('can parse a trun with per-sample flags', function() {
+QUnit.test('can parse a trun with per-sample flags', function(assert) {
   var data = box('trun',
                  0x00, // version
                  0x00, 0x0f, 0x00, // flags
@@ -844,7 +844,7 @@ QUnit.test('can parse a trun with per-sample flags', function() {
                  // dp: 0001 0010 0011 0100
                  0x01, 0xc4, 0x12, 0x34,
                  0x00, 0x00, 0x00, 0x00); // sample_composition_time_offset
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
               type: 'trun',
               version: 0,
@@ -868,7 +868,7 @@ QUnit.test('can parse a trun with per-sample flags', function() {
 
 });
 
-QUnit.test('can parse an sdtp', function() {
+QUnit.test('can parse an sdtp', function(assert) {
   var data = box('sdtp',
                  0x00, // version
                  0x00, 0x00, 0x00, // flags
@@ -878,7 +878,7 @@ QUnit.test('can parse an sdtp', function() {
                  // reserved + sample_depends_on +
                  // sample_is_dependend_on + sample_has_redundancy
                  0x27);
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)), [{
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)), [{
     type: 'sdtp',
     version: 0,
     flags: new Uint8Array([0, 0, 0]),
@@ -895,7 +895,7 @@ QUnit.test('can parse an sdtp', function() {
   }]);
 });
 
-QUnit.test('can parse a sidx', function() {
+QUnit.test('can parse a sidx', function(assert) {
   var data = box('sidx',
                  0x00, // version
                  0x00, 0x00, 0x00, // flags
@@ -914,7 +914,7 @@ QUnit.test('can parse a sidx', function() {
                  0x00, 0x00, 0x00, 0x04, // subsegment_duration
                  0x10, 0x00, 0x00, 0x05  // starts_with_SAP(1) + SAP_type(3) + SAP_delta_time(28)
                 );
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
               type: 'sidx',
               version: 0,
@@ -943,6 +943,56 @@ QUnit.test('can parse a sidx', function() {
             }]);
 });
 
+QUnit.test('can parse a version 1 sidx', function() {
+  var data = box('sidx',
+                  0x01, // version
+                  0x00, 0x00, 0x00, // flags
+                  0x00, 0x00, 0x00, 0x02, // reference_ID
+                  0x00, 0x00, 0x00, 0x01, // timescale
+                  0x00, 0x00, 0x00, 0x00, // earliest_presentation_time
+                  0x01, 0x02, 0x03, 0x04,
+                  0x00, 0x00, 0x00, 0x00, // first_offset
+                  0x00, 0x00, 0x00, 0x00,
+                  0x00, 0x00,             // reserved
+                  0x00, 0x02,             // reference_count
+                  // first reference
+                  0x80, 0x00, 0x00, 0x07, // reference_type(1) + referenced_size(31)
+                  0x00, 0x00, 0x00, 0x08, // subsegment_duration
+                  0x80, 0x00, 0x00, 0x09, // starts_with_SAP(1) + SAP_type(3) + SAP_delta_time(28)
+                  // second reference
+                  0x00, 0x00, 0x00, 0x03, // reference_type(1) + referenced_size(31)
+                  0x00, 0x00, 0x00, 0x04, // subsegment_duration
+                  0x10, 0x00, 0x00, 0x05  // starts_with_SAP(1) + SAP_type(3) + SAP_delta_time(28)
+  );
+  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+    [{
+      type: 'sidx',
+      version: 1,
+      flags: new Uint8Array([0, 0x00, 0x00]),
+      timescale: 1,
+      earliestPresentationTime: 0x01020304,
+      firstOffset: 0,
+      referenceId: 2,
+      size: 64,
+      references: [{
+        referenceType: 1,
+        referencedSize: 7,
+        subsegmentDuration: 8,
+        startsWithSap: true,
+        sapType: 0,
+        sapDeltaTime: 9
+      }, {
+        referenceType: 0,
+        referencedSize: 3,
+        subsegmentDuration: 4,
+        startsWithSap: false,
+        sapType: 1,
+        sapDeltaTime: 5
+      }]
+
+    }]);
+});
+
 QUnit.test('can parse an smhd', function() {
   var data = box('smhd',
                  0x00,             // version
@@ -950,7 +1000,7 @@ QUnit.test('can parse an smhd', function() {
                  0x00, 0xff,       // balance, fixed-point 8.8
                  0x00, 0x00);      // reserved
 
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
               type: 'smhd',
               size: 16,
@@ -961,12 +1011,12 @@ QUnit.test('can parse an smhd', function() {
             'parsed an smhd');
 });
 
-QUnit.test('can parse a version 0 tfdt', function() {
+QUnit.test('can parse a version 0 tfdt', function(assert) {
   var data = box('tfdt',
                  0x00, // version
                  0x00, 0x00, 0x00, // flags
                  0x01, 0x02, 0x03, 0x04); // baseMediaDecodeTime
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
               type: 'tfdt',
               version: 0,
@@ -976,13 +1026,13 @@ QUnit.test('can parse a version 0 tfdt', function() {
             }]);
 });
 
-QUnit.test('can parse a version 1 tfdt and return an unsigned integer value', function() {
+QUnit.test('can parse a version 1 tfdt and return an unsigned integer value', function(assert) {
   var data = box('tfdt',
                  0x01, // version
                  0x00, 0x00, 0x00, // flags
                  0x81, 0x02, 0x03, 0x04,
                  0x05, 0x06, 0x07, 0x08); // baseMediaDecodeTime
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(data)),
             [{
               type: 'tfdt',
               version: 1,
@@ -992,7 +1042,7 @@ QUnit.test('can parse a version 1 tfdt and return an unsigned integer value', fu
             }]);
 });
 
-QUnit.test('can parse a series of boxes', function() {
+QUnit.test('can parse a series of boxes', function(assert) {
   var ftyp = [
     0x00, 0x00, 0x00, 0x18 // size 4 * 6 = 24
   ].concat(typeBytes('ftyp')).concat([
@@ -1002,7 +1052,7 @@ QUnit.test('can parse a series of boxes', function() {
     98, 111, 111, 112  // compatible brands
   ]);
 
-  QUnit.deepEqual(mp4.tools.inspect(new Uint8Array(ftyp.concat(ftyp))),
+  assert.deepEqual(mp4.tools.inspect(new Uint8Array(ftyp.concat(ftyp))),
             [{
               type: 'ftyp',
               size: 4 * 6,

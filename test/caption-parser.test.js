@@ -34,7 +34,7 @@ QUnit.module('MP4 Caption Parser', {
   }
 });
 
-QUnit.test('parse captions from real segment', function() {
+QUnit.test('parse captions from real segment', function(assert) {
   var trackIds;
   var timescales;
   var cc;
@@ -44,20 +44,20 @@ QUnit.test('parse captions from real segment', function() {
 
   cc = captionParser.parse(dashSegment, trackIds, timescales);
 
-  QUnit.equal(cc.captions.length, 1);
-  QUnit.equal(cc.captions[0].text, '00:00:00',
+  assert.equal(cc.captions.length, 1);
+  assert.equal(cc.captions[0].text, '00:00:00',
     'real segment caption has correct text');
-  QUnit.equal(cc.captions[0].stream, 'CC1',
+  assert.equal(cc.captions[0].stream, 'CC1',
     'real segment caption has correct stream');
-  QUnit.equal(cc.captions[0].startTime, 0,
+  assert.equal(cc.captions[0].startTime, 0,
     'real segment caption has correct startTime');
-  QUnit.equal(cc.captions[0].endTime, 119,
+  assert.equal(cc.captions[0].endTime, 119,
     'real segment caption has correct endTime');
-  QUnit.equal(cc.captionStreams.CC1, true,
+  assert.equal(cc.captionStreams.CC1, true,
     'real segment caption streams have correct settings');
 });
 
-QUnit.test('parse captions when init segment received late', function() {
+QUnit.test('parse captions when init segment received late', function(assert) {
   var trackIds;
   var timescales;
   var cc;
@@ -66,13 +66,13 @@ QUnit.test('parse captions when init segment received late', function() {
   timescales = probe.timescale(dashInit);
 
   cc = captionParser.parse(dashSegment, [], {});
-  QUnit.ok(!cc, 'there should not be any parsed captions yet');
+  assert.ok(!cc, 'there should not be any parsed captions yet');
 
   cc = captionParser.parse(dashSegment, trackIds, timescales);
-  QUnit.equal(cc.captions.length, 1);
+  assert.equal(cc.captions.length, 1);
 });
 
-QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
+QUnit.test('parseTrackId for version 0 and version 1 boxes', function(assert) {
   var v0Captions;
   var v1Captions;
 
@@ -81,18 +81,18 @@ QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
     [1], // trackIds
     { 1: 90000 }); // timescales);
 
-  QUnit.equal(v0Captions.captions.length, 1, 'got 1 version0 caption');
-  QUnit.equal(v0Captions.captions[0].text, 'test string #1',
+  assert.equal(v0Captions.captions.length, 1, 'got 1 version0 caption');
+  assert.equal(v0Captions.captions[0].text, 'test string #1',
     'got the expected version0 caption text');
-  QUnit.equal(v0Captions.captions[0].stream, 'CC1',
+  assert.equal(v0Captions.captions[0].stream, 'CC1',
     'returned the correct caption stream CC1');
-  QUnit.equal(v0Captions.captions[0].startTime, 10 / 90000,
+  assert.equal(v0Captions.captions[0].startTime, 10 / 90000,
     'the start time for version0 caption is correct');
-  QUnit.equal(v0Captions.captions[0].endTime, 10 / 90000,
+  assert.equal(v0Captions.captions[0].endTime, 10 / 90000,
     'the end time for version0 caption is correct');
-  QUnit.equal(v0Captions.captionStreams.CC1, true,
+  assert.equal(v0Captions.captionStreams.CC1, true,
     'stream is CC1');
-  QUnit.ok(!v0Captions.captionStreams.CC4,
+  assert.ok(!v0Captions.captionStreams.CC4,
     'stream is not CC4');
 
   // Clear parsed captions
@@ -103,18 +103,18 @@ QUnit.test('parseTrackId for version 0 and version 1 boxes', function() {
     [2], // trackIds
     { 2: 90000 }); // timescales
 
-  QUnit.equal(v1Captions.captions.length, 1, 'got version1 caption');
-  QUnit.equal(v1Captions.captions[0].text, 'test string #2',
+  assert.equal(v1Captions.captions.length, 1, 'got version1 caption');
+  assert.equal(v1Captions.captions[0].text, 'test string #2',
     'got the expected version1 caption text');
-  QUnit.equal(v1Captions.captions[0].stream, 'CC4',
+  assert.equal(v1Captions.captions[0].stream, 'CC4',
     'returned the correct caption stream CC4');
-  QUnit.equal(v1Captions.captions[0].startTime, 30 / 90000,
+  assert.equal(v1Captions.captions[0].startTime, 30 / 90000,
     'the start time for version1 caption is correct');
-  QUnit.equal(v1Captions.captions[0].endTime, 30 / 90000,
+  assert.equal(v1Captions.captions[0].endTime, 30 / 90000,
     'the end time for version1 caption is correct');
-  QUnit.equal(v1Captions.captionStreams.CC4, true,
+  assert.equal(v1Captions.captionStreams.CC4, true,
     'stream is CC4');
-  QUnit.ok(!v1Captions.captionStreams.CC1,
+  assert.ok(!v1Captions.captionStreams.CC1,
     'stream is not CC1');
 });
 
