@@ -993,7 +993,7 @@ QUnit.test('can parse a version 1 sidx', function() {
     }]);
 });
 
-QUnit.test('can parse an smhd', function() {
+QUnit.test('can parse an smhd', function(assert) {
   var data = box('smhd',
                  0x00,             // version
                  0x00, 0x00, 0x00, // flags
