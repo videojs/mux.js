@@ -33,7 +33,6 @@
     "test": "npm-run-all lint build-test test:*",
     "test:browser": "karma start scripts/karma.conf.js",
     "test:node": "qunit test/dist/bundle.js",
-    "posttest": "shx cat test/dist/coverage/text.txt",
     "update-changelog": "conventional-changelog -p videojs -i CHANGELOG.md -s",
     "preversion": "npm test",
     "version": "is-prerelease || npm run update-changelog && git add CHANGELOG.md",
