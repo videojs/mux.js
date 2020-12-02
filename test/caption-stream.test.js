@@ -2608,10 +2608,10 @@ QUnit.test('mix of all modes (extract from CNN)', function(assert) {
 
 QUnit.test('Cea608Stream will log errors, not throw an exception', function(assert) {
   var result;
-  var originalConsole = window.console.error;
+  var originalConsole = console.error;
   var logs = [];
 
-  window.console.error = function(msg) {
+  console.error = function(msg) {
     logs.push(msg);
   };
 
@@ -2637,7 +2637,7 @@ QUnit.test('Cea608Stream will log errors, not throw an exception', function(asse
     'warnings were logged to the console'
   );
 
-  window.console.error = originalConsole;
+  console.error = originalConsole;
 });
 
 var cea708Stream;

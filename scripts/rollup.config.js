@@ -13,6 +13,11 @@ const shared = {
   plugins(defaults) {
     defaults.test.splice(0, 0, 'createTestData');
 
+    // istanbul is only in the list for regular builds and not watch
+    if (defaults.test.indexOf('istanbul') !== -1) {
+      defaults.test.splice(defaults.test.indexOf('istanbul'), 1);
+    }
+
     return defaults;
   }
 };

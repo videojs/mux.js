@@ -1,19 +1,7 @@
-/* global window */
 const fs = require('fs');
 const path = require('path');
 const baseDir = path.join(__dirname, '..');
 const segmentsDir = path.join(baseDir, 'test', 'segments');
-
-const base64ToUint8Array = function(base64) {
-  const decoded = window.atob(base64);
-  const uint8Array = new Uint8Array(new ArrayBuffer(decoded.length));
-
-  for (let i = 0; i < decoded.length; i++) {
-    uint8Array[i] = decoded.charCodeAt(i);
-  }
-
-  return uint8Array;
-};
 
 const getSegments = () => (fs.readdirSync(segmentsDir) || [])
   .filter((f) => ((/\.(ts|mp4|key|webm|aac|ac3|m4s)/).test(path.extname(f))))
@@ -30,7 +18,7 @@ const buildSegmentString = function() {
   });
 
   let segmentsFile =
-    `const base64ToUint8Array = ${base64ToUint8Array.toString()};\n` +
+    `import base64ToUint8Array from '${path.join(baseDir, 'test', 'base64-to-uint8-array.js')}';\n` +
     'const segments = {\n';
 
   Object.keys(segmentData).forEach((key) => {
