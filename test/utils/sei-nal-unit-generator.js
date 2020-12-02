@@ -81,9 +81,11 @@ var makeMdatFromCaptionPackets = function(packets) {
     mdat.push(sei.escapedRBSP.length + 1); // nal length
     mdat.push(0x06); // declare nal type as SEI
     // SEI message
-    sei.escapedRBSP.forEach(function(byte) {
+    for (var i = 0; i < sei.escapedRBSP.length; i++) {
+      var byte = sei.escapedRBSP[i];
+
       mdat.push(byte);
-    });
+    }
   });
 
   return box.apply(null, mdat);
