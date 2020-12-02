@@ -487,7 +487,7 @@ QUnit.test('constructs the dispatch type', function(assert) {
 });
 
 
-/*
+/* TODO: fix these tests for nodejs etc using rollup
 QUnit.test('can parse PRIV frames in web worker', function(assert) {
   var payload = stringToInts('arbitrary'),
       worker = webworkify(metadataStreamTestWorker),
