@@ -21,13 +21,12 @@
 */
 
 var metadataStream, stringToInts, stringToCString, id3Tag, id3Frame, id3Generator, mp2t, QUnit,
-    webworkify, metadataStreamTestWorker;
+    webworkify, MetadataStreamTestWorker;
 
 mp2t = require('../lib/m2ts');
 QUnit = require('qunit');
 id3Generator = require('./utils/id3-generator');
-//webworkify = require('webworkify');
-metadataStreamTestWorker = require('./metadata-stream-test-worker');
+MetadataStreamTestWorker = require('worker!./metadata-stream-test-worker.js');
 stringToInts = id3Generator.stringToInts;
 stringToCString = id3Generator.stringToCString;
 id3Tag = id3Generator.id3Tag;
@@ -487,16 +486,16 @@ QUnit.test('constructs the dispatch type', function(assert) {
 });
 
 
-/* TODO: fix these tests for nodejs etc using rollup
 QUnit.test('can parse PRIV frames in web worker', function(assert) {
   var payload = stringToInts('arbitrary'),
-      worker = webworkify(metadataStreamTestWorker),
+      worker = new MetadataStreamTestWorker(),
       done = assert.async();
 
   worker.addEventListener('message', function(e) {
     assert.equal(e.data.frames[0].key, 'PRIV', 'frame key is PRIV');
     assert.deepEqual(new Uint8Array(e.data.frames[0].data), new Uint8Array(payload),
                     'parsed the frame private data');
+    worker.terminate();
     done();
   });
 
@@ -513,13 +512,14 @@ QUnit.test('can parse PRIV frames in web worker', function(assert) {
 });
 
 QUnit.test('can parse TXXX frames in web worker', function(assert) {
-  var worker = webworkify(metadataStreamTestWorker),
+  var worker = new MetadataStreamTestWorker(),
       done = assert.async();
 
   worker.addEventListener('message', function(e) {
     assert.equal(e.data.frames[0].key, 'TXXX', 'frame key is TXXX');
     assert.equal(e.data.frames[0].description, 'get done', 'parsed the description');
     assert.deepEqual(JSON.parse(e.data.frames[0].data), { key: 'value' }, 'parsed the data');
+    worker.terminate();
     done();
   });
 
@@ -536,7 +536,6 @@ QUnit.test('can parse TXXX frames in web worker', function(assert) {
                                 [0x00, 0x00]))
   });
 });
-*/
 
 QUnit.test('triggers special event after parsing a timestamp ID3 tag', function(assert) {
   var
