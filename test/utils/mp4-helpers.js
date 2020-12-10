@@ -144,7 +144,7 @@ module.exports.sampleMoov =
                       box('stsd',
                           0x01, // version 1
                           0x00, 0x00, 0x00, // flags
-                          0x00, 0x00, 0x00, 0x00, // entry_count
+                          0x00, 0x00, 0x00, 0x01, // entry_count
                           box('avc1',
                             0x00, 0x00, 0x00, 0x00, // box content
                             0x00, 0x00, 0x00, 0x00, // box content
@@ -243,7 +243,7 @@ module.exports.sampleMoov =
                       box('stsd',
                           0x01, // version 1
                           0x00, 0x00, 0x00, // flags
-                          0x00, 0x00, 0x00, 0x00, // entry_count
+                          0x00, 0x00, 0x00, 0x01, // entry_count
                           box('mp4a',
                             0x00, 0x00, 0x00, 0x00, // box content
                             0x00, 0x00, 0x00, 0x00, // box content

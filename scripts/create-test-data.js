@@ -18,7 +18,7 @@ const buildSegmentString = function() {
   });
 
   let segmentsFile =
-    `import base64ToUint8Array from '${path.join(baseDir, 'test', 'base64-to-uint8-array.js')}';\n` +
+    'import base64ToUint8Array from "@videojs/vhs-utils/es/decode-b64-to-uint8-array.js";\n' +
     'const segments = {\n';
 
   Object.keys(segmentData).forEach((key) => {
