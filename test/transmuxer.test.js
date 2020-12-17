@@ -1,6 +1,6 @@
 'use strict';
 
-var segments = require('create-test-data!segments');
+var segments = require('data-files!segments');
 
 var mp2t = require('../lib/m2ts'),
     codecs = require('../lib/codecs'),

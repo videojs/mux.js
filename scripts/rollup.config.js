@@ -1,5 +1,5 @@
 const generate = require('videojs-generate-rollup-config');
-const createTestData = require('./create-test-data.js');
+const dataFiles = require('rollup-plugin-data-files');
 const worker = require('rollup-plugin-worker-factory');
 
 // see https://github.com/videojs/videojs-generate-rollup-config
@@ -8,7 +8,9 @@ const worker = require('rollup-plugin-worker-factory');
 const shared = {
   primedPlugins(defaults) {
     defaults = Object.assign(defaults, {
-      createTestData: createTestData()
+      dataFiles: dataFiles({
+        segments: {include: 'test/segments/**'}
+      })
     });
 
     defaults.worker = worker({plugins: [
@@ -24,7 +26,7 @@ const shared = {
     defaults.module.splice(2, 0, 'worker');
     defaults.browser.splice(2, 0, 'worker');
     defaults.test.splice(3, 0, 'worker');
-    defaults.test.splice(0, 0, 'createTestData');
+    defaults.test.splice(0, 0, 'dataFiles');
 
     // istanbul is only in the list for regular builds and not watch
     if (defaults.test.indexOf('istanbul') !== -1) {

@@ -1,6 +1,6 @@
 'use strict';
 
-var segments = require('create-test-data!segments');
+var segments = require('data-files!segments');
 
 var probe = require('../lib/mp4/probe');
 var CaptionParser = require('../lib/mp4').CaptionParser;
