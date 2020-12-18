@@ -75,6 +75,7 @@
     "dist/",
     "docs/",
     "es/",
+    "lib/",
     "index.html",
     "scripts/",
     "src/",
