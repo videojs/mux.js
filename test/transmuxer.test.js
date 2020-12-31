@@ -11,7 +11,7 @@ var mp2t = require('../lib/m2ts'),
     mp4Transmuxer = require('../lib/mp4/transmuxer'),
     mp4AudioProperties = mp4Transmuxer.AUDIO_PROPERTIES,
     mp4VideoProperties = mp4Transmuxer.VIDEO_PROPERTIES,
-    generateVideoSegmentTimingInfo = mp4Transmuxer.generateVideoSegmentTimingInfo,
+    generateSegmentTimingInfo = mp4Transmuxer.generateSegmentTimingInfo,
     clock = require('../lib/utils/clock'),
     utils = require('./utils'),
     TransportPacketStream = mp2t.TransportPacketStream,
@@ -2532,7 +2532,7 @@ QUnit.test('alignGopsAtEnd_ filters gops appropriately', function(assert) {
     'match with an alignment candidate');
 });
 
-QUnit.test('generateVideoSegmentTimingInfo generates correct timing info object', function(assert) {
+QUnit.test('generateSegmentTimingInfo generates correct timing info object', function(assert) {
   var
     firstFrame = {
       dts: 12,
@@ -2548,7 +2548,7 @@ QUnit.test('generateVideoSegmentTimingInfo generates correct timing info object'
     prependedContentDuration = 0;
 
   assert.deepEqual(
-    generateVideoSegmentTimingInfo(
+    generateSegmentTimingInfo(
       baseMediaDecodeTime,
       firstFrame.dts,
       firstFrame.pts,
@@ -2573,7 +2573,7 @@ QUnit.test('generateVideoSegmentTimingInfo generates correct timing info object'
     }, 'generated correct timing info object');
 });
 
-QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', function(assert) {
+QUnit.test('generateSegmentTimingInfo accounts for prepended GOPs', function(assert) {
   var
     firstFrame = {
       dts: 12,
@@ -2589,7 +2589,7 @@ QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', functio
     prependedContentDuration = 7;
 
   assert.deepEqual(
-    generateVideoSegmentTimingInfo(
+    generateSegmentTimingInfo(
       baseMediaDecodeTime,
       firstFrame.dts,
       firstFrame.pts,
@@ -2615,7 +2615,7 @@ QUnit.test('generateVideoSegmentTimingInfo accounts for prepended GOPs', functio
     'included prepended content duration in timing info');
 });
 
-QUnit.test('generateVideoSegmentTimingInfo handles GOPS where pts is < dts', function(assert) {
+QUnit.test('generateSegmentTimingInfo handles GOPS where pts is < dts', function(assert) {
   var
     firstFrame = {
       dts: 14,
@@ -2631,7 +2631,7 @@ QUnit.test('generateVideoSegmentTimingInfo handles GOPS where pts is < dts', fun
     prependedContentDuration = 7;
 
   assert.deepEqual(
-    generateVideoSegmentTimingInfo(
+    generateSegmentTimingInfo(
       baseMediaDecodeTime,
       firstFrame.dts,
       firstFrame.pts,
@@ -3220,6 +3220,60 @@ QUnit.test('audio track metadata takes on the value of the last metadata seen', 
   assert.equal(events[0].track.samplerate, 10000, 'kept the later samplerate');
   assert.equal(events[0].track.channelcount, 4, 'kept the later channelcount');
 });
+
+QUnit.test('audio segment stream triggers segmentTimingInfo with timing info',
+function(assert) {
+  var
+    events = [],
+    samplerate = 48000,
+    baseMediaDecodeTimeInVideoClock = 30,
+    audioFrameDurationInVideoClock = 90000 * 1024 / samplerate,
+    firstFrame = {
+      channelcount: 2,
+      samplerate: samplerate,
+      pts: 112,
+      dts: 111,
+      data: new Uint8Array([0])
+    },
+    secondFrame = {
+      channelcount: 2,
+      samplerate: samplerate,
+      pts: firstFrame.pts + audioFrameDurationInVideoClock,
+      dts: firstFrame.dts + audioFrameDurationInVideoClock,
+      data: new Uint8Array([1])
+    };
+
+  audioSegmentStream.on('segmentTimingInfo', function(event) {
+    events.push(event);
+  });
+  audioSegmentStream.track.timelineStartInfo.baseMediaDecodeTime =
+    baseMediaDecodeTimeInVideoClock;
+
+  audioSegmentStream.push(firstFrame);
+  audioSegmentStream.push(secondFrame);
+  audioSegmentStream.flush();
+
+  assert.equal(events.length, 1, 'a segmentTimingInfo event was fired');
+  assert.deepEqual(
+    events[0],
+    {
+      start: {
+        dts: baseMediaDecodeTimeInVideoClock,
+        pts: baseMediaDecodeTimeInVideoClock + (firstFrame.pts - firstFrame.dts)
+      },
+      end: {
+        dts: baseMediaDecodeTimeInVideoClock + (secondFrame.dts - firstFrame.dts) +
+          audioFrameDurationInVideoClock,
+        pts: baseMediaDecodeTimeInVideoClock + (secondFrame.pts - firstFrame.pts) +
+          audioFrameDurationInVideoClock
+      },
+      prependedContentDuration: 0,
+      baseMediaDecodeTime: baseMediaDecodeTimeInVideoClock
+    },
+    'has correct segmentTimingInfo'
+  );
+});
+
 
 QUnit.module('Transmuxer - options');
 
