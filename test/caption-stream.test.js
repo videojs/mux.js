@@ -1,5 +1,7 @@
 'use strict';
 
+var segments = require('create-test-data!segments');
+
 var
   captionStream,
   m2ts = require('../lib/m2ts'),
@@ -11,10 +13,10 @@ var
   characters = seiNalUnitGenerator.characters,
   packetHeader708 = seiNalUnitGenerator.packetHeader708,
   displayWindows708 = seiNalUnitGenerator.displayWindows708,
-  sintelCaptions = require('./utils/sintel-captions'),
-  mixed608708Captions = require('./utils/mixed-608-708-captions'),
-  multiChannel608Captions = require('./utils/multi-channel-608-captions'),
-  cc708PinkUnderscore = require('./utils/cc708-pink-underscore');
+  cc708PinkUnderscore = require('./utils/cc708-pink-underscore'),
+  sintelCaptions = segments['sintel-captions.ts'](),
+  mixed608708Captions = require('./utils/mixed-608-708-captions.js'),
+  multiChannel608Captions = segments['multi-channel-608-captions.ts']();
 
 QUnit.module('Caption Stream', {
   beforeEach: function() {
@@ -2606,10 +2608,10 @@ QUnit.test('mix of all modes (extract from CNN)', function(assert) {
 
 QUnit.test('Cea608Stream will log errors, not throw an exception', function(assert) {
   var result;
-  var originalConsole = window.console.error;
+  var originalConsole = console.error;
   var logs = [];
 
-  window.console.error = function(msg) {
+  console.error = function(msg) {
     logs.push(msg);
   };
 
@@ -2635,7 +2637,7 @@ QUnit.test('Cea608Stream will log errors, not throw an exception', function(asse
     'warnings were logged to the console'
   );
 
-  window.console.error = originalConsole;
+  console.error = originalConsole;
 });
 
 var cea708Stream;

@@ -1,9 +1,11 @@
 'use strict';
 
+var segments = require('create-test-data!segments');
+
 var
   QUnit = require('qunit'),
   utils = require('../lib/aac/utils.js'),
-  testSegment = require('./utils/test-aac-segment.js');
+  testSegment = segments['test-aac-segment.aac']();
 
 var id3TagOffset = 0;
 var audioFrameOffset = 73;

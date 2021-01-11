@@ -1,13 +1,15 @@
 'use strict';
 
+var segments = require('create-test-data!segments');
+
 var probe = require('../lib/mp4/probe');
 var CaptionParser = require('../lib/mp4').CaptionParser;
 var captionParser;
 
-var dashInit = require('./utils/dash-608-captions-init.mp4');
+var dashInit = segments['dash-608-captions-init.mp4']();
 // This file includes 2 segments data to force a flush
 // of the first caption. The second caption is at 200s
-var dashSegment = require('./utils/dash-608-captions-seg.m4s');
+var dashSegment = segments['dash-608-captions-seg.m4s']();
 
 var mp4Helpers = require('./utils/mp4-helpers');
 var box = mp4Helpers.box;

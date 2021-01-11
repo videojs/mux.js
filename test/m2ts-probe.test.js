@@ -1,10 +1,12 @@
 'use strict';
 
+var segments = require('create-test-data!segments');
+
 var
   QUnit = require('qunit'),
   probe = require('../lib/m2ts/probe.js'),
-  testSegment = require('./utils/test-segment.js'),
-  stuffedPesPacket = require('./utils/test-stuffed-pes.js');
+  testSegment = segments['test-segment.ts'](),
+  stuffedPesPacket = segments['test-stuffed-pes.ts']();
 
 /**
  * All subarray indices verified with the use of thumbcoil.
