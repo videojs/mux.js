@@ -883,7 +883,7 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
   assert.equal(captions[1].stream, 'CC4', 'caption went to right channel');
 });
 
-QUnit.test('ignores CEA708 captions', function(assert) {
+QUnit.test("don't mess up 608 captions when 708 are present", function(assert) {
   var captions = [];
   captionStream.ccStreams_.forEach(function(cc) {
     cc.on('data', function(caption) {
