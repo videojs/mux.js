@@ -902,6 +902,48 @@ QUnit.test("don't mess up 608 captions when 708 are present", function(assert) {
   assert.equal(captions[2].text, 'WE TRY NOT TO PUT AN ANIMAL DOWN\nIF WE DON\'T HAVE TO.', 'parsed third caption correctly');
 });
 
+QUnit.test("both 608 and 708 captions are available by default", function(assert) {
+  var cc608 = [];
+  var cc708 = [];
+  captionStream.on('data', function(caption) {
+    if (caption.stream === 'CC1') {
+      cc608.push(caption);
+    } else {
+      cc708.push(caption);
+    }
+  });
+
+  var seiNals = mixed608708Captions.map(makeSeiFromCaptionPacket);
+  seiNals.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  assert.equal(cc608.length, 3, 'parsed three 608 cues');
+  assert.equal(cc708.length, 3, 'parsed three 708 cues');
+});
+
+QUnit.test("708 parsing can be turned off", function(assert) {
+  captionStream.reset();
+  captionStream = new m2ts.CaptionStream({
+    parse708captions: false
+  });
+  var cc608 = [];
+  var cc708 = [];
+  captionStream.on('data', function(caption) {
+    if (caption.stream === 'CC1') {
+      cc608.push(caption);
+    } else {
+      cc708.push(caption);
+    }
+  });
+
+  var seiNals = mixed608708Captions.map(makeSeiFromCaptionPacket);
+  seiNals.forEach(captionStream.push, captionStream);
+  captionStream.flush();
+
+  assert.equal(cc608.length, 3, 'parsed three 608 cues');
+  assert.equal(cc708.length, 0, 'did not parse any 708 cues');
+});
+
 QUnit.test('ignores XDS and Text packets', function(assert) {
   var captions = [];
 
