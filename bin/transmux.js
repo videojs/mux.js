@@ -6,6 +6,7 @@ const path = require('path');
 const {Transmuxer} = require('../lib/mp4');
 const {version} = require('../package.json');
 const {concatTypedArrays} = require('@videojs/vhs-utils/cjs/byte-helpers');
+const {ONE_SECOND_IN_TS} = require('../lib/utils/clock.js');
 
 const showHelp = function() {
   console.log(`
@@ -98,7 +99,7 @@ const cli = function(stdin) {
     // Setting the BMDT to ensure that captions and id3 tags are not
     // time-shifted by this value when they are output and instead are
     // zero-based
-    transmuxer.setBaseMediaDecodeTime(100000);
+    transmuxer.setBaseMediaDecodeTime(ONE_SECOND_IN_TS);
 
     transmuxer.on('data', function(data) {
       if (data.initSegment) {
