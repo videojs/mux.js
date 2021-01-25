@@ -1,5 +1,5 @@
 'use strict';
-var segments = require('create-test-data!segments');
+var segments = require('data-files!segments');
 
 var
   QUnit = require('qunit'),
