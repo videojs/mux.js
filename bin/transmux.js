@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const {Transmuxer} = require('../lib/mp4');
 const {version} = require('../package.json');
-const {concatTypedArrays, bytesToString} = require('@videojs/vhs-utils/cjs/byte-helpers');
+const {concatTypedArrays} = require('@videojs/vhs-utils/cjs/byte-helpers');
 
 const showHelp = function() {
   console.log(`
@@ -55,7 +55,7 @@ const cli = function(stdin) {
 
   // if stdin was provided
   if (stdin && options.file) {
-    console.error(`You cannot pass in a file ${options.file} and pipe from stdin!`);
+    console.error(`You cannot pass in a file ${options.file} and pipe from stdin, see --help!`);
     process.exit(1);
   }
 
@@ -66,7 +66,7 @@ const cli = function(stdin) {
   }
 
   if (!inputStream) {
-    console.error('A file must be passed in as an argument or via pipeing to this script!');
+    console.error('A file must be passed in as an argument or via pipeing to this script, see --help!');
     process.exit(1);
   }
 
