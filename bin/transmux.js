@@ -55,18 +55,18 @@ const cli = function(stdin) {
 
   // if stdin was provided
   if (stdin && options.file) {
-    console.error(`You cannot pass in a file ${options.file} and pipe from stdin, see --help!`);
+    console.error(`You cannot pass in a file ${options.file} and pipe from stdin!`);
     process.exit(1);
   }
 
   if (stdin) {
     inputStream = process.stdin;
-  } else {
+  } else if (options.file) {
     inputStream = fs.createReadStream(path.resolve(options.file));
   }
 
   if (!inputStream) {
-    console.error('A file must be passed in as an argument or via pipeing to this script, see --help!');
+    console.error('A file or stdin must be passed in as an argument or via pipeing to this script!');
     process.exit(1);
   }
 
