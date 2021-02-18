@@ -111,7 +111,7 @@ module.exports.sampleMoov =
               0x00, 0x96, 0x00, 0x00), // 150 in 16.16 fixed-point
           box('edts',
               box('elst',
-                0x00, // version 1
+                0x00, // version
                 0x00, 0x00, 0x00, // flags
                 0x00, 0x00, 0x00, 0x01, // entry_count
                 0x00, 0x00, 0x00, 0x00, // segment_duration
