@@ -215,7 +215,7 @@ QUnit.test('can parse a moov', function(assert) {
   var result = QUnit.dump.parse(mp4.tools.inspect(new Uint8Array(data)));
   var expected = QUnit.dump.parse([{
     type: 'moov',
-    size: 981,
+    size: 1017,
     boxes: [{
       type: 'mvhd',
       version: 1,
@@ -231,7 +231,7 @@ QUnit.test('can parse a moov', function(assert) {
       nextTrackId: 2
     }, {
       type: 'trak',
-      size: 439,
+      size: 475,
       boxes: [{
         type: 'tkhd',
         flags: new Uint8Array([0, 0, 0]),
@@ -247,6 +247,20 @@ QUnit.test('can parse a moov', function(assert) {
         matrix: new Uint32Array(unityMatrix),
         width: 300,
         height: 150
+      }, {
+        type: 'edts',
+        size: 36,
+        boxes: [{
+          type: 'elst',
+          size: 28,
+          version: 0,
+          flags: new Uint8Array([0, 0, 0]),
+          entries: [{
+            segmentDuration: 0,
+            mediaTime: 1024,
+            mediaRate: 1
+          }]
+        }]
       }, {
         type: 'mdia',
         size: 327,
