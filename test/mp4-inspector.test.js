@@ -255,7 +255,7 @@ QUnit.test('can parse a moov', function(assert) {
           size: 28,
           version: 0,
           flags: new Uint8Array([0, 0, 0]),
-          entries: [{
+          edits: [{
             segmentDuration: 0,
             mediaTime: 1024,
             mediaRate: 1
