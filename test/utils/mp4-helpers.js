@@ -116,7 +116,7 @@ module.exports.sampleMoov =
                 0x00, 0x00, 0x00, 0x01, // entry_count
                 0x00, 0x00, 0x00, 0x00, // segment_duration
                 0x00, 0x00, 0x04, 0x00, // media_time
-                0x00, 0x01, 0x00, 0x00)), // media_rate
+                0x00, 0x01, 0x80, 0x00)), // media_rate
           box('mdia',
               box('mdhd',
                   0x01, // version 1

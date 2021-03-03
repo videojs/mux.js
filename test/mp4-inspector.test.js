@@ -258,7 +258,7 @@ QUnit.test('can parse a moov', function(assert) {
           edits: [{
             segmentDuration: 0,
             mediaTime: 1024,
-            mediaRate: 1
+            mediaRate: 1.5
           }]
         }]
       }, {
