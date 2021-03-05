@@ -1,3 +1,15 @@
+<a name="5.10.0"></a>
+# [5.10.0](https://github.com/videojs/mux.js/compare/v5.9.2...v5.10.0) (2021-03-05)
+
+### Features
+
+* parse edts boxes ([#375](https://github.com/videojs/mux.js/issues/375)) ([989bffd](https://github.com/videojs/mux.js/commit/989bffd))
+
+### Bug Fixes
+
+* Check if baseTimestamp is NaN ([#370](https://github.com/videojs/mux.js/issues/370)) ([b4e61dd](https://github.com/videojs/mux.js/commit/b4e61dd))
+* only parse PES packets as PES packets ([#378](https://github.com/videojs/mux.js/issues/378)) ([bb984db](https://github.com/videojs/mux.js/commit/bb984db))
+
 <a name="5.9.2"></a>
 ## [5.9.2](https://github.com/videojs/mux.js/compare/v5.9.1...v5.9.2) (2021-02-24)
 
