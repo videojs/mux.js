@@ -419,6 +419,40 @@ QUnit.test('aggregates program stream packets from the transport stream', functi
   assert.equal(events[0].data.byteLength, packetData.length, 'concatenated transport packets');
 });
 
+QUnit.test('aggregates program stream packets from the transport stream with no header data', function(assert) {
+  var events = []
+
+  elementaryStream.on('data', function(event) {
+    events.push(event);
+  });
+
+  elementaryStream.push({
+    type: 'pes',
+    streamType: H264_STREAM_TYPE,
+    data: new Uint8Array([0x1, 0x2, 0x3])
+  });
+
+  assert.equal(events.length, 0, 'buffers partial packets');
+
+  elementaryStream.push({
+    type: 'pes',
+    streamType: H264_STREAM_TYPE,
+    payloadUnitStartIndicator: true,
+    data: new Uint8Array([0x4, 0x5, 0x6])
+  });
+
+  elementaryStream.push({
+    type: 'pes',
+    streamType: H264_STREAM_TYPE,
+    data: new Uint8Array([0x7, 0x8, 0x9])
+  });
+  elementaryStream.flush();
+
+  assert.equal(events.length, 1, 'built one packet');
+  assert.equal(events[0].type, 'video', 'identified video data');
+  assert.equal(events[0].data.byteLength, 0, 'empty packet');
+});
+
 QUnit.test('parses an elementary stream packet with just a pts', function(assert) {
   var packet;
   elementaryStream.on('data', function(data) {
