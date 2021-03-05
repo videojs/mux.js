@@ -109,6 +109,14 @@ module.exports.sampleMoov =
               unityMatrix,
               0x01, 0x2c, 0x00, 0x00, // 300 in 16.16 fixed-point
               0x00, 0x96, 0x00, 0x00), // 150 in 16.16 fixed-point
+          box('edts',
+              box('elst',
+                0x00, // version
+                0x00, 0x00, 0x00, // flags
+                0x00, 0x00, 0x00, 0x01, // entry_count
+                0x00, 0x00, 0x00, 0x00, // segment_duration
+                0x00, 0x00, 0x04, 0x00, // media_time
+                0x00, 0x01, 0x80, 0x00)), // media_rate
           box('mdia',
               box('mdhd',
                   0x01, // version 1
@@ -208,6 +216,14 @@ module.exports.sampleMoov =
               unityMatrix,
               0x01, 0x2c, 0x00, 0x00, // 300 in 16.16 fixed-point
               0x00, 0x96, 0x00, 0x00), // 150 in 16.16 fixed-point
+          box('edts',
+              box('elst',
+                  0x01, // version
+                  0x00, 0x00, 0x00, // flags
+                  0x00, 0x00, 0x00, 0x01, // entry_count
+                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // segment_duration
+                  0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // media_time
+                  0x00, 0x01, 0x80, 0x00)), // media_rate
           box('mdia',
               box('mdhd',
                   0x01, // version 1
