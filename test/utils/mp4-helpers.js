@@ -194,7 +194,15 @@ module.exports.sampleMoov =
                           0x01, // version 1
                           0x00, 0x00, 0x00, // flags
                           0x00, 0x00, 0x00, 0x01, // entry_count
-                          0x00, 0x00, 0x00, 0x01))))), // chunk_offset
+                          0x00, 0x00, 0x00, 0x01), // chunk_offset
+                      box('ctts',
+                          0x00, // version 0
+                          0x00, 0x00, 0x00, // flags
+                          0x00, 0x00, 0x00, 0x02, // entry_count
+                          0x00, 0x00, 0x00, 0x01, // sample_count
+                          0x00, 0x00, 0x00, 0x01, // sample_offset
+                          0x00, 0x00, 0x00, 0x01, // sample_count,
+                          0xff, 0xff, 0xff, 0xff))))), // sample_offset
       box('trak',
           box('tkhd',
               0x01, // version 1
