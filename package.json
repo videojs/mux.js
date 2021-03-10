@@ -1,6 +1,6 @@
 {
   "name": "mux.js",
-  "version": "5.9.1",
+  "version": "5.10.0",
   "description": "A collection of lightweight utilities for inspecting and manipulating video container formats.",
   "repository": {
     "type": "git",
@@ -9,6 +9,9 @@
   "main": "./cjs/index.js",
   "module": "es/index.js",
   "browser": "dist/mux.js",
+  "bin": {
+    "muxjs-transmux": "bin/transmux.js"
+  },
   "generator-videojs-plugin": {
     "version": "7.7.3"
   },
@@ -70,6 +73,7 @@
     ]
   },
   "files": [
+    "bin/",
     "CONTRIBUTING.md",
     "cjs/",
     "dist/",
@@ -97,6 +101,7 @@
     "@babel/cli": "^7.11.6",
     "@videojs/babel-config": "^0.2.0",
     "@videojs/generator-helpers": "~2.0.1",
+    "@videojs/vhs-utils": "^3.0.0",
     "global": "^4.4.0",
     "karma": "^5.0.0",
     "rollup": "^2.37.1",
@@ -105,7 +110,7 @@
     "sinon": "^8.1.1",
     "videojs-generate-karma-config": "~7.1.0",
     "videojs-generate-rollup-config": "~6.2.0",
-    "videojs-generator-verify": "~3.0.1",
+    "videojs-generator-verify": "~3.0.2",
     "videojs-standard": "^8.0.4"
   }
 }
