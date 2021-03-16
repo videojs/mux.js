@@ -215,7 +215,7 @@ QUnit.test('can parse a moov', function(assert) {
   var result = QUnit.dump.parse(mp4.tools.inspect(new Uint8Array(data)));
   var expected = QUnit.dump.parse([{
     type: 'moov',
-    size: 1109,
+    size: 1129,
     boxes: [{
       type: 'mvhd',
       version: 1,
