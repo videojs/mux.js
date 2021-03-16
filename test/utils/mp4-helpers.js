@@ -302,6 +302,12 @@ module.exports.sampleMoov =
                           0x00, 0x00, 0x00, 0x02, // first_chunk
                           0x00, 0x00, 0x00, 0x03, // samples_per_chunk
                           0x00, 0x00, 0x00, 0x01), // sample_description_index
+                      box('ctts',
+                          0x01, // version 1
+                          0x00, 0x00, 0x00, // flags
+                          0x00, 0x00, 0x00, 0x01, // entry_count
+                          0x00, 0x00, 0x00, 0x01, // sample_count
+                          0xff, 0xff, 0xff, 0xff), // sample_offset
                       box('stco',
                           0x01, // version 1
                           0x00, 0x00, 0x00, // flags
