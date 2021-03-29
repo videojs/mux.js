@@ -195,6 +195,11 @@ module.exports.sampleMoov =
                           0x00, 0x00, 0x00, // flags
                           0x00, 0x00, 0x00, 0x01, // entry_count
                           0x00, 0x00, 0x00, 0x01), // chunk_offset
+                      box('stss',
+                          0x00, // version 0
+                          0x00, 0x00, 0x00, // flags
+                          0x00, 0x00, 0x00, 0x01, // entry_count
+                          0x00, 0x00, 0x00, 0x01), // sync_sample
                       box('ctts',
                           0x00, // version 0
                           0x00, 0x00, 0x00, // flags
