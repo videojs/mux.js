@@ -1,3 +1,11 @@
+<a name="5.11.0"></a>
+# [5.11.0](https://github.com/videojs/mux.js/compare/v5.10.0...v5.11.0) (2021-03-29)
+
+### Features
+
+* parse ctts atom in mp4 inspector ([#379](https://github.com/videojs/mux.js/issues/379)) ([b75a7a4](https://github.com/videojs/mux.js/commit/b75a7a4))
+* stss atom parsing ([#380](https://github.com/videojs/mux.js/issues/380)) ([305eb4f](https://github.com/videojs/mux.js/commit/305eb4f))
+
 <a name="5.10.0"></a>
 # [5.10.0](https://github.com/videojs/mux.js/compare/v5.9.2...v5.10.0) (2021-03-05)
 
