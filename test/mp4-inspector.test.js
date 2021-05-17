@@ -26,7 +26,7 @@ var
   typeBytes = mp4Helpers.typeBytes,
   box = mp4Helpers.box,
   unityMatrix = mp4Helpers.unityMatrix,
-  BigInt = globalThis.BigInt || Number,
+  BigInt = global.BigInt || Number,
 
   mvhd0 = box('mvhd',
              0x00, // version 0
