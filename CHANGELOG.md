@@ -1,3 +1,10 @@
+<a name="5.11.1"></a>
+## [5.11.1](https://github.com/videojs/mux.js/compare/v5.11.0...v5.11.1) (2021-06-22)
+
+### Bug Fixes
+
+* inspect all program map tables for stream types ([#386](https://github.com/videojs/mux.js/issues/386)) ([bac4da9](https://github.com/videojs/mux.js/commit/bac4da9))
+
 <a name="5.11.0"></a>
 # [5.11.0](https://github.com/videojs/mux.js/compare/v5.10.0...v5.11.0) (2021-03-29)
 
