@@ -1,3 +1,10 @@
+<a name="5.11.2"></a>
+## [5.11.2](https://github.com/videojs/mux.js/compare/v5.11.1...v5.11.2) (2021-06-24)
+
+### Bug Fixes
+
+* on flush if a pmt has not been emitted and we have one, emit it ([#388](https://github.com/videojs/mux.js/issues/388)) ([67b4aab](https://github.com/videojs/mux.js/commit/67b4aab))
+
 <a name="5.11.1"></a>
 ## [5.11.1](https://github.com/videojs/mux.js/compare/v5.11.0...v5.11.1) (2021-06-22)
 
