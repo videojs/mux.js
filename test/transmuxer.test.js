@@ -2729,6 +2729,57 @@ QUnit.test('generates AAC frame events from ADTS bytes', function(assert) {
   assert.equal(frames[0].samplesize, 16, 'parsed samplesize');
 });
 
+QUnit.test('skips garbage data between sync words', function(assert) {
+  var frames = [];
+  adtsStream.on('data', function(frame) {
+    frames.push(frame);
+  });
+
+  var frameHeader = [
+    0xff, 0xf1,       // no CRC
+    0x10,             // AAC Main, 44.1KHz
+    0xbc, 0x01, 0x20, // 2 channels, frame length 9 including header
+    0x00,             // one AAC per ADTS frame
+  ];
+  adtsStream.push({
+    type: 'audio',
+    data: new Uint8Array(
+      []
+      // garbage
+      .concat([0x00, 0x00, 0x00])
+      // frame
+      .concat(frameHeader)
+      .concat([0x00, 0x01])
+      // garbage
+      .concat([0x00, 0x00, 0x00, 0x00, 0x00])
+      .concat(frameHeader)
+      .concat([0x00, 0x02])
+      // garbage
+      .concat([0x00, 0x00, 0x00, 0x00])
+      .concat(frameHeader)
+      .concat([0x00, 0x03])
+      .concat([0x00, 0x00, 0x00, 0x00])
+    )
+  });
+
+  assert.equal(frames.length, 3, 'generated three frames');
+  frames.forEach(function(frame, i) {
+    assert.deepEqual(
+      new Uint8Array(frame.data),
+      new Uint8Array([0x00, i + 1]),
+      'extracted AAC frame'
+    );
+
+    assert.equal(frame.channelcount, 2, 'parsed channelcount');
+    assert.equal(frame.samplerate, 44100, 'parsed samplerate');
+
+    // Chrome only supports 8, 16, and 32 bit sample sizes. Assuming the
+    // default value of 16 in ISO/IEC 14496-12 AudioSampleEntry is
+    // acceptable.
+    assert.equal(frame.samplesize, 16, 'parsed samplesize');
+  });
+});
+
 QUnit.test('parses across packets', function(assert) {
   var frames = [];
   adtsStream.on('data', function(frame) {
