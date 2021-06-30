@@ -1,3 +1,10 @@
+<a name="5.11.3"></a>
+## [5.11.3](https://github.com/videojs/mux.js/compare/v5.11.2...v5.11.3) (2021-06-30)
+
+### Bug Fixes
+
+* Prevent skipping frames when we have garbage data between adts sync words ([#390](https://github.com/videojs/mux.js/issues/390)) ([71bac64](https://github.com/videojs/mux.js/commit/71bac64))
+
 <a name="5.11.2"></a>
 ## [5.11.2](https://github.com/videojs/mux.js/compare/v5.11.1...v5.11.2) (2021-06-24)
 
