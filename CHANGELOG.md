@@ -1,3 +1,10 @@
+<a name="5.12.0"></a>
+# [5.12.0](https://github.com/videojs/mux.js/compare/v5.11.3...v5.12.0) (2021-07-02)
+
+### Features
+
+* add general error/warn/debug log events and log skipped adts data ([#391](https://github.com/videojs/mux.js/issues/391)) ([6588d48](https://github.com/videojs/mux.js/commit/6588d48))
+
 <a name="5.11.3"></a>
 ## [5.11.3](https://github.com/videojs/mux.js/compare/v5.11.2...v5.11.3) (2021-06-30)
 
