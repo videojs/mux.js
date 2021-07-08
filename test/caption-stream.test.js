@@ -2648,14 +2648,13 @@ QUnit.test('mix of all modes (extract from CNN)', function(assert) {
 
 });
 
-QUnit.test('Cea608Stream will log errors, not throw an exception', function(assert) {
+QUnit.test('Cea608Stream will trigger log on malformed captions', function(assert) {
   var result;
-  var originalConsole = console.error;
   var logs = [];
 
-  console.error = function(msg) {
-    logs.push(msg);
-  };
+  cea608Stream.on('log', function(log) {
+    logs.push(log);
+  })
 
   // this will force an exception to happen in flushDisplayed
   cea608Stream.displayed_[0] = undefined;
@@ -2674,12 +2673,10 @@ QUnit.test('Cea608Stream will log errors, not throw an exception', function(asse
   assert.deepEqual(
     logs,
     [
-      'Skipping malformed caption.'
+      {level: 'warn', message: 'Skipping a malformed 608 caption at index 0.'}
     ],
-    'warnings were logged to the console'
+    'logs were triggered'
   );
-
-  console.error = originalConsole;
 });
 
 var cea708Stream;

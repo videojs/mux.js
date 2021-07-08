@@ -2731,8 +2731,13 @@ QUnit.test('generates AAC frame events from ADTS bytes', function(assert) {
 
 QUnit.test('skips garbage data between sync words', function(assert) {
   var frames = [];
+  var logs = [];
   adtsStream.on('data', function(frame) {
     frames.push(frame);
+  });
+
+  adtsStream.on('log', function(log) {
+    logs.push(log);
   });
 
   var frameHeader = [
@@ -2778,6 +2783,11 @@ QUnit.test('skips garbage data between sync words', function(assert) {
     // acceptable.
     assert.equal(frame.samplesize, 16, 'parsed samplesize');
   });
+  assert.deepEqual(logs, [
+    {level: 'warn', message: 'adts skiping bytes 0 to 3 in frame 0 outside syncword'},
+    {level: 'warn', message: 'adts skiping bytes 12 to 17 in frame 1 outside syncword'},
+    {level: 'warn', message: 'adts skiping bytes 26 to 30 in frame 2 outside syncword'}
+  ], 'logged skipped data');
 });
 
 QUnit.test('parses across packets', function(assert) {

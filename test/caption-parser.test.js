@@ -10,6 +10,8 @@ var dashInit = segments['dash-608-captions-init.mp4']();
 // This file includes 2 segments data to force a flush
 // of the first caption. The second caption is at 200s
 var dashSegment = segments['dash-608-captions-seg.m4s']();
+var malformedSei = segments['malformed-sei.m4s']();
+var malformedSeiInit = segments['malformed-sei-init.mp4']();
 
 var mp4Helpers = require('./utils/mp4-helpers');
 var box = mp4Helpers.box;
@@ -118,6 +120,27 @@ QUnit.test('parseTrackId for version 0 and version 1 boxes', function(assert) {
     'stream is CC4');
   assert.ok(!v1Captions.captionStreams.CC1,
     'stream is not CC1');
+});
+
+QUnit.test('triggers log on invalid sei', function(assert) {
+  var trackIds;
+  var timescales;
+  var cc;
+  var logs = [];
+
+  trackIds = probe.videoTrackIds(malformedSeiInit);
+  timescales = probe.timescale(malformedSeiInit);
+
+  captionParser.on('log', function(log) {
+    logs.push(log);
+  });
+
+  cc = captionParser.parse(malformedSei, trackIds, timescales);
+  assert.equal(cc.captions.length, 0);
+
+  assert.deepEqual(logs, [
+    {level: 'warn', message: 'We\'ve encountered a nal unit without data. See mux.js#223.'}
+  ], 'logged invalid sei nal');
 });
 
 // ---------
