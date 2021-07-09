@@ -1,6 +1,6 @@
 {
   "name": "mux.js",
-  "version": "5.12.0",
+  "version": "5.12.1",
   "description": "A collection of lightweight utilities for inspecting and manipulating video container formats.",
   "repository": {
     "type": "git",

@@ -1,3 +1,10 @@
+<a name="5.12.1"></a>
+## [5.12.1](https://github.com/videojs/mux.js/compare/v5.12.0...v5.12.1) (2021-07-09)
+
+### Code Refactoring
+
+* rename warn event to log, change console logs to log events ([#392](https://github.com/videojs/mux.js/issues/392)) ([4995603](https://github.com/videojs/mux.js/commit/4995603))
+
 <a name="5.12.0"></a>
 # [5.12.0](https://github.com/videojs/mux.js/compare/v5.11.3...v5.12.0) (2021-07-02)
 
