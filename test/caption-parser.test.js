@@ -122,24 +122,19 @@ QUnit.test('parseTrackId for version 0 and version 1 boxes', function(assert) {
     'stream is not CC1');
 });
 
-QUnit.test('triggers log on invalid sei', function(assert) {
+QUnit.test('returns log on invalid sei nal parse', function(assert) {
   var trackIds;
   var timescales;
-  var cc;
+  var result;
   var logs = [];
 
   trackIds = probe.videoTrackIds(malformedSeiInit);
   timescales = probe.timescale(malformedSeiInit);
 
-  captionParser.on('log', function(log) {
-    logs.push(log);
-  });
+  result = captionParser.parse(malformedSei, trackIds, timescales);
 
-  cc = captionParser.parse(malformedSei, trackIds, timescales);
-  assert.equal(cc.captions.length, 0);
-
-  assert.deepEqual(logs, [
-    {level: 'warn', message: 'We\'ve encountered a nal unit without data. See mux.js#223.'}
+  assert.deepEqual(result.logs, [
+    {level: 'warn', message: 'We\'ve encountered a nal unit without data at 189975 for trackId 1. See mux.js#223.'}
   ], 'logged invalid sei nal');
 });
 
