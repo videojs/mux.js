@@ -2731,8 +2731,13 @@ QUnit.test('generates AAC frame events from ADTS bytes', function(assert) {
 
 QUnit.test('skips garbage data between sync words', function(assert) {
   var frames = [];
+  var logs = [];
   adtsStream.on('data', function(frame) {
     frames.push(frame);
+  });
+
+  adtsStream.on('log', function(log) {
+    logs.push(log);
   });
 
   var frameHeader = [
@@ -2778,6 +2783,11 @@ QUnit.test('skips garbage data between sync words', function(assert) {
     // acceptable.
     assert.equal(frame.samplesize, 16, 'parsed samplesize');
   });
+  assert.deepEqual(logs, [
+    {level: 'warn', message: 'adts skiping bytes 0 to 3 in frame 0 outside syncword'},
+    {level: 'warn', message: 'adts skiping bytes 12 to 17 in frame 1 outside syncword'},
+    {level: 'warn', message: 'adts skiping bytes 26 to 30 in frame 2 outside syncword'}
+  ], 'logged skipped data');
 });
 
 QUnit.test('parses across packets', function(assert) {
@@ -3934,6 +3944,45 @@ QUnit.test('pipeline dynamically configures itself based on input', function(ass
   transmuxer.push(new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01)).concat([0xFF, 0xF1])));
   transmuxer.flush();
   assert.equal(transmuxer.transmuxPipeline_.type, 'aac', 'detected AAC file data');
+});
+
+QUnit.test('pipeline retriggers log events', function(assert) {
+  var id3 = id3Generator;
+  var logs = [];
+
+  var checkLogs = function() {
+    Object.keys(transmuxer.transmuxPipeline_).forEach(function(key) {
+      var stream = transmuxer.transmuxPipeline_[key];
+
+      if (!stream.on || key === 'headOfPipeline') {
+        return;
+      }
+
+      stream.trigger('log', {level: 'foo', message: 'bar'});
+
+      assert.deepEqual(logs, [
+        {level: 'foo', message: 'bar', stream: key}
+      ], 'retriggers log from ' + key);
+      logs.length = 0;
+    });
+  };
+
+  transmuxer.on('log', function(log) {
+    logs.push(log);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasAudio: true
+  })));
+  transmuxer.push(packetize(timedMetadataPes([0x03])));
+  transmuxer.flush();
+  assert.equal(transmuxer.transmuxPipeline_.type, 'ts', 'detected TS file data');
+  checkLogs();
+
+  transmuxer.push(new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01)).concat([0xFF, 0xF1])));
+  transmuxer.flush();
+  assert.equal(transmuxer.transmuxPipeline_.type, 'aac', 'detected AAC file data');
+  checkLogs();
 });
 
 QUnit.test('reuses audio track object when the pipeline reconfigures itself', function(assert) {
