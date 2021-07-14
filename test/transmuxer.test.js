@@ -853,7 +853,7 @@ QUnit.test('properly parses seq_parameter_set_rbsp nal units', function(assert) 
       profileCompatibility: 192,
       width: 720,
       height: 404,
-      sarRatio: undefined
+      sarRatio: [1, 1]
     };
 
   h264Stream.on('data', function(event) {
@@ -889,7 +889,7 @@ QUnit.test('Properly parses seq_parameter_set VUI nal unit', function(assert) {
       profileIdc: 66,
       levelIdc: 30,
       profileCompatibility: 192,
-      width: 64,
+      width: 16,
       height: 16,
       sarRatio: [65528, 16384]
     };
@@ -924,7 +924,7 @@ QUnit.test('Properly parses seq_parameter_set nal unit with defined sarRatio', f
       profileIdc: 77,
       levelIdc: 21,
       profileCompatibility: 64,
-      width: 640,
+      width: 352,
       height: 480,
       sarRatio: [20, 11]
     };
@@ -959,7 +959,7 @@ QUnit.test('Properly parses seq_parameter_set nal unit with extended sarRatio', 
       profileIdc: 77,
       levelIdc: 21,
       profileCompatibility: 64,
-      width: 403,
+      width: 352,
       height: 480,
       sarRatio: [8, 7]
     };
@@ -994,7 +994,7 @@ QUnit.test('Properly parses seq_parameter_set nal unit without VUI', function(as
       profileCompatibility: 64,
       width: 352,
       height: 480,
-      sarRatio: undefined
+      sarRatio: [1, 1]
     };
 
   h264Stream.on('data', function(event) {
