@@ -1,3 +1,10 @@
+<a name="5.12.2"></a>
+## [5.12.2](https://github.com/videojs/mux.js/compare/v5.12.1...v5.12.2) (2021-07-14)
+
+### Bug Fixes
+
+* Do not scale width by sarRatio, let decoder handle it via the pasp box ([#393](https://github.com/videojs/mux.js/issues/393)) ([9e9982f](https://github.com/videojs/mux.js/commit/9e9982f))
+
 <a name="5.12.1"></a>
 ## [5.12.1](https://github.com/videojs/mux.js/compare/v5.12.0...v5.12.1) (2021-07-09)
 
