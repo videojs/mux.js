@@ -3427,6 +3427,59 @@ QUnit.test('no options creates combined output', function(assert) {
   assert.equal('mdat', boxes[3].type, 'generated a second mdat box');
 });
 
+QUnit.test('first sequence number is used in mfhd box', function(assert) {
+  var
+    segments = [],
+    boxes,
+    moof,
+    mfhd,
+    transmuxer = new Transmuxer({ firstSequenceNumber: 10 });
+
+  transmuxer.on('data', function(segment) {
+    segments.push(segment);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true,
+    hasAudio: true
+  })));
+
+  transmuxer.push(packetize(audioPes([
+    0x19, 0x47
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+    0x07, // seq_parameter_set_rbsp
+    0x27, 0x42, 0xe0, 0x0b,
+    0xa9, 0x18, 0x60, 0x9d,
+    0x80, 0x53, 0x06, 0x01,
+    0x06, 0xb6, 0xc2, 0xb5,
+    0xef, 0x7c, 0x04
+  ], false)));
+  transmuxer.push(packetize(videoPes([
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
+  ], true)));
+  transmuxer.flush();
+
+  assert.equal(segments.length, 1, 'generated a combined video and audio segment');
+  assert.equal(segments[0].type, 'combined', 'combined is the segment type');
+
+  boxes = mp4.tools.inspect(segments[0].data);
+  moof = boxes.find(function(box) {
+    return box.type === 'moof';
+  });
+  mfhd = moof.boxes.find(function(box) {
+    return box.type === 'mfhd';
+  });
+
+  assert.equal(mfhd.sequenceNumber, 10, 'requested first sequence number starts at 10');
+});
+
 QUnit.test('can specify that we want to generate separate audio and video segments', function(assert) {
   var
     segments = [],
