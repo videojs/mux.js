@@ -10,7 +10,7 @@ jobs:
   github-release:
     env:
       # Set this if you want a netlify example
-      NETLIFY_BASE: 'https://muxjs.netlify.app/'
+      NETLIFY_BASE: 'muxjs.netlify.app/'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
