@@ -1,3 +1,15 @@
+<a name="5.13.0"></a>
+# [5.13.0](https://github.com/videojs/mux.js/compare/v5.12.2...v5.13.0) (2021-08-24)
+
+### Features
+
+* add firstSequenceNumber option to Transmuxer to start sequence somewhere other than zero ([#395](https://github.com/videojs/mux.js/issues/395)) ([6ff42f4](https://github.com/videojs/mux.js/commit/6ff42f4))
+
+### Chores
+
+* add github release ci action ([#397](https://github.com/videojs/mux.js/issues/397)) ([abe7936](https://github.com/videojs/mux.js/commit/abe7936))
+* update ci workflow to fix ci ([#396](https://github.com/videojs/mux.js/issues/396)) ([86cfdca](https://github.com/videojs/mux.js/commit/86cfdca))
+
 <a name="5.12.2"></a>
 ## [5.12.2](https://github.com/videojs/mux.js/compare/v5.12.1...v5.12.2) (2021-07-14)
 
