@@ -2808,7 +2808,9 @@ QUnit.test('Creates TextDecoder only if valid encoding value is provided', funct
   cc708Korean.forEach(cea708Stream.push, cea708Stream);
   cea708Stream.flushDisplayed(4721138662, cea708Stream.services[1]);
 
-  assert.ok(cea708Stream.services[1].textDecoder_, 'TextDecoder created successfully when encoding is valid');
+  if (window.TextDecoder) {
+    assert.ok(cea708Stream.services[1].textDecoder_, 'TextDecoder created successfully when encoding is valid');
+  }
 
   secondCea708Stream = new m2ts.Cea708Stream({
     captionServices: {
