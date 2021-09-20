@@ -2783,12 +2783,14 @@ QUnit.test('Decodes multibyte characters if valid encoding option is provided an
   assert.equal(captions.length, 1, 'parsed single caption correctly');
 
   if (window.TextDecoder) {
-    assert.ok(cea708Stream.services[1].textDecoder_, 'TextDecoder created');
+    assert.ok(cea708Stream.services[1].textDecoder_, 'TextDecoder created when supported');
     assert.equal(
       captions[0].text,
       '니가 ',
       'parsed multibyte characters correctly'
     );
+  } else {
+    assert.notOk(cea708Stream.services[1].textDecoder_, 'TextDecoder not created when unsupported');
   }
 });
 
