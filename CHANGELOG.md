@@ -1,3 +1,10 @@
+<a name="5.14.0"></a>
+# [5.14.0](https://github.com/videojs/mux.js/compare/v5.13.0...v5.14.0) (2021-09-21)
+
+### Features
+
+* Add multibyte character support ([#398](https://github.com/videojs/mux.js/issues/398)) ([0849e0a](https://github.com/videojs/mux.js/commit/0849e0a))
+
 <a name="5.13.0"></a>
 # [5.13.0](https://github.com/videojs/mux.js/compare/v5.12.2...v5.13.0) (2021-08-24)
 
