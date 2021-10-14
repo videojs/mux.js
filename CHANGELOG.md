@@ -1,3 +1,11 @@
+<a name="5.14.1"></a>
+## [5.14.1](https://github.com/videojs/mux.js/compare/v5.14.0...v5.14.1) (2021-10-14)
+
+### Bug Fixes
+
+* avoid mismatch with avc1 and hvc1 codec ([#400](https://github.com/videojs/mux.js/issues/400)) ([8a58d6e](https://github.com/videojs/mux.js/commit/8a58d6e))
+* prevent adding duplicate log listeners on every push after a flush ([#402](https://github.com/videojs/mux.js/issues/402)) ([eb332c1](https://github.com/videojs/mux.js/commit/eb332c1))
+
 <a name="5.14.0"></a>
 # [5.14.0](https://github.com/videojs/mux.js/compare/v5.13.0...v5.14.0) (2021-09-21)
 
