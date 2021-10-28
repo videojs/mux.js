@@ -23,7 +23,7 @@ var
   mp4 = require('../lib/mp4'),
   mp4Helpers = require('./utils/mp4-helpers'),
   QUnit = require('qunit'),
-  window = require('global/window');
+  window = require('global/window'),
   typeBytes = mp4Helpers.typeBytes,
   box = mp4Helpers.box,
   unityMatrix = mp4Helpers.unityMatrix,
