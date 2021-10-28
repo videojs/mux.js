@@ -1,3 +1,72 @@
+<a name="5.14.1"></a>
+## [5.14.1](https://github.com/videojs/mux.js/compare/v5.14.0...v5.14.1) (2021-10-14)
+
+### Bug Fixes
+
+* avoid mismatch with avc1 and hvc1 codec ([#400](https://github.com/videojs/mux.js/issues/400)) ([8a58d6e](https://github.com/videojs/mux.js/commit/8a58d6e))
+* prevent adding duplicate log listeners on every push after a flush ([#402](https://github.com/videojs/mux.js/issues/402)) ([eb332c1](https://github.com/videojs/mux.js/commit/eb332c1))
+
+<a name="5.14.0"></a>
+# [5.14.0](https://github.com/videojs/mux.js/compare/v5.13.0...v5.14.0) (2021-09-21)
+
+### Features
+
+* Add multibyte character support ([#398](https://github.com/videojs/mux.js/issues/398)) ([0849e0a](https://github.com/videojs/mux.js/commit/0849e0a))
+
+<a name="5.13.0"></a>
+# [5.13.0](https://github.com/videojs/mux.js/compare/v5.12.2...v5.13.0) (2021-08-24)
+
+### Features
+
+* add firstSequenceNumber option to Transmuxer to start sequence somewhere other than zero ([#395](https://github.com/videojs/mux.js/issues/395)) ([6ff42f4](https://github.com/videojs/mux.js/commit/6ff42f4))
+
+### Chores
+
+* add github release ci action ([#397](https://github.com/videojs/mux.js/issues/397)) ([abe7936](https://github.com/videojs/mux.js/commit/abe7936))
+* update ci workflow to fix ci ([#396](https://github.com/videojs/mux.js/issues/396)) ([86cfdca](https://github.com/videojs/mux.js/commit/86cfdca))
+
+<a name="5.12.2"></a>
+## [5.12.2](https://github.com/videojs/mux.js/compare/v5.12.1...v5.12.2) (2021-07-14)
+
+### Bug Fixes
+
+* Do not scale width by sarRatio, let decoder handle it via the pasp box ([#393](https://github.com/videojs/mux.js/issues/393)) ([9e9982f](https://github.com/videojs/mux.js/commit/9e9982f))
+
+<a name="5.12.1"></a>
+## [5.12.1](https://github.com/videojs/mux.js/compare/v5.12.0...v5.12.1) (2021-07-09)
+
+### Code Refactoring
+
+* rename warn event to log, change console logs to log events ([#392](https://github.com/videojs/mux.js/issues/392)) ([4995603](https://github.com/videojs/mux.js/commit/4995603))
+
+<a name="5.12.0"></a>
+# [5.12.0](https://github.com/videojs/mux.js/compare/v5.11.3...v5.12.0) (2021-07-02)
+
+### Features
+
+* add general error/warn/debug log events and log skipped adts data ([#391](https://github.com/videojs/mux.js/issues/391)) ([6588d48](https://github.com/videojs/mux.js/commit/6588d48))
+
+<a name="5.11.3"></a>
+## [5.11.3](https://github.com/videojs/mux.js/compare/v5.11.2...v5.11.3) (2021-06-30)
+
+### Bug Fixes
+
+* Prevent skipping frames when we have garbage data between adts sync words ([#390](https://github.com/videojs/mux.js/issues/390)) ([71bac64](https://github.com/videojs/mux.js/commit/71bac64))
+
+<a name="5.11.2"></a>
+## [5.11.2](https://github.com/videojs/mux.js/compare/v5.11.1...v5.11.2) (2021-06-24)
+
+### Bug Fixes
+
+* on flush if a pmt has not been emitted and we have one, emit it ([#388](https://github.com/videojs/mux.js/issues/388)) ([67b4aab](https://github.com/videojs/mux.js/commit/67b4aab))
+
+<a name="5.11.1"></a>
+## [5.11.1](https://github.com/videojs/mux.js/compare/v5.11.0...v5.11.1) (2021-06-22)
+
+### Bug Fixes
+
+* inspect all program map tables for stream types ([#386](https://github.com/videojs/mux.js/issues/386)) ([bac4da9](https://github.com/videojs/mux.js/commit/bac4da9))
+
 <a name="5.11.0"></a>
 # [5.11.0](https://github.com/videojs/mux.js/compare/v5.10.0...v5.11.0) (2021-03-29)
 

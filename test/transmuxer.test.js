@@ -853,7 +853,7 @@ QUnit.test('properly parses seq_parameter_set_rbsp nal units', function(assert) 
       profileCompatibility: 192,
       width: 720,
       height: 404,
-      sarRatio: undefined
+      sarRatio: [1, 1]
     };
 
   h264Stream.on('data', function(event) {
@@ -889,7 +889,7 @@ QUnit.test('Properly parses seq_parameter_set VUI nal unit', function(assert) {
       profileIdc: 66,
       levelIdc: 30,
       profileCompatibility: 192,
-      width: 64,
+      width: 16,
       height: 16,
       sarRatio: [65528, 16384]
     };
@@ -924,7 +924,7 @@ QUnit.test('Properly parses seq_parameter_set nal unit with defined sarRatio', f
       profileIdc: 77,
       levelIdc: 21,
       profileCompatibility: 64,
-      width: 640,
+      width: 352,
       height: 480,
       sarRatio: [20, 11]
     };
@@ -959,7 +959,7 @@ QUnit.test('Properly parses seq_parameter_set nal unit with extended sarRatio', 
       profileIdc: 77,
       levelIdc: 21,
       profileCompatibility: 64,
-      width: 403,
+      width: 352,
       height: 480,
       sarRatio: [8, 7]
     };
@@ -994,7 +994,7 @@ QUnit.test('Properly parses seq_parameter_set nal unit without VUI', function(as
       profileCompatibility: 64,
       width: 352,
       height: 480,
-      sarRatio: undefined
+      sarRatio: [1, 1]
     };
 
   h264Stream.on('data', function(event) {
@@ -2729,6 +2729,67 @@ QUnit.test('generates AAC frame events from ADTS bytes', function(assert) {
   assert.equal(frames[0].samplesize, 16, 'parsed samplesize');
 });
 
+QUnit.test('skips garbage data between sync words', function(assert) {
+  var frames = [];
+  var logs = [];
+  adtsStream.on('data', function(frame) {
+    frames.push(frame);
+  });
+
+  adtsStream.on('log', function(log) {
+    logs.push(log);
+  });
+
+  var frameHeader = [
+    0xff, 0xf1,       // no CRC
+    0x10,             // AAC Main, 44.1KHz
+    0xbc, 0x01, 0x20, // 2 channels, frame length 9 including header
+    0x00,             // one AAC per ADTS frame
+  ];
+  adtsStream.push({
+    type: 'audio',
+    data: new Uint8Array(
+      []
+      // garbage
+      .concat([0x00, 0x00, 0x00])
+      // frame
+      .concat(frameHeader)
+      .concat([0x00, 0x01])
+      // garbage
+      .concat([0x00, 0x00, 0x00, 0x00, 0x00])
+      .concat(frameHeader)
+      .concat([0x00, 0x02])
+      // garbage
+      .concat([0x00, 0x00, 0x00, 0x00])
+      .concat(frameHeader)
+      .concat([0x00, 0x03])
+      .concat([0x00, 0x00, 0x00, 0x00])
+    )
+  });
+
+  assert.equal(frames.length, 3, 'generated three frames');
+  frames.forEach(function(frame, i) {
+    assert.deepEqual(
+      new Uint8Array(frame.data),
+      new Uint8Array([0x00, i + 1]),
+      'extracted AAC frame'
+    );
+
+    assert.equal(frame.channelcount, 2, 'parsed channelcount');
+    assert.equal(frame.samplerate, 44100, 'parsed samplerate');
+
+    // Chrome only supports 8, 16, and 32 bit sample sizes. Assuming the
+    // default value of 16 in ISO/IEC 14496-12 AudioSampleEntry is
+    // acceptable.
+    assert.equal(frame.samplesize, 16, 'parsed samplesize');
+  });
+  assert.deepEqual(logs, [
+    {level: 'warn', message: 'adts skiping bytes 0 to 3 in frame 0 outside syncword'},
+    {level: 'warn', message: 'adts skiping bytes 12 to 17 in frame 1 outside syncword'},
+    {level: 'warn', message: 'adts skiping bytes 26 to 30 in frame 2 outside syncword'}
+  ], 'logged skipped data');
+});
+
 QUnit.test('parses across packets', function(assert) {
   var frames = [];
   adtsStream.on('data', function(frame) {
@@ -3366,6 +3427,64 @@ QUnit.test('no options creates combined output', function(assert) {
   assert.equal('mdat', boxes[3].type, 'generated a second mdat box');
 });
 
+QUnit.test('first sequence number option is used in mfhd box', function(assert) {
+  var
+    segments = [],
+    mfhds = [],
+    boxes,
+    transmuxer = new Transmuxer({ firstSequenceNumber: 10 });
+
+  transmuxer.on('data', function(segment) {
+    segments.push(segment);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasVideo: true,
+    hasAudio: true
+  })));
+
+  transmuxer.push(packetize(audioPes([
+    0x19, 0x47
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+      0x09, 0x01 // access_unit_delimiter_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+      0x08, 0x01 // pic_parameter_set_rbsp
+  ], true)));
+  transmuxer.push(packetize(videoPes([
+    0x07, // seq_parameter_set_rbsp
+    0x27, 0x42, 0xe0, 0x0b,
+    0xa9, 0x18, 0x60, 0x9d,
+    0x80, 0x53, 0x06, 0x01,
+    0x06, 0xb6, 0xc2, 0xb5,
+    0xef, 0x7c, 0x04
+  ], false)));
+  transmuxer.push(packetize(videoPes([
+      0x05, 0x01 // slice_layer_without_partitioning_rbsp_idr
+  ], true)));
+  transmuxer.flush();
+
+  assert.equal(segments.length, 1, 'generated a combined video and audio segment');
+  assert.equal(segments[0].type, 'combined', 'combined is the segment type');
+
+  boxes = mp4.tools.inspect(segments[0].data);
+  boxes.forEach(function(box) {
+    if (box.type === 'moof') {
+      box.boxes.forEach(function(moofBox) {
+        if (moofBox.type === 'mfhd') {
+          mfhds.push(moofBox);
+        }
+      });
+    }
+  });
+
+  assert.equal(mfhds.length, 2, 'muxed output has two mfhds');
+
+  assert.equal(mfhds[0].sequenceNumber, 10, 'first mfhd sequence starts at 10');
+  assert.equal(mfhds[1].sequenceNumber, 10, 'second mfhd sequence starts at 10');
+});
+
 QUnit.test('can specify that we want to generate separate audio and video segments', function(assert) {
   var
     segments = [],
@@ -3883,6 +4002,53 @@ QUnit.test('pipeline dynamically configures itself based on input', function(ass
   transmuxer.push(new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01)).concat([0xFF, 0xF1])));
   transmuxer.flush();
   assert.equal(transmuxer.transmuxPipeline_.type, 'aac', 'detected AAC file data');
+});
+
+QUnit.test('pipeline retriggers log events', function(assert) {
+  var id3 = id3Generator;
+  var logs = [];
+
+  var checkLogs = function() {
+    Object.keys(transmuxer.transmuxPipeline_).forEach(function(key) {
+      var stream = transmuxer.transmuxPipeline_[key];
+
+      if (!stream.on || key === 'headOfPipeline') {
+        return;
+      }
+
+      stream.trigger('log', {level: 'foo', message: 'bar'});
+
+      assert.deepEqual(logs, [
+        {level: 'foo', message: 'bar', stream: key}
+      ], 'retriggers log from ' + key);
+      logs.length = 0;
+    });
+  };
+
+  transmuxer.on('log', function(log) {
+    logs.push(log);
+  });
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasAudio: true
+  })));
+  transmuxer.push(packetize(timedMetadataPes([0x03])));
+  transmuxer.flush();
+  transmuxer.push(packetize(PAT));
+  transmuxer.push(packetize(generatePMT({
+    hasAudio: true
+  })));
+  transmuxer.push(packetize(timedMetadataPes([0x03])));
+  transmuxer.flush();
+  assert.equal(transmuxer.transmuxPipeline_.type, 'ts', 'detected TS file data');
+  checkLogs();
+
+  transmuxer.push(new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01)).concat([0xFF, 0xF1])));
+  transmuxer.flush();
+  transmuxer.push(new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 0x00, 0x01)).concat([0xFF, 0xF1])));
+  transmuxer.flush();
+  assert.equal(transmuxer.transmuxPipeline_.type, 'aac', 'detected AAC file data');
+  checkLogs();
 });
 
 QUnit.test('reuses audio track object when the pipeline reconfigures itself', function(assert) {

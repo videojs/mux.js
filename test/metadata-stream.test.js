@@ -42,6 +42,39 @@ QUnit.test('can construct a MetadataStream', function(assert) {
  assert.ok(metadataStream, 'does not return null');
 });
 
+QUnit.test('triggers log for non-id3/invalid data', function(assert) {
+  var logs = [];
+
+  metadataStream.on('log', function(log) {
+    logs.push(log);
+  });
+
+  // id3 not long enough
+  metadataStream.push({type: 'timed-metadata', data: new Uint8Array()});
+  // invalid data
+  metadataStream.push({type: 'timed-metadata', data: new Uint8Array([
+    0x01, 0x01, 0x01, 0x01, 0x01,
+    0x01, 0x01, 0x01, 0x01, 0x01
+  ])});
+  const zeroFrames = new Uint8Array(stringToInts('ID3').concat([
+    0x03, 0x00,            // version 3.0 of ID3v2 (aka ID3v.2.3.0)
+    0x40,                  // flags. include an extended header
+    0x00, 0x00, 0x00, 0x00, // size. set later
+
+    // extended header
+    0x00, 0x00, 0x00, 0x06, // extended header size. no CRC
+    0x00, 0x00,             // extended flags
+    0x00, 0x00, 0x00, 0x02  // size of padding
+  ]));
+
+  metadataStream.push({type: 'timed-metadata', data: zeroFrames});
+
+  assert.deepEqual(logs, [
+    {level: 'warn', message: 'Skipping unrecognized metadata packet'},
+    {level: 'warn', message: 'Skipping unrecognized metadata packet'},
+    {level: 'warn', message: 'Malformed ID3 frame encountered. Skipping metadata parsing.'}
+  ], 'logs as expected.');
+});
 
 QUnit.test('parses simple ID3 metadata out of PES packets', function(assert) {
   var
