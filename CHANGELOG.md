@@ -1,3 +1,19 @@
+<a name="6.0.0"></a>
+# [6.0.0](https://github.com/videojs/mux.js/compare/v5.14.1...v6.0.0) (2021-11-29)
+
+### Features
+
+* use bigint for 64 bit ints if needed and available. ([#383](https://github.com/videojs/mux.js/issues/383)) ([83779b9](https://github.com/videojs/mux.js/commit/83779b9))
+
+### Chores
+
+* don't run tests on version ([#404](https://github.com/videojs/mux.js/issues/404)) ([45623ea](https://github.com/videojs/mux.js/commit/45623ea))
+
+
+### BREAKING CHANGES
+
+* In some cases, mux.js will now be returning a BigInt rather than a regular Number value. This means that consumers of this library will need to add checks for BigInt for optimal operation.
+
 <a name="5.14.1"></a>
 ## [5.14.1](https://github.com/videojs/mux.js/compare/v5.14.0...v5.14.1) (2021-10-14)
 
