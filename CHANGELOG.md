@@ -1,3 +1,10 @@
+<a name="6.0.1"></a>
+## [6.0.1](https://github.com/videojs/mux.js/compare/v6.0.0...v6.0.1) (2021-12-20)
+
+### Bug Fixes
+
+* fix IE11 by replacing arrow function ([#406](https://github.com/videojs/mux.js/issues/406)) ([47302fe](https://github.com/videojs/mux.js/commit/47302fe))
+
 <a name="6.0.0"></a>
 # [6.0.0](https://github.com/videojs/mux.js/compare/v5.14.1...v6.0.0) (2021-11-29)
 
