@@ -1,3 +1,10 @@
+<a name="6.1.0"></a>
+# [6.1.0](https://github.com/videojs/mux.js/compare/v6.0.1...v6.1.0) (2022-05-26)
+
+### Features
+
+* send ID3 tag even when a frame has malformed content ([#408](https://github.com/videojs/mux.js/issues/408)) ([1da5d23](https://github.com/videojs/mux.js/commit/1da5d23))
+
 <a name="6.0.1"></a>
 ## [6.0.1](https://github.com/videojs/mux.js/compare/v6.0.0...v6.0.1) (2021-12-20)
 
