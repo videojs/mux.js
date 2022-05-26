@@ -72,7 +72,7 @@ QUnit.test('triggers log for non-id3/invalid data', function(assert) {
   assert.deepEqual(logs, [
     {level: 'warn', message: 'Skipping unrecognized metadata packet'},
     {level: 'warn', message: 'Skipping unrecognized metadata packet'},
-    {level: 'warn', message: 'Malformed ID3 frame encountered. Skipping metadata parsing.'}
+    {level: 'warn', message: 'Malformed ID3 frame encountered. Skipping remaining metadata parsing.'}
   ], 'logs as expected.');
 });
 
@@ -518,6 +518,27 @@ QUnit.test('constructs the dispatch type', function(assert) {
   assert.equal(metadataStream.dispatchType, '1503020100', 'built the dispatch type');
 });
 
+QUnit.test('should skip tag frame parsing on malformed frame, preserving previous frames', function(assert) {
+  var events = [],
+      validFrame = id3Frame('TIT2',
+                            0x03, // utf-8
+                            stringToCString('sample title')),
+      malformedFrame = id3Frame('WOAF'), // frame with size of 0B
+      tag = id3Tag(validFrame, malformedFrame);
+  
+  metadataStream.on('data', function(event) {
+    events.push(event);
+  });
+
+  metadataStream.push({
+    type: 'timed-metadata',
+    data: new Uint8Array(tag)
+  })
+  
+  assert.equal(events.length, 1, 'parsed 1 tag')
+  assert.equal(events[0].frames.length, 1, 'parsed one frame');
+  assert.equal(events[0].frames[0].key, 'TIT2');
+});
 
 QUnit.test('can parse PRIV frames in web worker', function(assert) {
   var payload = stringToInts('arbitrary'),
