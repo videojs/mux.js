@@ -72,7 +72,7 @@ QUnit.test('triggers log for non-id3/invalid data', function(assert) {
   assert.deepEqual(logs, [
     {level: 'warn', message: 'Skipping unrecognized metadata packet'},
     {level: 'warn', message: 'Skipping unrecognized metadata packet'},
-    {level: 'warn', message: 'Malformed ID3 frame encountered. Skipping metadata parsing.'}
+    {level: 'warn', message: 'Malformed ID3 frame encountered. Skipping remaining metadata parsing.'}
   ], 'logs as expected.');
 });
 
