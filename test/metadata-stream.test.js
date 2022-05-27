@@ -540,6 +540,44 @@ QUnit.test('should skip tag frame parsing on malformed frame, preserving previou
   assert.equal(events[0].frames[0].key, 'TIT2');
 });
 
+QUnit.test('can parse APIC frame in web worker', function(assert) {
+  var worker = new MetadataStreamTestWorker(),
+      done = assert.async();
+
+  worker.addEventListener('message', function(e) {
+    assert.equal(e.data.frames[0].key, 'APIC', 'frame key mismatch');
+    assert.equal(e.data.frames[0].mimeType, 'image/jpeg', 'APIC frame MIME type mismatch');
+    assert.equal(e.data.frames[0].pictureType, 0x03, 'APIC frame Picture type mismatch');
+    assert.equal(e.data.frames[0].description, 'sample description', 'APIC frame description mismatch');
+    assert.deepEqual(e.data.frames[0].pictureData, new Uint8Array(stringToInts("picture binary data")), 'APIC frame Picture data mismatch');
+    assert.equal(e.data.frames[1].key, 'APIC', 'frame key mismatch');
+    assert.equal(e.data.frames[1].mimeType, '-->', 'APIC frame MIME type mismatch');
+    assert.equal(e.data.frames[1].pictureType, 0x04, 'APIC frame Picture type mismatch');
+    assert.equal(e.data.frames[1].description, 'sample description 2', 'APIC frame description mismatch');
+    assert.equal(e.data.frames[1].url, 'http://example.org/cover-back.jpg', 'APIC frame Picture URL mismatch');
+    worker.terminate();
+    done();
+  });
+
+  worker.postMessage({
+    type: 'timed-metadata',
+    data: new Uint8Array(id3Tag(id3Frame('APIC',
+                                         0x03, // Text encoding: UTF-8
+                                         stringToCString('image/jpeg'), // MIME type + \0
+                                         0x03, // Picture type: Cover (front) [ID3v2.4.0 section 4.14]
+                                         stringToCString('sample description'), // Decription + \0
+                                         stringToInts('picture binary data')
+                                         ),
+                                id3Frame('APIC',
+                                         0x03, // Text encoding: UTF-8
+                                         stringToCString('-->'), // MIME type: link to the image [ID3v2.4.0 section 4.14] + \0
+                                         0x04, // Picture type: Cover (back) [ID3v2.4.0 section 4.14]
+                                         stringToCString('sample description 2'), // Decription + \0
+                                         stringToInts('http://example.org/cover-back.jpg')
+                                         )))
+  });
+});
+
 QUnit.test('can parse PRIV frames in web worker', function(assert) {
   var payload = stringToInts('arbitrary'),
       worker = new MetadataStreamTestWorker(),
@@ -588,6 +626,47 @@ QUnit.test('can parse TXXX frames in web worker', function(assert) {
                                           stringToCString('get done'),
                                           stringToCString('{ "key": "value" }')),
                                 [0x00, 0x00]))
+  });
+});
+
+QUnit.test('should parse text frames in web worker', function(assert) {
+  var worker = new MetadataStreamTestWorker(),
+      done = assert.async();
+
+  worker.addEventListener('message', function(e) {
+    assert.equal(e.data.frames[0].key, 'TIT2', 'frame key mismatch');
+    assert.equal(e.data.frames[0].value, 'sample song title', 'TIT2 frame value mismatch')
+    worker.terminate();
+    done();
+  });
+
+  worker.postMessage({
+    type: 'timed-metadata',
+    data: new Uint8Array(id3Tag(id3Frame('TIT2',
+                                          0x03, // utf-8
+                                          // frames that allow different types of encoding contain terminated text [ID3v2.4.0 section 4.]
+                                          stringToCString('sample song title'))))
+  });
+});
+
+QUnit.test('should parse URL link frames in web worker', function(assert) {
+  var worker = new MetadataStreamTestWorker(),
+      done = assert.async(),
+      payloadBytes;
+
+  // if the payload is followed by a string termination all the following information should be ignored [ID3v2.4.0 section 4.3]
+  payloadBytes = stringToInts('http://example.org\0 ignored \0 part')
+
+  worker.addEventListener('message', function(e) {
+    assert.equal(e.data.frames[0].key, 'WOAF', 'frame key mismatch');
+    assert.equal(e.data.frames[0].url, 'http://example.org', 'WOAF frame URL mismatch')
+    worker.terminate();
+    done();
+  });
+
+  worker.postMessage({
+    type: 'timed-metadata',
+    data: new Uint8Array(id3Tag(id3Frame('WOAF', payloadBytes)))
   });
 });
 
