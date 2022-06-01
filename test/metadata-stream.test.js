@@ -536,7 +536,7 @@ QUnit.test('should skip tag frame parsing on malformed frame, preserving previou
   })
   
   assert.equal(events.length, 1, 'parsed 1 tag')
-  assert.equal(events[0].frames.length, 1, 'parsed one frame');
+  assert.equal(events[0].frames.length, 1, 'parsed 1 frame');
   assert.equal(events[0].frames[0].key, 'TIT2');
 });
 
@@ -545,16 +545,16 @@ QUnit.test('can parse APIC frame in web worker', function(assert) {
       done = assert.async();
 
   worker.addEventListener('message', function(e) {
-    assert.equal(e.data.frames[0].key, 'APIC', 'frame key mismatch');
-    assert.equal(e.data.frames[0].mimeType, 'image/jpeg', 'APIC frame MIME type mismatch');
-    assert.equal(e.data.frames[0].pictureType, 0x03, 'APIC frame Picture type mismatch');
-    assert.equal(e.data.frames[0].description, 'sample description', 'APIC frame description mismatch');
-    assert.deepEqual(e.data.frames[0].pictureData, new Uint8Array(stringToInts("picture binary data")), 'APIC frame Picture data mismatch');
-    assert.equal(e.data.frames[1].key, 'APIC', 'frame key mismatch');
-    assert.equal(e.data.frames[1].mimeType, '-->', 'APIC frame MIME type mismatch');
-    assert.equal(e.data.frames[1].pictureType, 0x04, 'APIC frame Picture type mismatch');
-    assert.equal(e.data.frames[1].description, 'sample description 2', 'APIC frame description mismatch');
-    assert.equal(e.data.frames[1].url, 'http://example.org/cover-back.jpg', 'APIC frame Picture URL mismatch');
+    assert.equal(e.data.frames[0].key, 'APIC', 'frame key is APIC');
+    assert.equal(e.data.frames[0].mimeType, 'image/jpeg', 'parsed MIME type is "image/jpeg"');
+    assert.equal(e.data.frames[0].pictureType, 0x03, 'parsed picture type is 0x03');
+    assert.equal(e.data.frames[0].description, 'sample description', 'parsed description');
+    assert.deepEqual(e.data.frames[0].pictureData, new Uint8Array(stringToInts("picture binary data")), 'parsed picture data');
+    assert.equal(e.data.frames[1].key, 'APIC', 'frame key is APIC');
+    assert.equal(e.data.frames[1].mimeType, '-->', 'parsed MIME type is "-->"');
+    assert.equal(e.data.frames[1].pictureType, 0x04, 'parsed picture type is 0x04');
+    assert.equal(e.data.frames[1].description, 'sample description 2', 'parsed description');
+    assert.equal(e.data.frames[1].url, 'http://example.org/cover-back.jpg', 'parsed picture data');
     worker.terminate();
     done();
   });
@@ -634,8 +634,8 @@ QUnit.test('should parse text frames in web worker', function(assert) {
       done = assert.async();
 
   worker.addEventListener('message', function(e) {
-    assert.equal(e.data.frames[0].key, 'TIT2', 'frame key mismatch');
-    assert.equal(e.data.frames[0].value, 'sample song title', 'TIT2 frame value mismatch')
+    assert.equal(e.data.frames[0].key, 'TIT2', 'frame key is TIT2');
+    assert.equal(e.data.frames[0].value, 'sample song title', 'parsed value')
     worker.terminate();
     done();
   });
@@ -658,8 +658,8 @@ QUnit.test('should parse URL link frames in web worker', function(assert) {
   payloadBytes = stringToInts('http://example.org\0 ignored \0 part')
 
   worker.addEventListener('message', function(e) {
-    assert.equal(e.data.frames[0].key, 'WOAF', 'frame key mismatch');
-    assert.equal(e.data.frames[0].url, 'http://example.org', 'WOAF frame URL mismatch')
+    assert.equal(e.data.frames[0].key, 'WOAF', 'frame key is WOAF');
+    assert.equal(e.data.frames[0].url, 'http://example.org', 'parsed URL')
     worker.terminate();
     done();
   });
