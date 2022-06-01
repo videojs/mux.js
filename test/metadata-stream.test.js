@@ -634,8 +634,13 @@ QUnit.test('should parse text frames in web worker', function(assert) {
       done = assert.async();
 
   worker.addEventListener('message', function(e) {
+    assert.equal(e.data.frames.length, 2, 'got 2 frames');
     assert.equal(e.data.frames[0].key, 'TIT2', 'frame key is TIT2');
     assert.equal(e.data.frames[0].value, 'sample song title', 'parsed value')
+    assert.equal(e.data.frames[1].key, 'TIT3', 'frame key is TIT3');
+    assert.equal(e.data.frames[1].value.length, 2, 'parsed value is an array of size 2')
+    assert.equal(e.data.frames[1].value[0], 'sample title 1', 'parsed multiple string value')
+    assert.equal(e.data.frames[1].value[1], 'sample title 2', 'parsed multiple string value')
     worker.terminate();
     done();
   });
@@ -645,7 +650,12 @@ QUnit.test('should parse text frames in web worker', function(assert) {
     data: new Uint8Array(id3Tag(id3Frame('TIT2',
                                           0x03, // utf-8
                                           // frames that allow different types of encoding contain terminated text [ID3v2.4.0 section 4.]
-                                          stringToCString('sample song title'))))
+                                          stringToCString('sample song title')),
+                                id3Frame('TIT3',
+                                          0x03, // utf-8
+                                          // frames that allow different types of encoding contain terminated text [ID3v2.4.0 section 4.]
+                                          // text information frames supports multiple strings, stored as a terminator separated list [ID3v2.4.0 section 4.2.]
+                                          stringToCString('sample title 1'), stringToCString('sample title 2'))))
   });
 });
 
