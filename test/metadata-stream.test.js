@@ -637,10 +637,13 @@ QUnit.test('should parse text frames in web worker', function(assert) {
     assert.equal(e.data.frames.length, 2, 'got 2 frames');
     assert.equal(e.data.frames[0].key, 'TIT2', 'frame key is TIT2');
     assert.equal(e.data.frames[0].value, 'sample song title', 'parsed value')
+    assert.equal(e.data.frames[0].values.length, 1, 'parsed value is an array of size 1')
+    assert.equal(e.data.frames[0].values[0], 'sample song title', 'parsed a non multiple strings value')
     assert.equal(e.data.frames[1].key, 'TIT3', 'frame key is TIT3');
-    assert.equal(e.data.frames[1].value.length, 2, 'parsed value is an array of size 2')
-    assert.equal(e.data.frames[1].value[0], 'sample title 1', 'parsed multiple string value')
-    assert.equal(e.data.frames[1].value[1], 'sample title 2', 'parsed multiple string value')
+    assert.equal(e.data.frames[1].value, 'sample title 1\0sample title 2', 'parsed value')
+    assert.equal(e.data.frames[1].values.length, 2, 'parsed value is an array of size 2')
+    assert.equal(e.data.frames[1].values[0], 'sample title 1', 'parsed 1st multiple strings value')
+    assert.equal(e.data.frames[1].values[1], 'sample title 2', 'parsed 2nd multiple strings value')
     worker.terminate();
     done();
   });
