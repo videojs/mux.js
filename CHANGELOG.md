@@ -1,3 +1,14 @@
+<a name="6.2.0"></a>
+# [6.2.0](https://github.com/videojs/mux.js/compare/v6.1.0...v6.2.0) (2022-07-08)
+
+### Features
+
+* add ID3 parsing for text, link, and APIC frames ([#412](https://github.com/videojs/mux.js/issues/412)) ([5454bdd](https://github.com/videojs/mux.js/commit/5454bdd))
+
+### Bug Fixes
+
+* replace indexOf with typedArrayIndexOf for IE11 support ([#417](https://github.com/videojs/mux.js/issues/417)) ([4e1b195](https://github.com/videojs/mux.js/commit/4e1b195))
+
 <a name="6.1.0"></a>
 # [6.1.0](https://github.com/videojs/mux.js/compare/v6.0.1...v6.1.0) (2022-05-26)
 
