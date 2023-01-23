@@ -5,6 +5,7 @@ var
   probe = require('../lib/mp4/probe'),
   mp4Helpers = require('./utils/mp4-helpers'),
   box = mp4Helpers.box,
+  id3 = require('./utils/id3-generator'),
 
   // defined below
   moovWithoutMdhd,
@@ -143,6 +144,65 @@ QUnit.test('getTimescaleFromMediaHeader gets timescale for version 0 mdhd', func
   );
 });
 
+QUnit.test('can get ID3 data from a v0 EMSG box', function(assert) { 
+  var id3Data = new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 
+    id3.stringToCString('priv-owner@example.com'), 
+    id3.stringToInts('foo.bar.id3.com')))
+  );
+
+  var v0EmsgId3Data = mp4Helpers.generateEmsgBoxData(0, id3Data);
+  var emsgId3Box = new Uint8Array(box('emsg', Array.from(v0EmsgId3Data)));
+  var emsgBoxes = probe.getEmsgID3(emsgId3Box);
+  assert.equal(emsgBoxes[0].pts, 10, 'got correct ID3 pts value from v0 emsg');
+  assert.equal(emsgBoxes[0].duration, 0, 'got correct ID3 duration value from v0 emsg');
+  assert.deepEqual(emsgBoxes[0].data, id3Data, 'got correct ID3 data from v0 emsg');
+});
+
+QUnit.test('can get ID3 data from a v1 EMSG box', function(assert) { 
+  var id3Data = new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 
+    id3.stringToCString('priv-owner@example.com'), 
+    id3.stringToInts('foo.bar.id3.com')))
+  );
+
+  var v1EmsgId3Data = mp4Helpers.generateEmsgBoxData(1, id3Data);
+  var emsgId3Box = new Uint8Array(box('emsg', Array.from(v1EmsgId3Data)));
+  var emsgBoxes = probe.getEmsgID3(emsgId3Box);
+  assert.equal(emsgBoxes[0].pts, 100, 'got correct ID3 pts value from v0 emsg');
+  assert.equal(emsgBoxes[0].duration, 0.01, 'got correct ID3 duration value from v0 emsg');
+  assert.deepEqual(emsgBoxes[0].data, id3Data, 'got correct ID3 data from v0 emsg');
+});
+
+QUnit.test('can get ID3 data from a multiple EMSG boxes', function(assert) { 
+  var v1id3Data = new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 
+    id3.stringToCString('priv-owner@example.com'), 
+    id3.stringToInts('foo.bar.id3.com')))
+  );
+
+  var v0id3Data = new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 
+    id3.stringToCString('bar@foo.com'), 
+    id3.stringToInts('id3.foo.bar.com')))
+  );
+
+  var v1EmsgId3Data = mp4Helpers.generateEmsgBoxData(1, v1id3Data);
+  var v1emsgId3Box = new Uint8Array(box('emsg', Array.from(v1EmsgId3Data)));
+
+  var v0EmsgId3Data = mp4Helpers.generateEmsgBoxData(0, v0id3Data);
+  var v0emsgId3Box = new Uint8Array(box('emsg', Array.from(v0EmsgId3Data)));
+
+  var multiBoxData = new Uint8Array(v1emsgId3Box.length + v0emsgId3Box.length);
+  multiBoxData.set(v1emsgId3Box);
+  multiBoxData.set(v0emsgId3Box, v1emsgId3Box.length);
+
+  var emsgBoxes = probe.getEmsgID3(multiBoxData);
+
+  assert.equal(emsgBoxes[0].pts, 100, 'got correct ID3 pts value from v0 emsg');
+  assert.equal(emsgBoxes[0].duration, 0.01, 'got correct ID3 duration value from v0 emsg');
+  assert.deepEqual(emsgBoxes[0].data, v1id3Data, 'got correct ID3 data from v0 emsg');
+
+  assert.equal(emsgBoxes[1].pts, 10, 'got correct ID3 pts value from v0 emsg');
+  assert.equal(emsgBoxes[1].duration, 0, 'got correct ID3 duration value from v0 emsg');
+  assert.deepEqual(emsgBoxes[1].data, v0id3Data, 'got correct ID3 data from v0 emsg');
+});
 // ---------
 // Test Data
 // ---------
