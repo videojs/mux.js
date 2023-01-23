@@ -152,8 +152,8 @@ QUnit.test('can get ID3 data from a v0 EMSG box', function(assert) {
 
   var v0EmsgId3Data = mp4Helpers.generateEmsgBoxData(0, id3Data);
   var emsgId3Box = new Uint8Array(box('emsg', Array.from(v0EmsgId3Data)));
-  var emsgBoxes = probe.getEmsgID3(emsgId3Box);
-  assert.equal(emsgBoxes[0].pts, 10, 'got correct ID3 pts value from v0 emsg');
+  var emsgBoxes = probe.getEmsgID3(emsgId3Box, 10);
+  assert.equal(emsgBoxes[0].pts, 20, 'got correct ID3 pts value from v0 emsg');
   assert.equal(emsgBoxes[0].duration, 0, 'got correct ID3 duration value from v0 emsg');
   assert.deepEqual(emsgBoxes[0].data, id3Data, 'got correct ID3 data from v0 emsg');
 });
