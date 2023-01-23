@@ -172,7 +172,7 @@ QUnit.test('can get ID3 data from a v1 EMSG box', function(assert) {
   assert.deepEqual(emsgBoxes[0].data, id3Data, 'got correct ID3 data from v1 emsg');
 });
 
-QUnit.test('can get ID3 data from a multiple EMSG boxes', function(assert) { 
+QUnit.test('can get ID3 data from multiple EMSG boxes', function(assert) { 
   var v1id3Data = new Uint8Array(id3.id3Tag(id3.id3Frame('PRIV', 
     id3.stringToCString('priv-owner@example.com'), 
     id3.stringToInts('foo.bar.id3.com')))
