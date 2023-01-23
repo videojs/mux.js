@@ -167,9 +167,9 @@ QUnit.test('can get ID3 data from a v1 EMSG box', function(assert) {
   var v1EmsgId3Data = mp4Helpers.generateEmsgBoxData(1, id3Data);
   var emsgId3Box = new Uint8Array(box('emsg', Array.from(v1EmsgId3Data)));
   var emsgBoxes = probe.getEmsgID3(emsgId3Box);
-  assert.equal(emsgBoxes[0].pts, 100, 'got correct ID3 pts value from v0 emsg');
-  assert.equal(emsgBoxes[0].duration, 0.01, 'got correct ID3 duration value from v0 emsg');
-  assert.deepEqual(emsgBoxes[0].data, id3Data, 'got correct ID3 data from v0 emsg');
+  assert.equal(emsgBoxes[0].pts, 100, 'got correct ID3 pts value from v1 emsg');
+  assert.equal(emsgBoxes[0].duration, 0.01, 'got correct ID3 duration value from v1 emsg');
+  assert.deepEqual(emsgBoxes[0].data, id3Data, 'got correct ID3 data from v1 emsg');
 });
 
 QUnit.test('can get ID3 data from a multiple EMSG boxes', function(assert) { 
@@ -195,9 +195,9 @@ QUnit.test('can get ID3 data from a multiple EMSG boxes', function(assert) {
 
   var emsgBoxes = probe.getEmsgID3(multiBoxData);
 
-  assert.equal(emsgBoxes[0].pts, 100, 'got correct ID3 pts value from v0 emsg');
-  assert.equal(emsgBoxes[0].duration, 0.01, 'got correct ID3 duration value from v0 emsg');
-  assert.deepEqual(emsgBoxes[0].data, v1id3Data, 'got correct ID3 data from v0 emsg');
+  assert.equal(emsgBoxes[0].pts, 100, 'got correct ID3 pts value from v1 emsg');
+  assert.equal(emsgBoxes[0].duration, 0.01, 'got correct ID3 duration value from v1 emsg');
+  assert.deepEqual(emsgBoxes[0].data, v1id3Data, 'got correct ID3 data from v1 emsg');
 
   assert.equal(emsgBoxes[1].pts, 10, 'got correct ID3 pts value from v0 emsg');
   assert.equal(emsgBoxes[1].duration, 0, 'got correct ID3 duration value from v0 emsg');
