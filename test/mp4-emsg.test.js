@@ -10,7 +10,7 @@ QUnit.module('EMSG Parsing');
 QUnit.test('Can parse a v0 emsg box', function(assert) {
     var boxData = generateEmsgBoxData(0, messageData);
     var parsedBox = emsg.parseEmsgBox(boxData);
-    // we're getting wrong version for some reason
+
     assert.equal(parsedBox.scheme_id_uri, 'urn:foo:bar:2023\0', 'v0 box has expected scheme_id_uri');
     assert.equal(parsedBox.value, 'foo.bar.value\0', 'v0 box has expected value');
     assert.equal(parsedBox.timescale, 100, 'v0 box has expected timescale');
@@ -25,7 +25,7 @@ QUnit.test('Can parse a v0 emsg box', function(assert) {
 QUnit.test('Can parse a v1 emsg box', function(assert) {
     var boxData = generateEmsgBoxData(1, messageData);
     var parsedBox = emsg.parseEmsgBox(boxData);
-    // we're getting wrong version for some reason
+
     assert.equal(parsedBox.scheme_id_uri, 'urn:foo:bar:2023\0', 'v1 box has expected scheme_id_uri');
     assert.equal(parsedBox.value, 'foo.bar.value\0', 'v1 box has expected value');
     assert.equal(parsedBox.timescale, 100, 'v1 box has expected timescale');
@@ -34,5 +34,4 @@ QUnit.test('Can parse a v1 emsg box', function(assert) {
     assert.equal(parsedBox.event_duration, 1, 'v1 box has expected event_duration');
     assert.equal(parsedBox.id, 2, 'v1 box has expected id');
     assert.deepEqual(parsedBox.message_data, messageData, 'v1 box has expected data');
-
 });
