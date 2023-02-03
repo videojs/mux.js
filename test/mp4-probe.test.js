@@ -174,7 +174,7 @@ QUnit.test('can get ID3 data from a v1 EMSG box', function(assert) {
   assert.equal(emsgBoxes[0].cueTime, 100, 'got correct emsg cueTime value from v1 emsg');
   assert.equal(emsgBoxes[0].duration, 0.01, 'got correct emsg duration value from v1 emsg');
   assert.equal(emsgBoxes[0].frames[0].id, 'TXXX' , 'got correct ID3 id');
-  assert.equal(emsgBoxes[0].frames[0].description, 'foo bar', 'got correct ID3 owner');
+  assert.equal(emsgBoxes[0].frames[0].description, 'foo bar', 'got correct ID3 description');
   assert.deepEqual(JSON.parse(emsgBoxes[0].frames[0].data), { key: 'value' }, 'got correct ID3 data');
 });
 
@@ -213,7 +213,7 @@ QUnit.test('can get ID3 data from multiple EMSG boxes', function(assert) {
   assert.equal(emsgBoxes[1].cueTime, 10, 'got correct emsg cueTime value from v0 emsg');
   assert.equal(emsgBoxes[1].duration, 0, 'got correct emsg duration value from v0 emsg');
   assert.equal(emsgBoxes[1].frames[0].id, 'TXXX' , 'got correct ID3 id');
-  assert.equal(emsgBoxes[1].frames[0].description, 'foo bar', 'got correct ID3 owner');
+  assert.equal(emsgBoxes[1].frames[0].description, 'foo bar', 'got correct ID3 description');
   assert.deepEqual(JSON.parse(emsgBoxes[1].frames[0].data),{ key: 'value' }, 'got correct ID3 data');
 });
 
