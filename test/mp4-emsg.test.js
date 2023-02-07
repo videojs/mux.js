@@ -35,3 +35,9 @@ QUnit.test('Can parse a v1 emsg box', function(assert) {
   assert.equal(parsedBox.id, 2, 'v1 box has expected id');
   assert.deepEqual(parsedBox.message_data, messageData, 'v1 box has expected data');
 });
+
+QUnit.test('Will return undefined if the emsg box is invalid', function(assert) {
+  var badBoxData = generateEmsgBoxData(3, messageData);
+  var parsedBox = emsg.parseEmsgBox(badBoxData);
+  assert.equal(parsedBox, undefined, 'parsed box is undefined');
+});
