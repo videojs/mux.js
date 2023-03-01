@@ -1,4 +1,4 @@
-name: github-release
+name: release
 on:
   push:
     tags:
@@ -7,7 +7,7 @@ on:
     # match semver pre-releases
     - "v[0-9]+.[0-9]+.[0-9]+-*"
 jobs:
-  github-release:
+  release:
     env:
       # Set this if you want a netlify example
       NETLIFY_BASE: 'muxjs.netlify.app/'
@@ -30,12 +30,17 @@ jobs:
         with:
           node-version: '${{steps.nvm.outputs.NVMRC}}'
           cache: npm
+          # this line is required for the setup-node action to be able to run the npm publish below.
+          registry-url: 'https://registry.npmjs.org'
 
       - name: npm install
         run: npm i --prefer-offline --no-audit
 
-      - name: build
-        run: npm run build-prod || npm run build --if-present
+      # publish runs build for us via a prepublishOnly script
+      - name: npm release
+        run: npm publish --tag next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Check if this is a pre-release
         run: echo ::set-output name=IS_PRE_RELEASE::$(npx -p not-prerelease is-prerelease && echo "true" || echo "false")
@@ -68,3 +73,4 @@ jobs:
           files: |
             dist/**/*.js
             dist/**/*.css
+          discussion_category_name: Releases
