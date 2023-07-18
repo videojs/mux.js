@@ -856,24 +856,24 @@ QUnit.test('clears buffer and drops data until first command that sets activeCha
   seiNals1.forEach(captionStream.push, captionStream);
   captionStream.flush();
 
-  assert.equal(captionStream.ccStreams_[0].nonDisplayed_[14], 'field0',
+  assert.equal(captionStream.ccStreams_[0].nonDisplayed_[14].text, 'field0',
     'there is data in non-displayed memory for field 0 before reset');
-  assert.equal(captionStream.ccStreams_[3].nonDisplayed_[14], 'field1',
+  assert.equal(captionStream.ccStreams_[3].nonDisplayed_[14].text, 'field1',
     'there is data in non-displayed memory for field 1 before reset');
-  assert.equal(captionStream.ccStreams_[0].displayed_[14], 'field0',
+  assert.equal(captionStream.ccStreams_[0].displayed_[14].text, 'field0',
     'there is data in displayed memory for field 0 before reset');
-  assert.equal(captionStream.ccStreams_[3].displayed_[14], 'field1',
+  assert.equal(captionStream.ccStreams_[3].displayed_[14].text, 'field1',
     'there is data in displayed memory for field 1 before reset');
 
   captionStream.reset();
 
-  assert.equal(captionStream.ccStreams_[0].nonDisplayed_[14], '',
+  assert.equal(captionStream.ccStreams_[0].nonDisplayed_[14].text, '',
     'there is no data in non-displayed memory for field 0 after reset');
-  assert.equal(captionStream.ccStreams_[3].nonDisplayed_[14], '',
+  assert.equal(captionStream.ccStreams_[3].nonDisplayed_[14].text, '',
     'there is no data in non-displayed memory for field 1 after reset');
-  assert.equal(captionStream.ccStreams_[0].displayed_[14], '',
+  assert.equal(captionStream.ccStreams_[0].displayed_[14].text, '',
     'there is no data in displayed memory for field 0 after reset');
-  assert.equal(captionStream.ccStreams_[3].displayed_[14], '',
+  assert.equal(captionStream.ccStreams_[3].displayed_[14].text, '',
     'there is no data in displayed memory for field 1 after reset');
 
   seiNals2.forEach(captionStream.push, captionStream);
@@ -1969,13 +1969,13 @@ QUnit.test('switching to roll-up from pop-on wipes memories and flushes captions
   ].forEach(cea608Stream.push, cea608Stream);
 
   var displayed = cea608Stream.displayed_.reduce(function(acc, val) {
-    acc += val;
+    acc += val.text;
     return acc;
-  });
+  }, '');
   var nonDisplayed = cea608Stream.nonDisplayed_.reduce(function(acc, val) {
-    acc += val;
+    acc += val.text;
     return acc;
-  });
+  }, '');
 
   assert.equal(captions.length, 2, 'both captions flushed');
   assert.equal(displayed, '', 'displayed memory is wiped');
@@ -2017,13 +2017,13 @@ QUnit.test('switching to roll-up from paint-on wipes memories and flushes captio
   ].forEach(cea608Stream.push, cea608Stream);
 
   var displayed = cea608Stream.displayed_.reduce(function(acc, val) {
-    acc += val;
+    acc += val.text;
     return acc;
-  });
+  }, '');
   var nonDisplayed = cea608Stream.nonDisplayed_.reduce(function(acc, val) {
-    acc += val;
+    acc += val.text;
     return acc;
-  });
+  }, '');
 
   assert.equal(captions.length, 1, 'flushed caption');
   assert.equal(displayed, '', 'displayed memory is wiped');
@@ -2396,7 +2396,7 @@ QUnit.test('reset works', function(assert) {
     { pts: 0, ccData: characters('01'), type: 0 }
   ].forEach(cea608Stream.push, cea608Stream);
   var buffer = cea608Stream.displayed_.map(function(row) {
-    return row.trim();
+    return row.text.trim();
   }).join('\n')
   .replace(/^\n+|\n+$/g, '');
 
@@ -2405,7 +2405,7 @@ QUnit.test('reset works', function(assert) {
   cea608Stream.reset();
   buffer = cea608Stream.displayed_
     .map(function(row) {
-      return row.trim();
+      return row.text.trim();
     })
     .join('\n')
     .replace(/^\n+|\n+$/g, '');
@@ -2545,10 +2545,10 @@ QUnit.test('PAC offset code increases the position', function(assert) {
   var packets = [
     // RCL, resume caption loading
     { ccData: 0x1420, type: 0 },
-    // PAC offset (tab offset 2 columns)
+    // PAC: row 1, indent 0
+    { pts: 6750, ccData: 0x1150, type: 0 },
+    // TO2 (tab offset 2 columns)
     { pts: 6755, ccData: 0x1722, type: 0 },
-    // PAC indent code representing 1 indentation.
-    { ccData: 4434, type: 0 },
     { ccData: characters('te'), type: 0 },
     { ccData: characters('st'), type: 0 },
     // EOC, End of Caption
@@ -2562,7 +2562,8 @@ QUnit.test('PAC offset code increases the position', function(assert) {
   packets.forEach(cea608Stream.push, cea608Stream);
   assert.equal(captions[0].content[0].text, 'test', 'content text');
   assert.equal(captions[0].content[0].line, 1, 'positions the caption to the bottom of the screen');
-  assert.equal(captions[0].content[0].position, 20, 'positions the caption to the right');
+  // Two tab offset columns adds 5 to the position (2 * 2.5)
+  assert.equal(captions[0].content[0].position, 15, 'positions the caption to the right');
 });
 
 QUnit.test('PAC row command ensures we have the correct line property for captions', function(assert) {
@@ -2852,7 +2853,7 @@ QUnit.test('mix of all modes (extract from CNN)', function(assert) {
   assert.deepEqual(captions[3], {
     content: [{
       line: 1,
-      position: 20,
+      position: 22.5,
       text: 'on the national debt?',
     }],
     startPts: 6782,
@@ -2863,7 +2864,7 @@ QUnit.test('mix of all modes (extract from CNN)', function(assert) {
     content: [
       {
         line: 1,
-        position: 20,
+        position: 25,
         text: 'Will they stay true',
       },
       {
