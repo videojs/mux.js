@@ -1,3 +1,18 @@
+<a name="7.0.0"></a>
+# [7.0.0](https://github.com/videojs/mux.js/compare/v6.3.0...v7.0.0) (2023-07-21)
+
+### Features
+
+* add position data to captions ([#434](https://github.com/videojs/mux.js/issues/434)) ([30f2132](https://github.com/videojs/mux.js/commit/30f2132))
+
+### Chores
+
+* add npm publish step to the release workflow ([a8306cd](https://github.com/videojs/mux.js/commit/a8306cd))
+* rename workflow name from github-release to release and add discussion category name for github releases ([4ba1607](https://github.com/videojs/mux.js/commit/4ba1607))
+* Update CI and release workflows ([#431](https://github.com/videojs/mux.js/issues/431)) ([dc56f1b](https://github.com/videojs/mux.js/commit/dc56f1b))
+* update collaborator guide md ([51b3ed4](https://github.com/videojs/mux.js/commit/51b3ed4))
+* update git push suggestion in collaborator guide md ([73a5b60](https://github.com/videojs/mux.js/commit/73a5b60))
+
 <a name="6.3.0"></a>
 # [6.3.0](https://github.com/videojs/mux.js/compare/v6.2.0...v6.3.0) (2023-02-22)
 
