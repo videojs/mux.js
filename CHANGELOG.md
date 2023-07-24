@@ -13,6 +13,27 @@
 * update collaborator guide md ([51b3ed4](https://github.com/videojs/mux.js/commit/51b3ed4))
 * update git push suggestion in collaborator guide md ([73a5b60](https://github.com/videojs/mux.js/commit/73a5b60))
 
+### BREAKING CHANGES
+
+* In the case of CEA-608, mux.js will now be returning captions in the form of caption sets.
+This means that rather then returning a single text of combined caption cues, an array of caption cues are returned in the `content` array.
+
+```js
+transmuxer.on('data', function (segment) {
+  // create a VTTCue for all the parsed CEA-608 captions:>
+  segment.captions.forEach(function(captionSet) {
+    // Caption sets contains multiple captions with text and position data.
+    captionSet.content.forEach(function(cue) {
+      const newCue = new VTTCue(cue.startTime, cue.endTime, cue.text);
+      newCue.line = cue.line;
+      newCue.position = cue.position;
+
+      captionTextTrack.addCue(newCue);
+    });
+  });
+});
+```
+
 <a name="6.3.0"></a>
 # [6.3.0](https://github.com/videojs/mux.js/compare/v6.2.0...v6.3.0) (2023-02-22)
 
