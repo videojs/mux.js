@@ -15,8 +15,8 @@
 
 ### BREAKING CHANGES
 
-* In the case of CEA-608, mux.js will now be returning captions in the form of caption sets.
-This means that rather then returning a single text of combined caption cues, an array of caption cues are returned in the `content` array.
+* In the case of CEA-608 captions, mux.js will now be returning captions in the form of caption sets.
+This means that rather then returning a single text of combined caption cues, an array of caption cues is returned in the `content` property.
 
 ```js
 transmuxer.on('data', function (segment) {
