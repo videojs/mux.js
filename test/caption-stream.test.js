@@ -3051,6 +3051,33 @@ QUnit.test('Decodes multibyte characters if valid encoding option is provided an
   }
 });
 
+QUnit.test('Decodes multi-byte characters as unicode if no valid encoding option is provided', function(assert) {
+  var captions = [];
+
+  cea708Stream = new m2ts.Cea708Stream({
+    captionServices: {
+      SERVICE1: {}
+    }
+  });
+
+  cea708Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  cc708Korean.forEach(cea708Stream.push, cea708Stream);
+
+  cea708Stream.flushDisplayed(4721138662, cea708Stream.services[1]);
+
+  assert.equal(captions.length, 1, 'parsed single caption correctly');
+
+  assert.notOk(cea708Stream.services[1].textDecoder_, 'TextDecoder was not created');
+  assert.equal(
+    captions[0].text,
+    '듏낡 ',
+    'parsed multibyte characters correctly'
+  );
+});
+
 QUnit.test('Creates TextDecoder only if valid encoding value is provided', function(assert) {
   var secondCea708Stream;
 
