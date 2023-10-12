@@ -1,3 +1,14 @@
+<a name="7.0.1"></a>
+## [7.0.1](https://github.com/videojs/mux.js/compare/v7.0.0...v7.0.1) (2023-10-12)
+
+### Bug Fixes
+
+* 708 captions multi-byte char fix ([#439](https://github.com/videojs/mux.js/issues/439)) ([ec31749](https://github.com/videojs/mux.js/commit/ec31749))
+
+### Chores
+
+* update v7.0.0 documentation ([#435](https://github.com/videojs/mux.js/issues/435)) ([21e55aa](https://github.com/videojs/mux.js/commit/21e55aa))
+
 <a name="7.0.0"></a>
 # [7.0.0](https://github.com/videojs/mux.js/compare/v6.3.0...v7.0.0) (2023-07-21)
 
