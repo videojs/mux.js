@@ -287,3 +287,39 @@ QUnit.test('continues parsing after corrupted stream', function(assert) {
   assert.equal(adtsCount, 1);
   assert.equal(id3Count, 1);
 });
+
+QUnit.test('handles timestamp rollover', function(assert) {
+    var
+      MAX_TS = 8589934592,
+      count = 0,
+      array = new Uint8Array(2048);
+
+    array[0] = 255;
+    array[1] = 255;
+    array[2] = 0;
+    array[3] = 255;
+    array[4] = 255;
+    array[5] = 255;
+    array[6] = 255;
+    array[7] = 255;
+    array[8] = 0;
+    array[9] = 0;
+
+
+  aacStream.on('data', function(frame) {
+    if (frame.pts > MAX_TS && frame.dts > MAX_TS) {
+      count += 1;
+    }
+  });
+
+  aacStream.setTimestamp(MAX_TS);
+  aacStream.push(array);
+
+  aacStream.setTimestamp(10);
+  aacStream.push(array);
+
+  aacStream.setTimestamp(20);
+  aacStream.push(array);
+
+  assert.equal(count, 2);
+});
