@@ -283,6 +283,26 @@ QUnit.test('parses the program map table pid from the program association table 
   assert.strictEqual(0x0010, transportParseStream.pmtPid, 'parsed PMT pid');
 });
 
+QUnit.test('parses section_number and last_section_number from the PAT', function(assert) {
+  var packet, pat;
+
+  // Distinctive values: the shared PAT fixture is zero here, which hides
+  // an off-by-one against program_number (ISO/IEC 13818-1 2.4.4.3).
+  pat = PAT.slice();
+  pat[11] = 0x03;
+  pat[12] = 0x05;
+
+  transportParseStream.on('data', function(data) {
+    packet = data;
+  });
+
+  transportParseStream.push(new Uint8Array(pat));
+  assert.ok(packet, 'parsed a packet');
+  assert.strictEqual(packet.section_number, 0x03, 'parsed section_number'); // eslint-disable-line camelcase
+  assert.strictEqual(packet.last_section_number, 0x05, 'parsed last_section_number'); // eslint-disable-line camelcase
+  assert.strictEqual(packet.pmtPid, 0x0010, 'parsed PMT pid');
+});
+
 QUnit.test('does not parse PES packets until after the PES has been parsed', function(assert) {
   var pesCount = 0;
 
