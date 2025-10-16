@@ -29,8 +29,11 @@ jobs:
       CI_TEST_TYPE: ${{matrix.test-type}}
     runs-on: ${{matrix.os}}
     steps:
+    - name: Disable apparmor because it breaks Chromium headless
+      run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
     - name: checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: read node version from .nvmrc
       run: echo "NVMRC=$(cat .nvmrc)" >> $GITHUB_OUTPUT
@@ -47,7 +50,7 @@ jobs:
       run: pulseaudio -D
 
     - name: setup node
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v5
       with:
         node-version: '${{steps.nvm.outputs.NVMRC}}'
         cache: npm
