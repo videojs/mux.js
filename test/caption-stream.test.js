@@ -3,7 +3,7 @@
 var segments = require('data-files!segments');
 
 var
-  window = require('global/window'),
+  window = require('videojs-global-compat/window'),
   captionStream,
   m2ts = require('../lib/m2ts'),
   mp4 = require('../lib/mp4'),
