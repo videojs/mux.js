@@ -2,7 +2,7 @@ var segments = require('data-files!segments');
 var vttContentSegment = segments['test-webvtt.m4s']();
 var vttInitSegment = segments['test-webvtt-init.mp4']();
 var WebVttParser = require('../lib/mp4').WebVttParser;
-var window = require('videojs-global-compat/window');
+var window = require('@videojs/global-compat/window');
 var webVttParser;
 
 QUnit.module('MP4 WebVtt Segment Parser', {

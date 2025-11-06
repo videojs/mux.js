@@ -1,4 +1,4 @@
-var window = require('videojs-global-compat/window');
+var window = require('@videojs/global-compat/window');
 // TODO: use vhs-utils here
 
 var atob = (s) => window.atob ? window.atob(s) : Buffer.from(s, 'base64').toString('binary');
