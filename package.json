@@ -104,7 +104,7 @@
     "@videojs/vhs-utils": "^3.0.0",
     "karma": "^5.0.0",
     "qunit": "^2.16.0",
-    "rollup": "^2.37.1",
+    "rollup": "^2.80.0",
     "rollup-plugin-data-files": "^0.1.0",
     "rollup-plugin-worker-factory": "^0.5.6",
     "sinon": "^8.1.1",
