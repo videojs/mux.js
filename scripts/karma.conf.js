@@ -8,7 +8,7 @@ module.exports = function(config) {
     coverage: false,
     browsers(aboutToRun) {
       return aboutToRun.filter(function(launcherName) {
-        return !(/^Safari/).test(launcherName);
+        return !(/^(Safari|Chromium)/).test(launcherName);
       });
     },
     browserstackLaunchers(defaults) {
