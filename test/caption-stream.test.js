@@ -3078,6 +3078,37 @@ QUnit.test('Decodes multi-byte characters as unicode if no valid encoding option
   );
 });
 
+QUnit.test('Decodes P16 two-byte characters outside the G0/G1 text block', function(assert) {
+  var captions = [];
+
+  cea708Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  // P16 (0x18) introduces a 16-bit character. Unicode letters such as
+  // ż (U+017C), ł (U+0142), and ć (U+0107) have a first byte below 0x20,
+  // which is outside the G0/G1 ranges used for single-byte 708 text.
+  // ó (U+00F3) is a single G1 byte and should still decode beside them.
+  [
+    { type: 3, pts: 1000, ccData: packetHeader708(0, 8, 1, 14) },
+    { type: 2, pts: 1000, ccData: displayWindows708([0]) },
+    { type: 2, pts: 1000, ccData: 0x8000 }, // CW0
+    { type: 2, pts: 1000, ccData: 0x1801 }, // P16, U+017C
+    { type: 2, pts: 1000, ccData: 0x7cf3 }, // ż then ó (G1)
+    { type: 2, pts: 1000, ccData: 0x1801 }, // P16, U+0142
+    { type: 2, pts: 1000, ccData: 0x4218 }, // ł then P16
+    { type: 2, pts: 1000, ccData: 0x0107 }, // ć U+0107
+
+    { type: 3, pts: 2000, ccData: packetHeader708(1, 2, 1, 2) },
+    { type: 2, pts: 2000, ccData: 0x8aff },
+
+    { type: 3, pts: 3000, ccData: packetHeader708(2, 1, 1, 0) }
+  ].forEach(cea708Stream.push, cea708Stream);
+
+  assert.equal(captions.length, 1, 'parsed 1 caption');
+  assert.equal(captions[0].text, 'żółć', 'parsed P16 unicode characters correctly');
+});
+
 QUnit.test('Creates TextDecoder only if valid encoding value is provided', function(assert) {
   var secondCea708Stream;
 
