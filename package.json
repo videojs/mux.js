@@ -47,6 +47,9 @@
   "engines": {
     "node": "^22.13.0 || >=24"
   },
+  "overrides": {
+    "serialize-javascript": "^7.0.3"
+  },
   "keywords": [
     "video",
     "container",
@@ -104,12 +107,12 @@
     "@videojs/vhs-utils": "^3.0.0",
     "karma": "^6.4.4",
     "qunit": "^2.16.0",
-    "rollup": "^2.37.1",
+    "rollup": "^2.80.0",
     "rollup-plugin-data-files": "^0.1.0",
     "rollup-plugin-worker-factory": "^0.5.6",
     "sinon": "^8.1.1",
     "videojs-generate-karma-config": "^8.1.0",
-    "videojs-generate-rollup-config": "~6.2.0",
+    "videojs-generate-rollup-config": "~7.0.2",
     "videojs-generator-verify": "~3.0.2",
     "videojs-standard": "^8.0.4"
   }
