@@ -36,8 +36,8 @@
     "test": "npm-run-all lint build-test test:*",
     "test:browser": "karma start scripts/karma.conf.js",
     "test:node": "node scripts/node-test.js",
-    "update-changelog": "conventional-changelog -p videojs -i CHANGELOG.md -s",
-    "version": "is-prerelease || npm run update-changelog && git add CHANGELOG.md",
+    "update-changelog": "vjs-update-changelog --run-on-prerelease",
+    "version": "vjs-update-changelog --add",
     "watch": "npm-run-all -p watch:*",
     "watch:cjs": "npm run build:cjs -- -w",
     "watch:es": "npm run build:es -- -w",
@@ -87,11 +87,6 @@
     "src/",
     "test/"
   ],
-  "husky": {
-    "hooks": {
-      "pre-commit": ": lint-staged"
-    }
-  },
   "lint-staged": {
     "*.js": "vjsstandard --fix",
     "README.md": "doctoc --notitle"
@@ -103,7 +98,7 @@
   "devDependencies": {
     "@babel/cli": "^7.11.6",
     "@videojs/babel-config": "^0.2.0",
-    "@videojs/generator-helpers": "~2.0.1",
+    "@videojs/generator-helpers": "~3.2.0",
     "@videojs/vhs-utils": "^3.0.0",
     "karma": "^6.4.4",
     "qunit": "^2.16.0",
