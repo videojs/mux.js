@@ -26,7 +26,7 @@ var metadataStream, stringToInts, stringToCString, id3Tag, id3Frame, id3Generato
 mp2t = require('../lib/m2ts');
 QUnit = require('qunit');
 id3Generator = require('./utils/id3-generator');
-MetadataStreamTestWorker = require('worker!./metadata-stream-test-worker.js');
+MetadataStreamTestWorker = require('worker!./metadata-stream-test-worker.js').default;
 stringToInts = id3Generator.stringToInts;
 stringToCString = id3Generator.stringToCString;
 id3Tag = id3Generator.id3Tag;
