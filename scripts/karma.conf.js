@@ -12,8 +12,8 @@ module.exports = function(config) {
       });
     },
     browserstackLaunchers(defaults) {
-      delete defaults.bsSafariMojave;
-      delete defaults.bsSafariElCapitan;
+      delete defaults.bsSafari15;
+      delete defaults.bsSafari17;
 
       return defaults;
     }

@@ -5,6 +5,25 @@ const worker = require('rollup-plugin-worker-factory');
 // see https://github.com/videojs/videojs-generate-rollup-config
 // for options
 
+// videojs-generate-rollup-config 6.2.2 and later inline global/window in the
+// browser builds, which changes the UMD wrapper that mux.js has always shipped
+const browserGlobals = {
+  globals(defaults) {
+    Object.assign(defaults.browser, {
+      global: 'window',
+      'global/window': 'window',
+      'global/document': 'document'
+    });
+
+    return defaults;
+  },
+  plugins(defaults) {
+    defaults.browser = defaults.browser.filter((name) => name !== 'externalGlobals');
+
+    return defaults;
+  }
+};
+
 const shared = {
   primedPlugins(defaults) {
     defaults = Object.assign(defaults, {
@@ -22,7 +41,9 @@ const shared = {
 
     return defaults;
   },
+  globals: browserGlobals.globals,
   plugins(defaults) {
+    defaults = browserGlobals.plugins(defaults);
     defaults.module.splice(2, 0, 'worker');
     defaults.browser.splice(2, 0, 'worker');
     defaults.test.splice(3, 0, 'worker');
@@ -37,8 +58,8 @@ const shared = {
   }
 };
 const mainBuilds = generate(Object.assign({input: 'lib/index.js', distName: 'mux', exportName: 'muxjs'}, shared)).builds;
-const mp4Builds = generate({input: 'lib/mp4/index.js', distName: 'mux-mp4', exportName: 'muxjs'}).builds;
-const flvBuilds = generate({input: 'lib/flv/index.js', distName: 'mux-flv', exportName: 'muxjs'}).builds;
+const mp4Builds = generate(Object.assign({input: 'lib/mp4/index.js', distName: 'mux-mp4', exportName: 'muxjs'}, browserGlobals)).builds;
+const flvBuilds = generate(Object.assign({input: 'lib/flv/index.js', distName: 'mux-flv', exportName: 'muxjs'}, browserGlobals)).builds;
 
 const allBuilds = [];
 
