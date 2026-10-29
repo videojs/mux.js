@@ -18,6 +18,10 @@ var box = mp4Helpers.box;
 var seiNalUnitGenerator = require('./utils/sei-nal-unit-generator');
 var makeMdatFromCaptionPackets = seiNalUnitGenerator.makeMdatFromCaptionPackets;
 var characters = seiNalUnitGenerator.characters;
+var packetHeader708 = seiNalUnitGenerator.packetHeader708;
+var displayWindows708 = seiNalUnitGenerator.displayWindows708;
+
+var cc708Korean = require('./utils/cc708-korean');
 
 var packets0;
 var version0Moof;
@@ -26,6 +30,15 @@ var version0Segment;
 var packets1;
 var version1Moof;
 var version1Segment;
+
+var CEA608_RESUME_CAPTION_LOADING = 0x1420;
+var CEA608_END_OF_CAPTION = 0x142f;
+var CEA708_SET_CURRENT_WINDOW_0 = 0x8000;
+var CEA708_HIDE_ALL_WINDOWS = 0x8aff;
+
+var mixed608708Packets;
+var mixed608708Segment;
+var korean708Segment;
 
 QUnit.module('MP4 Caption Parser', {
   beforeEach: function() {
@@ -136,6 +149,59 @@ QUnit.test('returns log on invalid sei nal parse', function(assert) {
   assert.deepEqual(result.logs, [
     {level: 'warn', message: 'We\'ve encountered a nal unit without data at 189975 for trackId 1. See mux.js#223.'}
   ], 'logged invalid sei nal');
+});
+
+QUnit.test('parses both 608 and 708 captions by default', function(assert) {
+  var cc = captionParser.parse(mixed608708Segment, [1], { 1: 90000 });
+
+  assert.deepEqual(cc.captions.map(function(caption) {
+    return caption.stream;
+  }), ['CC1', 'cc708_1'], 'dispatched one 608 and one 708 caption');
+  assert.equal(cc.captions[0].content[0].text, '608 text', 'parsed the 608 caption text');
+  assert.equal(cc.captions[1].text, '708 text', 'parsed the 708 caption text');
+  assert.deepEqual(cc.captionStreams, { CC1: true, cc708_1: true },
+    'reported both caption streams');
+});
+
+QUnit.test('parse708captions: false suppresses 708 captions', function(assert) {
+  captionParser = new CaptionParser();
+  captionParser.init({ parse708captions: false });
+
+  var cc = captionParser.parse(mixed608708Segment, [1], { 1: 90000 });
+
+  assert.deepEqual(cc.captions.map(function(caption) {
+    return caption.stream;
+  }), ['CC1'], 'dispatched only the 608 caption');
+  assert.equal(cc.captions[0].content[0].text, '608 text', 'still parsed the 608 caption text');
+  assert.deepEqual(cc.captionStreams, { CC1: true },
+    'did not report a 708 caption stream');
+});
+
+QUnit.test('captionServices encoding is applied to 708 captions', function(assert) {
+  var defaultCc = captionParser.parse(korean708Segment, [1], { 1: 90000 });
+
+  assert.equal(defaultCc.captions.length, 1, 'parsed a single caption without an encoding');
+  assert.equal(defaultCc.captions[0].text, '듏낡 뎻 ',
+    'decoded multi-byte characters as unicode without an encoding');
+
+  captionParser = new CaptionParser();
+  captionParser.init({
+    captionServices: {
+      SERVICE1: { encoding: 'euc-kr' }
+    }
+  });
+
+  var eucKrCc = captionParser.parse(korean708Segment, [1], { 1: 90000 });
+
+  assert.equal(eucKrCc.captions.length, 1, 'parsed a single caption with an encoding');
+
+  if (typeof TextDecoder !== 'undefined') {
+    assert.equal(eucKrCc.captions[0].text, '니가 내 ',
+      'decoded multi-byte characters using the euc-kr encoding');
+  } else {
+    assert.equal(eucKrCc.captions[0].text, '듏낡 뎻 ',
+      'fell back to unicode without TextDecoder support');
+  }
 });
 
 // ---------
@@ -269,3 +335,42 @@ version1Moof =
         0x00, 0x00, 0x00, 0x14))); // signed sample_composition_time_offset = 20
 
 version1Segment = version1Moof.concat(makeMdatFromCaptionPackets(packets1));
+
+mixed608708Packets = [
+  { ccData: CEA608_RESUME_CAPTION_LOADING, type: 0 },
+  { ccData: CEA608_RESUME_CAPTION_LOADING, type: 0 },
+  { ccData: characters('60'), type: 0 },
+  { ccData: characters('8 '), type: 0 },
+  { ccData: characters('te'), type: 0 },
+  { ccData: characters('xt'), type: 0 },
+  { ccData: CEA608_END_OF_CAPTION, type: 0 },
+  { ccData: CEA608_END_OF_CAPTION, type: 0 },
+  { ccData: CEA608_RESUME_CAPTION_LOADING, type: 0 },
+  { ccData: CEA608_END_OF_CAPTION, type: 0 },
+
+  { ccData: packetHeader708(0, 7, 1, 12), type: 3 },
+  { ccData: CEA708_SET_CURRENT_WINDOW_0, type: 2 },
+  { ccData: characters('70'), type: 2 },
+  { ccData: characters('8 '), type: 2 },
+  { ccData: characters('te'), type: 2 },
+  { ccData: characters('xt'), type: 2 },
+  { ccData: displayWindows708([0]), type: 2 },
+
+  { ccData: packetHeader708(1, 2, 1, 2), type: 3 },
+  { ccData: CEA708_HIDE_ALL_WINDOWS, type: 2 },
+
+  { ccData: packetHeader708(2, 1, 1, 0), type: 3 }
+];
+
+mixed608708Segment = new Uint8Array(
+  version0Moof.concat(makeMdatFromCaptionPackets(mixed608708Packets))
+);
+
+korean708Segment = new Uint8Array(
+  version0Moof.concat(makeMdatFromCaptionPackets(cc708Korean.concat([
+    { ccData: packetHeader708(0, 2, 1, 2), type: 3 },
+    { ccData: CEA708_HIDE_ALL_WINDOWS, type: 2 },
+
+    { ccData: packetHeader708(1, 1, 1, 0), type: 3 }
+  ])))
+);
