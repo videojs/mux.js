@@ -76,4 +76,3 @@ jobs:
           files: |
             dist/**/*.js
             dist/**/*.css
-          discussion_category_name: Releases
