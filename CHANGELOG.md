@@ -1,3 +1,14 @@
+<a name="7.1.1"></a>
+## [7.1.1](https://github.com/videojs/mux.js/compare/v7.1.0...v7.1.1) (2026-10-29)
+
+### Bug Fixes
+
+* update node, regenerate the lockfile and run the audit pass ([#458](https://github.com/videojs/mux.js/issues/458)) ([36e76d5](https://github.com/videojs/mux.js/commit/36e76d5))
+
+### Chores
+
+* **ci:** run karma on local headless browsers instead of BrowserStack ([#453](https://github.com/videojs/mux.js/issues/453)) ([6d1ae20](https://github.com/videojs/mux.js/commit/6d1ae20))
+
 <a name="7.1.0"></a>
 # [7.1.0](https://github.com/videojs/mux.js/compare/v7.0.3...v7.1.0) (2024-10-11)
 
