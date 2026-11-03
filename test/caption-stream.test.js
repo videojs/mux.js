@@ -2970,6 +2970,77 @@ QUnit.test('Filters encoding values out of captionServices option block', functi
   assert.deepEqual(cea708Stream.serviceEncodings, expectedServiceEncodings, 'filtered encodings correctly');
 });
 
+QUnit.test('P16 parameters outside G0/G1 are consumed as one character', function(assert) {
+  // Exercise the existing Unicode fallback, not a new character mapping.
+  // U+0410 followed by ASCII B previously produced a stray ASCII 0 instead.
+  cea708Stream.current708Packet = {data: [0x18, 0x04, 0x10, 0x42], ptsVals: [1000, 1000]};
+  var service = cea708Stream.initService(1, 0);
+
+  service.setCurrentWindow(0);
+  cea708Stream.pushServiceBlock(1, 0, 4);
+  assert.equal(service.currentWindow.getText(), '\u0410B', 'parameter bytes are not commands');
+});
+
+QUnit.test('P16 preserves all Cyrillic code units and following ASCII text', function(assert) {
+  for (var code = 0x0400; code <= 0x052f; code++) {
+    cea708Stream.current708Packet = {
+      data: [0x18, code >> 8, code & 0xff, 0x21],
+      ptsVals: [1000, 1000]
+    };
+    var service = cea708Stream.initService(1, 0);
+
+    service.setCurrentWindow(0);
+    cea708Stream.pushServiceBlock(1, 0, 4);
+    assert.equal(service.currentWindow.getText(), String.fromCharCode(code) + '!',
+      'both bytes consumed for U+' + code.toString(16));
+  }
+});
+
+QUnit.test('P16 with a zero high byte retains the existing Unicode fallback', function(assert) {
+  cea708Stream.current708Packet = {data: [0x18, 0x00, 0x41, 0x42], ptsVals: [1000, 1000]};
+  var service = cea708Stream.initService(1, 0);
+
+  service.setCurrentWindow(0);
+  cea708Stream.pushServiceBlock(1, 0, 4);
+  assert.equal(service.currentWindow.getText(), 'AB', 'zero parameter is not a NUL command');
+});
+
+QUnit.test('truncated P16 does not read past its service or packet boundary', function(assert) {
+  [[0x18], [0x18, 0x41]].forEach(function(bytes) {
+    cea708Stream.current708Packet = {data: bytes, ptsVals: [1000]};
+    var service = cea708Stream.initService(1, 0);
+
+    service.setCurrentWindow(0);
+    cea708Stream.pushServiceBlock(1, 0, bytes.length);
+    assert.equal(service.currentWindow.getText(), '', 'truncated parameter is not rendered');
+  });
+  cea708Stream.current708Packet = {data: [0x18, 0x41, 0x42, 0x43], ptsVals: [1000, 1000]};
+  var first = cea708Stream.initService(1, 0);
+  var second = cea708Stream.initService(2, 2);
+
+  first.setCurrentWindow(0);
+  second.setCurrentWindow(0);
+  cea708Stream.pushServiceBlock(1, 0, 2);
+  cea708Stream.pushServiceBlock(2, 2, 2);
+  assert.equal(first.currentWindow.getText(), '', 'does not steal next service bytes');
+  assert.equal(second.currentWindow.getText(), 'BC', 'following service remains intact');
+});
+
+QUnit.test('zero-high-byte P16 does not prepend NUL with an explicit decoder', function(assert) {
+  cea708Stream.current708Packet = {data: [0x18, 0x00, 0x41], ptsVals: [1000, 1000]};
+  var service = cea708Stream.initService(1, 0);
+  var decodedBytes;
+
+  service.setCurrentWindow(0);
+  service.textDecoder_ = {decode: function(bytes) {
+    decodedBytes = Array.prototype.slice.call(bytes);
+    return 'A';
+  }};
+  cea708Stream.pushServiceBlock(1, 0, 3);
+  assert.deepEqual(decodedBytes, [0x41], 'decoder receives only the character byte');
+  assert.equal(service.currentWindow.getText(), 'A', 'no spurious NUL');
+});
+
 QUnit.test('parses 708 captions', function(assert) {
   var captions = [];
 
