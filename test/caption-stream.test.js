@@ -2446,6 +2446,45 @@ QUnit.test('paint-on mode', function(assert) {
   }, 'parsed the caption');
 });
 
+QUnit.test('a second RDC in paint-on mode flushes the displayed caption', function(assert) {
+  var captions = [];
+  cea608Stream.on('data', function(caption) {
+    captions.push(caption);
+  });
+
+  [
+    // RDC, resume direct captioning
+    { pts: 1000, ccData: 0x1429, type: 0 },
+    // PAC: row 14, indent 0
+    { pts: 1000, ccData: 0x1450, type: 0 },
+    { pts: 1000, ccData: characters('hi'), type: 0 },
+    // RDC again, while already in paint-on mode
+    { pts: 4000, ccData: 0x1429, type: 0 },
+    // PAC: row 15, indent 0
+    { pts: 4000, ccData: 0x1470, type: 0 },
+    { pts: 4000, ccData: characters('yo'), type: 0 },
+    // EDM, erase displayed memory, flush caption
+    { pts: 8000, ccData: 0x142c, type: 0 }
+  ].forEach(cea608Stream.push, cea608Stream);
+
+  assert.equal(captions.length, 2, 'two captions emitted');
+  assert.deepEqual(captions[0], {
+    startPts: 1000,
+    endPts: 4000,
+    content: [{ line: 14, position: 10, text: 'hi' }],
+    stream: 'CC1'
+  }, 'first row shown from the first RDC');
+  assert.deepEqual(captions[1], {
+    startPts: 4000,
+    endPts: 8000,
+    content: [
+      { line: 14, position: 10, text: 'hi' },
+      { line: 15, position: 10, text: 'yo' }
+    ],
+    stream: 'CC1'
+  }, 'both rows shown from the second RDC');
+});
+
 QUnit.test('generates correct text from PACs in paint-on mode', function(assert) {
   var captions = [];
   cea608Stream.on('data', function(caption) {
