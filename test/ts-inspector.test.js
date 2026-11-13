@@ -203,3 +203,10 @@ QUnit.test('can parse audio PES when it\'s the only packet in a stream', functio
     }],
     'parses audio pes for timing info');
 });
+
+QUnit.test('returns for aac data with a zero length adts header', function(assert) {
+  // frame length 0, which is shorter than the 7 byte header itself
+  var bytes = new Uint8Array([0xff, 0xf1, 0x50, 0x80, 0x00, 0x1f, 0xfc, 0x00, 0x00, 0x00]);
+
+  assert.equal(inspect(bytes), null, 'returned null');
+});
