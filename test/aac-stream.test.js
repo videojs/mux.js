@@ -287,3 +287,30 @@ QUnit.test('continues parsing after corrupted stream', function(assert) {
   assert.equal(adtsCount, 1);
   assert.equal(id3Count, 1);
 });
+
+QUnit.test('skips an adts header with a frame length shorter than the header', function(assert) {
+  var
+    audio = [],
+    zeroLength = createAdtsHeader(0),
+    valid = createAdtsHeader(9).concat([0x12, 0x34]);
+
+  aacStream.on('data', function(frame) {
+    if (frame.type === 'audio') {
+      audio.push(frame);
+      // without the length check the stream never moves past a zero length
+      // header, so stop the test instead of hanging it
+      if (audio.length > 10) {
+        throw new Error('too many frames');
+      }
+    }
+  });
+
+  aacStream.push(new Uint8Array(zeroLength.concat(valid)));
+
+  assert.equal(audio.length, 1, 'only the valid frame is emitted');
+  assert.deepEqual(
+    new Uint8Array(audio[0].data),
+    new Uint8Array(valid),
+    'emitted the valid frame'
+  );
+});

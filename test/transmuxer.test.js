@@ -2790,6 +2790,66 @@ QUnit.test('skips garbage data between sync words', function(assert) {
   ], 'logged skipped data');
 });
 
+QUnit.test('skips headers with a frame length shorter than the header', function(assert) {
+  var frames = [];
+  var logs = [];
+  adtsStream.on('data', function(frame) {
+    frames.push(frame);
+    // without the length check the stream never moves past a zero length
+    // header, so stop the test instead of hanging it
+    if (frames.length > 10) {
+      throw new Error('too many frames');
+    }
+  });
+  adtsStream.on('log', function(log) {
+    logs.push(log);
+  });
+
+  adtsStream.push({
+    type: 'audio',
+    pts: 0,
+    dts: 0,
+    data: new Uint8Array([
+      // frame length 0, no CRC
+      0xff, 0xf1, 0x50, 0x80, 0x00, 0x1f, 0xfc,
+      // frame length 8, with CRC (header alone is 9 bytes)
+      0xff, 0xf0, 0x50, 0x80, 0x01, 0x1f, 0xfc, 0x00, 0x00,
+      // valid frame, length 9, no CRC
+      0xff, 0xf1, 0x10, 0xbc, 0x01, 0x20, 0x00, 0x12, 0x34,
+      // extra junk that should be ignored
+      0x56, 0x78
+    ])
+  });
+
+  assert.equal(frames.length, 1, 'only the valid frame is emitted');
+  assert.deepEqual(new Uint8Array(frames[0].data),
+            new Uint8Array([0x12, 0x34]),
+            'extracted AAC frame');
+  assert.deepEqual(logs, [
+    {level: 'warn', message: 'adts skiping bytes 0 to 16 in frame 0 outside syncword'}
+  ], 'logged the skipped headers');
+});
+
+QUnit.test('does not loop on a lone zero length header', function(assert) {
+  var frames = 0;
+  adtsStream.on('data', function() {
+    frames++;
+    if (frames > 10) {
+      throw new Error('too many frames');
+    }
+  });
+
+  adtsStream.push({
+    type: 'audio',
+    trackId: 257,
+    pts: 0,
+    dts: 0,
+    data: new Uint8Array([0xff, 0xf1, 0x50, 0x80, 0x00, 0x1f, 0xfc, 0x00, 0x00, 0x00])
+  });
+
+  assert.equal(frames, 0, 'no frames emitted');
+});
+
 QUnit.test('parses across packets', function(assert) {
   var frames = [];
   adtsStream.on('data', function(frame) {
